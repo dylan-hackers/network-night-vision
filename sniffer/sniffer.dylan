@@ -233,7 +233,7 @@ define function main(interface-name :: <string>,
                        <summary-printer>
                      end,
                      stream: *standard-output*);
-  /* let arp-responder 
+  let arp-responder 
     = make(<arp-responder>,
            mac-address: parse-frame(<mac-address>, 
                                     as(<byte-vector>,
@@ -241,12 +241,12 @@ define function main(interface-name :: <string>,
            ip-address: parse-frame(<ipv4-address>, 
                                    as(<byte-vector>, #(193, 17, 43, 122))),
            output-sink: interface);
-*/
+
   let accounting = make(<ip-accounting>);
 
 //  add-listener(interface, printer);
-//  add-listener(interface, arp-responder);
-  add-listener(interface, accounting);
+  add-listener(interface, arp-responder);
+//  add-listener(interface, accounting);
 
   let thr1 = make(<thread>, 
                   function: curry(print-accounting-table-loop, accounting));
