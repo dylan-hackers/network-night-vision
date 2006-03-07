@@ -73,15 +73,17 @@ end;
 define protocol ipv4-frame (<container-frame>)
   summary "IP SRC %= DST %=/%s",
     source-address, destination-address, compose(summary, payload);
-  field version :: <4bit-unsigned-integer>;
-  field header-length :: <4bit-unsigned-integer>;
+  field version :: <4bit-unsigned-integer> = 4;
+  field header-length :: <4bit-unsigned-integer>,
+    fixup: reduce(\+, 20, apply(field-size, frame.options)) / 4;
   field type-of-service :: <unsigned-byte>;
-  field total-length :: <2byte-big-endian-unsigned-integer>;
+  field total-length :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.header-length * 4 + field-size(frame.payload);
   field identification :: <2byte-big-endian-unsigned-integer>;
-  field evil :: <1bit-unsigned-integer>;
-  field dont-fragment :: <1bit-unsigned-integer>;
-  field more-fragments :: <1bit-unsigned-integer>;
-  field fragment-offset :: <13bit-unsigned-integer>;
+  field evil :: <1bit-unsigned-integer> = 0;
+  field dont-fragment :: <1bit-unsigned-integer> = 0;
+  field more-fragments :: <1bit-unsigned-integer> = 0;
+  field fragment-offset :: <13bit-unsigned-integer> = 0;
   field time-to-live :: <unsigned-byte>;
   field protocol :: <unsigned-byte>;
   field header-checksum :: <2byte-big-endian-unsigned-integer>;
@@ -166,10 +168,11 @@ define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
 end;
               
 define protocol arp-frame (<container-frame>)
-  field mac-address-type :: <2byte-big-endian-unsigned-integer>;
-  field protocol-address-type :: <2byte-big-endian-unsigned-integer>;
-  field mac-address-size :: <unsigned-byte>;
-  field protocol-address-size :: <unsigned-byte>;
+  field mac-address-type :: <2byte-big-endian-unsigned-integer> = 1;
+  field protocol-address-type :: <2byte-big-endian-unsigned-integer> = #x800;
+  field mac-address-size :: <unsigned-byte> = byte-offset(field-size(<mac-address>));
+  field protocol-address-size :: <unsigned-byte> 
+    = byte-offset(field-size(<ipv4-address>));
   field operation :: <2byte-big-endian-unsigned-integer>;
   field source-mac-address :: <mac-address>;
   field source-ip-address :: <ipv4-address>;

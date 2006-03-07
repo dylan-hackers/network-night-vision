@@ -349,6 +349,13 @@ define method assemble-frame-into (frame :: <container-frame>,
                                    start :: <integer>)
   for (field in frame-fields(frame),
        offset = start then offset + get-field-size-aux(frame, field))
+    if (field.getter(frame) = #f)
+      if (field.fixup-function)
+        field.setter(field.fixup-function(frame), frame);
+      else
+        error("No value for field %s while assembling", field.name);
+      end;
+    end;
     assemble-field-into(field, frame, packet, offset)
   end;
 end;
@@ -393,6 +400,8 @@ end;
 
 define abstract class <field> (<object>)
   slot name, required-init-keyword: name:;
+  slot init-value = #f, init-keyword: init:;
+  slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
   slot getter, required-init-keyword: getter:;
   slot setter, required-init-keyword: setter:;
   slot start-offset = #f, init-keyword: start:;

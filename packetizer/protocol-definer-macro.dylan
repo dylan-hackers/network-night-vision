@@ -12,6 +12,15 @@ define macro real-class-definer
       define inline method name (frame :: ?name)
         ?"name"
       end;
+      define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
+        let frame = apply(make, cache-class(?name), rest);
+        for (field in frame-fields(?name))
+          if (field.getter(frame) = #f)
+            field.setter(field.init-value, frame);
+          end;
+        end;
+        frame;
+      end;
  }
 
   fields:
@@ -36,12 +45,42 @@ define macro real-class-definer
                setter: ?name ## "-setter",
                ?args), ... }
    { repeated field ?:name \:: ?field-type:name, ?args:*; ... }
-    => { make(<repeated-field>,
-              name: ?#"name",
-              type: ?field-type,
-              getter: ?name,
-              setter: ?name ## "-setter",
-              ?args), ... }
+     => { make(<repeated-field>,
+               name: ?#"name",
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+   { field ?:name \:: ?field-type:name = ?init:expression ; ... }
+     => { make(<single-field>,
+               name: ?#"name",
+               init: ?init,
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter"), ... }
+   { field ?:name \:: ?field-type:name = ?init:expression , ?args:*; ... }
+     => { make(<single-field>,
+               name: ?#"name",
+               init: ?init,
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+   { variably-typed-field ?:name = ?init:expression , ?args:*; ... }
+     => { make(<variably-typed-field>,
+               name: ?#"name",
+               init: ?init,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+   { repeated field ?:name \:: ?field-type:name = ?init:expression, ?args:*; ... }
+     => { make(<repeated-field>,
+               name: ?#"name",
+               init: ?init,
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
 
   args: //FIXME: better types, not <frame>!
     { } => { }
@@ -57,6 +96,8 @@ define macro real-class-definer
       => { type-function: method(?=frame :: <frame>) ?type end, ... }
     { reached-end?: ?reached:expression, ... }
       => { reached-end?: ?reached, ... }
+    { fixup: ?fixup:expression, ... }
+      => { fixup: method(?=frame :: <frame>) ?fixup end, ... }
 end;
 
 define macro cache-class-definer
