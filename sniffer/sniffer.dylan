@@ -71,11 +71,7 @@ end class <arp-responder>;
 define method initialize(sink :: <arp-responder>,
                          #rest args, #key, #all-keys)
   next-method();
-  let response = make(<decoded-arp-frame>,
-                      mac-address-type: 1,
-                      protocol-address-type: #x800,
-                      mac-address-size: 6,
-                      protocol-address-size: 4,
+  let response = make(<arp-frame>,
                       operation: 1,
                       source-mac-address: sink.mac-address,
                       source-ip-address: sink.ip-address,
@@ -100,11 +96,7 @@ define method push-frame (sink :: <arp-responder>,
   if(instance?(arp-request, <arp-frame>)
     & arp-request.operation = 1
     & arp-request.target-ip-address = sink.ip-address)
-    let response = make(<decoded-arp-frame>,
-                        mac-address-type: 1,
-                        protocol-address-type: #x800,
-                        mac-address-size: 6,
-                        protocol-address-size: 4,
+    let response = make(<arp-frame>,
                         operation: 2,
                         source-mac-address: sink.mac-address,
                         source-ip-address: sink.ip-address,
