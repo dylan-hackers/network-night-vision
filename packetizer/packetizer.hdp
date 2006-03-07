@@ -1,0 +1,21 @@
+comment:	This file is generated, please don't edit
+format-version:	2
+library:	packetizer
+files:	library
+	module
+	new-protocol
+	protocol-definer-macro
+	ethernet
+	ipv4
+	pcap
+	dns
+	util
+base-address:	0x63FE0000
+debug-arguments:	c:\foo.pcap
+linker-options:	$(guilflags)
+major-version:	1
+minor-version:	0
+library-pack:	0
+compilation-mode:	loose
+target-type:	dll
+comment:	additional keywords

@@ -1,0 +1,15 @@
+Format-Version:   2
+Library:          gui-sniffer
+Synopsis:         A brief description of the project.
+Author:           Andreas Bogk, Hannes Mehnert
+Copyright:        (C) 2005,  All rights reserved.
+Major-Version:    1
+Minor-Version:    0
+Files:            library
+	module
+	gui-sniffer
+Linker-Options:   $(guilflags)
+Start-Function:   main
+Compilation-Mode: loose
+Target-Type:      executable
+
