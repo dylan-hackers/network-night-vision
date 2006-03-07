@@ -110,11 +110,11 @@ define macro cache-class-definer
     
     field:
     { field ?:name \:: ?field-type:name ?rest:* }
-      => { slot ?name :: false-or(high-level-type(?field-type)) = #f }
+      => { slot ?name :: false-or(high-level-type(?field-type)) = #f, init-keyword: ?#"name" }
     { variably-typed-field ?:name, ?rest:* }
-      => { slot ?name :: false-or(<frame>) = #f }
+      => { slot ?name :: false-or(<frame>) = #f, init-keyword: ?#"name" }
     { repeated field ?:name ?rest:* }
-      => { slot ?name :: false-or(<stretchy-vector>) = #f }
+      => { slot ?name :: false-or(<stretchy-vector>) = #f, init-keyword: ?#"name" }
     
 end;
 
@@ -289,6 +289,9 @@ end;
 
 define macro frame-field-generator
     { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name  ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?field-type, ?count);
+         frame-field-generator(?type; ?count + field-size(?field-type); ?rest) }
+    { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name = ?init:expression ; ?rest:*) }
     => { unparsed-frame-field-generator(?field-name, ?type, ?field-type, ?count);
          frame-field-generator(?type; ?count + field-size(?field-type); ?rest) }
     { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name, ?args:* ; ?rest:*) }
