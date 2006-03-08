@@ -83,7 +83,7 @@ define protocol ipv4-frame (<container-frame>)
     source-address, destination-address, compose(summary, payload);
   field version :: <4bit-unsigned-integer> = 4;
   field header-length :: <4bit-unsigned-integer>,
-    fixup: round(reduce(\+, 20, apply(compose(byte-offset, frame-size), frame.options)), 4);
+    fixup: round/(reduce(\+, 20, map(method(x) byte-offset(frame-size(x)) end, frame.options)), 4);
   field type-of-service :: <unsigned-byte> = 0;
   field total-length :: <2byte-big-endian-unsigned-integer>,
     fixup: frame.header-length * 4 + byte-offset(frame-size(frame.payload));
