@@ -72,8 +72,11 @@ end;
 
 define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>), count :: <integer>)
   let checksum = 0;
-  for (i from 0 below count by 2)
+  for (i from 0 below count - 1 by 2)
     checksum := checksum + ash(frame[i], 8) + frame[i + 1];
+  end;
+  if (logand(#x1, count) = 1)
+    checksum := checksum + ash(frame[count - 1], 8);
   end;
   while (checksum > (2 ^ 16 - 1))
     checksum := ash(checksum, -16) + logand(#xffff, checksum);
