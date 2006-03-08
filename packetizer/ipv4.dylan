@@ -70,26 +70,34 @@ define method print-object (object :: <frame>, stream :: <stream>) => ()
   write(stream, as(<string>, object));
 end;
 
+define function calculate-checksum (frame :: <byte-vector>, count :: <integer>)
+  let checksum = 0;
+  for (i from 0 to frame.size by 2)
+    checksum := modulo(checksum + frame[i] + frame[i + 1], 2 ^ 16 - 1);
+  end;
+  checksum;
+end;
+
 define protocol ipv4-frame (<container-frame>)
   summary "IP SRC %= DST %=/%s",
     source-address, destination-address, compose(summary, payload);
   field version :: <4bit-unsigned-integer> = 4;
   field header-length :: <4bit-unsigned-integer>,
-    fixup: reduce(\+, 20, apply(field-size, frame.options)) / 4;
-  field type-of-service :: <unsigned-byte>;
+    fixup: round(reduce(\+, 20, apply(compose(byte-offset, frame-size), frame.options)), 4);
+  field type-of-service :: <unsigned-byte> = 0;
   field total-length :: <2byte-big-endian-unsigned-integer>,
-    fixup: frame.header-length * 4 + field-size(frame.payload);
+    fixup: frame.header-length * 4 + byte-offset(frame-size(frame.payload));
   field identification :: <2byte-big-endian-unsigned-integer>;
   field evil :: <1bit-unsigned-integer> = 0;
   field dont-fragment :: <1bit-unsigned-integer> = 0;
   field more-fragments :: <1bit-unsigned-integer> = 0;
   field fragment-offset :: <13bit-unsigned-integer> = 0;
-  field time-to-live :: <unsigned-byte>;
+  field time-to-live :: <unsigned-byte> = 64;
   field protocol :: <unsigned-byte>;
-  field header-checksum :: <2byte-big-endian-unsigned-integer>;
+  field header-checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
-  repeated field options :: <ip-option-frame>,
+  repeated field options :: <ip-option-frame>, // = make(<stretchy-vector>),
     reached-end?: method(value :: <ip-option-frame>)
                       instance?(value, <end-of-option-ip-option>)
                   end;
@@ -123,7 +131,7 @@ define protocol icmp-frame (<container-frame>)
   summary "ICMP type %= code %=", type, code;
   field type :: <unsigned-byte>;
   field code :: <unsigned-byte>;
-  field checksum :: <2byte-big-endian-unsigned-integer>;
+  field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field payload :: <raw-frame>;
 end;
 

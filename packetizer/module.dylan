@@ -29,5 +29,10 @@ define module packetizer
     <leaf-frame>, <container-frame>, frame, type,
     <frame-field>, <repeated-field>, field, name,
     <pcap-file>, <pcap-file-header>, <pcap-packet>, packets;
+
+  export <icmp-frame>, code, type, checksum;
+
+  export <raw-frame>;
+
   export $broken-ipv4, hexdump;
 end module packetizer;

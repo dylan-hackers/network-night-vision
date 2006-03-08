@@ -110,6 +110,32 @@ define method push-frame (sink :: <arp-responder>,
     format(*standard-output*, "%=\n", summary(response*));
     force-output(*standard-output*);
     push-frame(sink.output-sink, response*);
+  elseif (instance?(arp-request, <ipv4-frame>)
+         & arp-request.destination-address = sink.ip-address)
+    let icmp-frame = arp-request.payload;
+    if (instance?(icmp-frame, <icmp-frame>)
+       & icmp-frame.type = 8
+       & icmp-frame.code = 0)
+      let response = make(<icmp-frame>,
+                          type: 0,
+                          code: 0,
+                          payload: icmp-frame.payload);
+      let response* = make(<ipv4-frame>,
+                           protocol: 1,
+                           source-address: sink.ip-address,
+                           destination-address: arp-request.source-address,
+                           identification: 0,
+                           options: make(<stretchy-vector>),
+                           payload: response);
+      let response** = make(<ethernet-frame>,
+                            destination-address: frame.source-address,
+                            source-address: sink.mac-address,
+                            type-code: #x800,
+                            payload: response*);
+      format(*standard-output*, "%=\n", summary(response**));
+      force-output(*standard-output*);
+      push-frame(sink.output-sink, response**);
+    end;
   end if;
 end method push-frame;
 
@@ -153,13 +179,13 @@ end;
 
 define class <ethernet-interface> (<source>, <sink>)
   slot interface :: <interface>;
-  slot name, required-init-keyword: name:;
+  slot name-foo, required-init-keyword: name:;
 end class <ethernet-interface>;
 
 define method initialize (source :: <ethernet-interface>,
                          #rest keywords, #key, #all-keys)
   next-method();
-  source.interface := make(<interface>, name: source.name);
+  source.interface := make(<interface>, name: source.name-foo);
 end method initialize;
 
 define method toplevel (source :: <ethernet-interface>) => ();
@@ -182,6 +208,7 @@ define method toplevel (source :: <ethernet-interface>) => ();
     end block;
   end while;
 end method toplevel;
+
 
 define method push-frame (sink :: <ethernet-interface>,
                           frame :: <frame>) => ();
@@ -237,7 +264,7 @@ define function main(interface-name :: <string>,
     = make(<arp-responder>,
            mac-address: parse-frame(<mac-address>, 
                                     as(<byte-vector>,
-                                       #(#xde, #xad, 0, 0, #xbe, #xee))),
+                                       #(#xde, #xad, 0, 0, #xbe, #xef))),
            ip-address: parse-frame(<ipv4-address>, 
                                    as(<byte-vector>, #(193, 17, 43, 122))),
            output-sink: interface);
@@ -248,8 +275,8 @@ define function main(interface-name :: <string>,
   add-listener(interface, arp-responder);
 //  add-listener(interface, accounting);
 
-  let thr1 = make(<thread>, 
-                  function: curry(print-accounting-table-loop, accounting));
+//  let thr1 = make(<thread>, 
+//                  function: curry(print-accounting-table-loop, accounting));
 
   toplevel(interface);
 end;
