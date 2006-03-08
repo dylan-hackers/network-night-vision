@@ -97,6 +97,10 @@ define inline method frame-fields (frame :: <container-frame>) => (fields :: <li
   frame-fields(frame.object-class);
 end;
 
+define method fixup!(frame :: <container-frame>,
+                     packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
+end;
+
 define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
  => (length :: <integer>);
 
@@ -330,6 +334,7 @@ end;
 define method assemble-frame (frame :: <container-frame>) => (packet :: <byte-vector>);
   let result = make(<byte-vector>, size: byte-offset(frame-size(frame)), fill: 0);
   assemble-frame-into(frame, result, 0);
+  fixup!(frame, result);
   result;
 end;
 
@@ -836,7 +841,7 @@ end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: <byte-vector>,
+                                      packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
                                       start :: <integer>)
   byte-aligned(start);
   for (i from 0 below frame-size(frame-type) by 8)

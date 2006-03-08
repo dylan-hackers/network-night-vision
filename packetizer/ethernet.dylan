@@ -11,6 +11,10 @@ define method as (class == <string>, frame :: <mac-address>) => (string :: <stri
                  frame.data))
 end;
 
+define method fixup!(frame :: <ethernet-frame>, packet :: type-union(<byte-vector-subsequence>, <byte-vector>))
+  fixup!(frame.payload, subsequence(packet, start: 14, end: packet.size));
+end;
+
 define protocol ethernet-frame (<container-frame>)
   summary "ETH %= -> %=/%s",
     source-address, destination-address, compose(summary, payload);

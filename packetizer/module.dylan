@@ -34,5 +34,7 @@ define module packetizer
 
   export <raw-frame>;
 
+  export fixup!;
+
   export $broken-ipv4, hexdump;
 end module packetizer;

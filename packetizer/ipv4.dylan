@@ -70,12 +70,33 @@ define method print-object (object :: <frame>, stream :: <stream>) => ()
   write(stream, as(<string>, object));
 end;
 
-define function calculate-checksum (frame :: <byte-vector>, count :: <integer>)
+define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>), count :: <integer>)
   let checksum = 0;
-  for (i from 0 to frame.size by 2)
-    checksum := modulo(checksum + frame[i] + frame[i + 1], 2 ^ 16 - 1);
+  for (i from 0 below frame.size by 2)
+    checksum := checksum + ash(frame[i], 8) + frame[i + 1];
   end;
-  checksum;
+  while (checksum > (2 ^ 16 - 1))
+    checksum := ash(checksum, -16) + logand(#xffff, checksum);
+  end;
+  logand(#xffff, lognot(checksum));
+end;
+
+define method fixup! (frame :: <ipv4-frame>, packet :: type-union(<byte-vector-subsequence>, <byte-vector>))
+  assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
+                         calculate-checksum(packet, frame.header-length * 4),
+                         packet,
+                         80);
+  fixup!(frame.payload,
+         subsequence(packet,
+                     start: frame.header-length * 4,
+                     end: packet.size));
+end;
+
+define method fixup! (frame :: <icmp-frame>, packet :: type-union(<byte-vector-subsequence>, <byte-vector>))
+  assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
+                         calculate-checksum(packet, packet.size),
+                         packet,
+                         8);
 end;
 
 define protocol ipv4-frame (<container-frame>)
