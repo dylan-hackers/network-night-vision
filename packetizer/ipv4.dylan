@@ -72,7 +72,7 @@ end;
 
 define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>), count :: <integer>)
   let checksum = 0;
-  for (i from 0 below frame.size by 2)
+  for (i from 0 below count by 2)
     checksum := checksum + ash(frame[i], 8) + frame[i + 1];
   end;
   while (checksum > (2 ^ 16 - 1))
@@ -96,7 +96,7 @@ define method fixup! (frame :: <icmp-frame>, packet :: type-union(<byte-vector-s
   assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
                          calculate-checksum(packet, packet.size),
                          packet,
-                         8);
+                         16);
 end;
 
 define protocol ipv4-frame (<container-frame>)
