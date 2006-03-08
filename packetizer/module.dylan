@@ -37,4 +37,19 @@ define module packetizer
   export fixup!;
 
   export $broken-ipv4, hexdump;
+
+  export frame-fields, getter;
 end module packetizer;
+
+define module packet-filter
+  use common-dylan;
+  use packetizer;
+
+  export 
+    <filter-expression>,
+    <field-equals>,
+    <and-expression>,
+    <or-expression>,
+    <not-expression>,
+    matches?;
+end;

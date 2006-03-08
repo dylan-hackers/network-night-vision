@@ -10,5 +10,5 @@ define library packetizer
   use system;
 
   // Add any more module exports here.
-  export packetizer;
+  export packetizer, packet-filter;
 end library packetizer;

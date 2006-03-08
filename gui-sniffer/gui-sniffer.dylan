@@ -11,7 +11,7 @@ define method frame-children-predicate (frame :: <container-frame>)
 end;
 
 define method frame-children-predicate (collection :: <collection>)
-  #t
+  collection.size > 0
 end;
 
 define method frame-children-predicate (object :: <object>)
@@ -20,7 +20,7 @@ end;
 
 define method frame-children-predicate (frame-field :: <frame-field>)
   instance?(frame-field.frame, <container-frame>)
-    | instance?(frame-field.field, <repeated-field>)
+    | (instance?(frame-field.field, <repeated-field>) & frame-field.frame.size > 0)
 end;
 
 define method frame-children-generator (collection :: <collection>)
@@ -45,9 +45,10 @@ define method frame-print-label (frame-field :: <frame-field>)
   if (~ frame-children-predicate(frame-field))
     format-to-string("%s: %=", frame-field.field.name, frame-field.frame)
   elseif (instance?(frame-field.frame, <container-frame>))
-    format-to-string("%s: %s",
+    format-to-string("%s: %s %s",
                      frame-field.field.name, 
-                     frame-field.frame.name)
+                     frame-field.frame.name,
+                     frame-field.frame.summary)
   elseif (instance?(frame-field.field, <repeated-field>))
     format-to-string("%s: %= %s",
                      frame-field.field.name,
@@ -59,7 +60,7 @@ define method frame-print-label (frame-field :: <frame-field>)
 end;
 
 define method frame-print-label (frame :: <container-frame>)
-  format-to-string("%s", frame.name);
+  format-to-string("%s %s", frame.name, frame.summary);
 end;
 
 define method frame-print-label (frame :: <leaf-frame>)
@@ -74,6 +75,14 @@ define method frame-viewer(frame :: <frame>)
        children-predicate: frame-children-predicate)
 end;
 
+define method frame-viewer(frames :: <collection>)
+  make(<tree-control>, 
+       roots: frames,
+       label-key: frame-print-label,
+       children-generator: frame-children-generator,
+       children-predicate: frame-children-predicate)
+end;
+
 define variable *frame* = #f;
 
 begin
@@ -82,7 +91,12 @@ begin
                                 direction: #"input")
                   stream-contents(stream);
                 end);
-  *frame* := parse-frame(<pcap-file>, file);
+  let filter = make(<field-equals>,
+                    name: #"destination-address",
+                    value: parse-frame(<mac-address>,
+                                       as(<byte-vector>, #[#x01, #x00, #x0c, #xcc, #xcc, #xcd]))); 
+  *frame* := choose(rcurry(matches?, filter),
+                    map(payload, parse-frame(<pcap-file>, file).packets));
   contain(frame-viewer(*frame*));
 end;
 

@@ -14,6 +14,7 @@ define module gui-sniffer
   use file-system;
   use operating-system;
   use packetizer;
+  use packet-filter;
 
   // Add binding exports here.
 
