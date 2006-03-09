@@ -11,51 +11,74 @@ end;
 
 define constant $filter-tokens
   = simple-lexical-definition
+      inert "([ \t]+)";
+
+      token EOF;
       token AMP = "&";
       token PIPE = "\\|";
       token TILDE = "~";
       token EQUALS = "=";
       token DOT = "\\.";
+      token LPAREN = "\\(";
+      token RPAREN = "\\)";
+      token COLON = ":";
 
-      inert "([ \t]+)";
-      token Name = "[a-zA-Z_0-9]",
-         semantic-value-function: extract-action,
-         priority: -1;
-      token value = "[a-zA-Z_0-9:.]",
-         semantic-value-function: extract-action,
-         priority: -2;
+      token Name = "[a-zA-Z_0-9-]+",
+         semantic-value-function: extract-action;
 end;
 
 define constant $filter-productions
  = simple-grammar-productions
-  production filter => [filter AMP filter], action:
+  production value => [Name value], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<and-expression>, left: p[0], right: p[2]);
+        concatenate(p[0], p[1]);
     end;
 
-  production filter => [filter PIPE filter], action:
+  production value => [DOT value], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<or-expression>, left: p[0], right: p[2]);
+        concatenate(".", p[1]);
+    end;
+  production value => [COLON value], action:
+    method(p :: <simple-parser>, data, s, e)
+        concatenate(":", p[1]);
     end;
 
-  production filter => [TILDE filter], action:
+  production value => [], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<not-expression>, left: p[0]);
+        "";
     end;
 
-  production filter => [Name], action:
+  production filter => [LPAREN filter RPAREN AMP LPAREN filter RPAREN], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<frame-present>, frame: p[0]);
+        make(<and-expression>, left: p[1], right: p[5]);
     end;
+
+  production filter => [LPAREN filter RPAREN PIPE LPAREN filter RPAREN], action:
+    method(p :: <simple-parser>, data, s, e)
+        make(<or-expression>, left: p[1], right: p[5]);
+    end;
+
+  production filter => [TILDE LPAREN filter RPAREN], action:
+    method(p :: <simple-parser>, data, s, e)
+        make(<not-expression>, left: p[2]);
+    end;
+
+//  production filter => [Name], action:
+//    method(p :: <simple-parser>, data, s, e)
+//        make(<frame-present>, frame: p[0]);
+//    end;
 
   production filter => [Name DOT Name EQUALS value], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<field-equals>, frame: p[0], name: p[2], value: p[4]);
+        make(<field-equals>,
+             frame: as(<symbol>, p[0]),
+             name: as(<symbol>, p[2]),
+             value: p[4]);
     end;
 
   production compound-filter => [filter], action:
     method(p :: <simple-parser>, data, s, e)
-        data := p[0];
+        data.filter := p[0];
     end;
 end;
 
@@ -63,26 +86,35 @@ define constant $filter-automaton
   = simple-parser-automaton($filter-tokens, $filter-productions,
                             #[#"compound-filter"]);
 
-define function main (name, arguments)
-  let handler (<parser-automaton-shift/reduce-error>) =
-    method (condition :: <parser-automaton-shift/reduce-error>,
-            next-handler)
-      format-out("shift/reduce error on token %s (choosing shift), productions: %=\n",
-                 condition.parser-automaton-error-inputs.first);
-      for (production in condition.parser-automaton-error-productions)
-        format-out("  %s\n", production);
-      end;
-      signal(make(<parser-automaton-shift/reduce-restart>,
-                  action: #"shift"));
-    end method;
+define function consume-token 	 
+    (consumer-data,
+     token-number :: <integer>,
+     token-name :: <object>,
+     semantic-value :: <object>,
+     start-position :: <integer>,
+     end-position :: <integer>)
+ => ();
+  //let srcloc
+  //  = range-source-location(consumer-data, start-position, end-position);
+  format-out("%d - %d: token %d: %= value %=\n",
+             start-position,
+             end-position,
+             token-number,
+             token-name,
+             semantic-value);
+end function;
 
+define class <filter> (<object>)
+  slot filter :: <filter-expression>
+end;
 
+define function main ()
   let rangemap = make(<source-location-rangemap>);
   let scanner = make(<simple-lexical-scanner>,
                      definition: $filter-tokens,
                      rangemap: rangemap);
   let input = "ip.source-address = 23.23.23.23"; // & tcp.source-port = 23";
-  let data = #();
+  let data = make(<filter>);
   let parser = make(<simple-parser>,
                     automaton: $filter-automaton,
                     start-symbol: #"compound-filter",
@@ -90,11 +122,16 @@ define function main (name, arguments)
                     consumer-data: data);
   scan-tokens(scanner,
               simple-parser-consume-token,
+//              consume-token,
               parser,
               input,
               end: input.size,
               partial?: #f);
-  print-filter(data);
+  scan-tokens(scanner, simple-parser-consume-token, parser, "", partial?: #f);
+  let end-position = scanner.scanner-source-position;
+  simple-parser-consume-token(parser, 0, #"EOF", parser, end-position, end-position);
+  let filter = data.filter;
+  print-filter(filter);
 end;
 
 define method print-filter (filter :: <frame-present>)
@@ -124,5 +161,4 @@ define method print-filter (filter :: <not-expression>)
   format-out("not filter: ");
   print-filter(filter.expression);
 end;
-
 
