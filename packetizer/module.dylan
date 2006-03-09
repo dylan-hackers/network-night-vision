@@ -43,6 +43,17 @@ end module packetizer;
 
 define module packet-filter
   use common-dylan;
+  use format-out;
+  use simple-parser;
+  use source-location;
+  use source-location-rangemap;
+  use grammar;
+  use simple-lexical-scanner;
+  use parser-automaton,
+    import: { <parser-automaton-shift/reduce-error>,
+              <parser-automaton-shift/reduce-restart>,
+              parser-automaton-error-productions,
+              parser-automaton-error-inputs };
   use packetizer;
 
   export 

@@ -6,6 +6,7 @@ files:	library
 	packetizer
 	protocol-definer-macro
 	filter
+	filter-parser
 	ethernet
 	ipv4
 	pcap

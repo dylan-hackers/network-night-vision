@@ -9,6 +9,11 @@ define library packetizer
   use collection-extensions;
   use system;
 
+  use source-location;
+  use grammar;
+  use simple-parser;
+  use regular;
+
   // Add any more module exports here.
   export packetizer, packet-filter;
 end library packetizer;
