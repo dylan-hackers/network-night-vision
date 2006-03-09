@@ -57,5 +57,6 @@ define module packet-filter
     <and-expression>,
     <or-expression>,
     <not-expression>,
-    matches?;
+    matches?,
+    parse-filter;
 end;

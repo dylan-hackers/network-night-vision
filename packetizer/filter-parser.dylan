@@ -63,10 +63,10 @@ define constant $filter-productions
         make(<not-expression>, left: p[2]);
     end;
 
-//  production filter => [Name], action:
-//    method(p :: <simple-parser>, data, s, e)
-//        make(<frame-present>, frame: p[0]);
-//    end;
+  production filter => [Name], action:
+    method(p :: <simple-parser>, data, s, e)
+        make(<frame-present>, frame: as(<symbol>, p[0]));
+    end;
 
   production filter => [Name DOT Name EQUALS value], action:
     method(p :: <simple-parser>, data, s, e)
@@ -108,12 +108,11 @@ define class <filter> (<object>)
   slot filter :: <filter-expression>
 end;
 
-define function main ()
+define function parse-filter (input :: <string>)
   let rangemap = make(<source-location-rangemap>);
   let scanner = make(<simple-lexical-scanner>,
                      definition: $filter-tokens,
                      rangemap: rangemap);
-  let input = "ip.source-address = 23.23.23.23"; // & tcp.source-port = 23";
   let data = make(<filter>);
   let parser = make(<simple-parser>,
                     automaton: $filter-automaton,
@@ -130,35 +129,37 @@ define function main ()
   scan-tokens(scanner, simple-parser-consume-token, parser, "", partial?: #f);
   let end-position = scanner.scanner-source-position;
   simple-parser-consume-token(parser, 0, #"EOF", parser, end-position, end-position);
-  let filter = data.filter;
-  print-filter(filter);
+  data.filter;
 end;
 
 define method print-filter (filter :: <frame-present>)
-  format-out("frame present filter %=\n", filter.frame-name);
+  format-out("%= present?\n", filter.frame-name);
 end;
 
 define method print-filter (filter :: <field-equals>)
-  format-out("field equals filter %= %= %=\n",
+  format-out("%=.%= = %= ?\n",
              filter.frame-name,
              filter.field-name,
              filter.field-value);
 end;
 
 define method print-filter (filter :: <and-expression>)
-  format-out("and filter:");
   print-filter(filter.left-expression);
+  format-out(" and\n");
   print-filter(filter.right-expression);
 end;
 
 define method print-filter (filter :: <or-expression>)
-  format-out("or filter: ");
   print-filter(filter.left-expression);
+  format-out(" or\n");
   print-filter(filter.right-expression);
 end;
 
 define method print-filter (filter :: <not-expression>)
-  format-out("not filter: ");
+  format-out("not ");
   print-filter(filter.expression);
 end;
 
+//begin
+// print-filter(parse-filter("(ip.source-address = 23.23.23.23) & ((tcp.source-port = 23) & (foo))"));
+//end;
