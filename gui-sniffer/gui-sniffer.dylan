@@ -28,14 +28,14 @@ define method frame-children-generator (collection :: <collection>)
 end;
 
 define method frame-children-generator (a-frame :: <container-frame>)
-  a-frame.concrete-frame-fields
+  sorted-frame-fields(a-frame)
 end;
 
 define method frame-children-generator (frame-field :: <frame-field>)
   if (instance?(frame-field.field, <repeated-field>))
     frame-field.frame
   elseif (instance?(frame-field.frame, <container-frame>))
-    frame-field.frame.concrete-frame-fields
+    sorted-frame-fields(frame-field.frame)
   else
     error("huh?")
   end
