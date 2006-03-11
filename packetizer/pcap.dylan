@@ -21,7 +21,7 @@ define protocol unix-time-value (<container-frame>)
   field microseconds :: <4byte-little-endian-unsigned-integer>;
 end;
 
-define protocol pcap-packet (<container-frame>)
+define protocol pcap-packet (<header-frame>)
   field timestamp :: <unix-time-value>;
   field capture-length :: <3byte-little-endian-unsigned-integer>;
   field last-capture-length :: <unsigned-byte>;

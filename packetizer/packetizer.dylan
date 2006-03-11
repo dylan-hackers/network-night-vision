@@ -97,8 +97,15 @@ define inline method frame-fields (frame :: <container-frame>) => (fields :: <li
   frame-fields(frame.object-class);
 end;
 
-define method fixup!(frame :: <container-frame>,
+define method fixup!(frame :: type-union(<container-frame>, <raw-frame>),
                      packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
+end;
+
+define method fixup!(frame :: <header-frame>,
+                     packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
+  fixup!(frame.payload,
+         subsequence(packet,
+                     start: byte-offset(start-offset(get-frame-field(#"payload", frame)))));
 end;
 
 define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
@@ -175,12 +182,56 @@ define generic read-frame
 define abstract class <container-frame> (<variable-size-untranslated-frame>)
   virtual constant slot name :: <string>;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
-  constant slot concrete-frame-fields :: false-or(<collection>) = #f,
+  constant slot concrete-frame-fields :: <table> = make(<table>),
     init-keyword: frame-fields:;
+end;
+
+define function get-frame-field (field-name :: <symbol>, frame :: <container-frame>)
+ => (res :: <frame-field>)
+  //doesn't support padding..
+  let res = element(frame.concrete-frame-fields, field-name, default: #f);
+  unless (res)
+    let field = choose(method(x) x.name = field-name end, frame-fields(frame))[0];
+    let length = get-field-size-aux(frame, field);
+    let start = 0;
+    block(ret)
+      for (f in frame-fields(frame))
+        if (f.name = field-name)
+          ret();
+        end;
+        start := start + get-field-size-aux(frame, f);
+      end;
+    end;
+    let frame-field = make(<frame-field>,
+                           field: field,
+                           frame: field.getter(frame),
+                           start: start,
+                           end: start + length,
+                           length: length);
+    frame.concrete-frame-fields[field-name] := frame-field;
+    frame-field;
+  end;
+end;
+
+define method sorted-frame-fields (frame :: <container-frame>)
+  let field-table = frame.concrete-frame-fields;
+  map(method(x) field-table[x] end,
+      sort!(key-sequence(field-table),
+            test: method(a, b)
+                      field-table[a].start-offset < 
+                      field-table[b].start-offset
+                  end))
 end;
 
 define method name(frame :: <container-frame>)
   "anonymous"
+end;
+
+define abstract class <header-frame> (<container-frame>)
+end;
+
+define method payload (frame :: <header-frame>) => (payload :: <frame>)
+  error("No payload specified");
 end;
 
 define method field-size (frame :: subclass(<container-frame>)) => (res :: <number>)
@@ -205,7 +256,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                  packet: subsequence(packet, start: byte-offset(start)),
                  parent: parent);
   let args = make(<stretchy-vector>);
-  let concrete-frame-fields = make(<stretchy-vector>);
+  let concrete-frame-fields = make(<table>);
   for (field in frame-fields(res),
        i from 0)
     let type = get-frame-type(field, res);
@@ -239,13 +290,12 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                                        end),
                       res);
 
-    concrete-frame-fields := add!(concrete-frame-fields, 
-                                  make(<frame-field>,
-                                       start: start,
-                                       end: offset,
-                                       frame: value,
-                                       field: field,
-                                       length: offset - start));
+    concrete-frame-fields[field.name] :=  make(<frame-field>,
+                                               start: start,
+                                               end: offset,
+                                               frame: value,
+                                               field: field,
+                                               length: offset - start);
     start := byte-offset(start) * 8 + offset;
 
     if (end-of-field ~= $unknown-at-compile-time)

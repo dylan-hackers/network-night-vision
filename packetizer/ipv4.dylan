@@ -84,25 +84,27 @@ define function calculate-checksum (frame :: type-union(<byte-vector-subsequence
   logand(#xffff, lognot(checksum));
 end;
 
-define method fixup! (frame :: <ipv4-frame>, packet :: type-union(<byte-vector-subsequence>, <byte-vector>))
+define method fixup! (frame :: <ipv4-frame>,
+                      packet :: type-union(<byte-vector-subsequence>, <byte-vector>),
+                      #next next-method)
   assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
                          calculate-checksum(packet, frame.header-length * 4),
                          packet,
-                         80);
-  fixup!(frame.payload,
-         subsequence(packet,
-                     start: frame.header-length * 4,
-                     end: packet.size));
+                         start-offset(get-frame-field(#"header-checksum", frame)));
+  next-method();
 end;
 
-define method fixup! (frame :: <icmp-frame>, packet :: type-union(<byte-vector-subsequence>, <byte-vector>))
+define method fixup! (frame :: <icmp-frame>,
+                      packet :: type-union(<byte-vector-subsequence>, <byte-vector>),
+                      #next next-method)
   assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
                          calculate-checksum(packet, packet.size),
                          packet,
-                         16);
+                         start-offset(get-frame-field(#"checksum", frame)));
+  next-method();
 end;
 
-define protocol ipv4-frame (<container-frame>)
+define protocol ipv4-frame (<header-frame>)
   summary "IP SRC %= DST %=/%s",
     source-address, destination-address, compose(summary, payload);
   field version :: <4bit-unsigned-integer> = 4;
@@ -151,7 +153,7 @@ define constant $broken-ipv4
          #x00, #x00, #x00, #x00]);
 
 
-define protocol icmp-frame (<container-frame>)
+define protocol icmp-frame (<header-frame>)
   summary "ICMP type %= code %=", type, code;
   field type :: <unsigned-byte>;
   field code :: <unsigned-byte>;
@@ -159,7 +161,7 @@ define protocol icmp-frame (<container-frame>)
   field payload :: <raw-frame>;
 end;
 
-define protocol udp-frame (<container-frame>)
+define protocol udp-frame (<header-frame>)
   summary "UDP port %= -> %=", source-port, destination-port;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
@@ -171,7 +173,7 @@ end;
 // FIXME: must do for now
 define n-byte-vector(<4byte-big-endian-unsigned-integer>, 4) end;
 
-define protocol tcp-frame (<container-frame>)
+define protocol tcp-frame (<header-frame>)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
