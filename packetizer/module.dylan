@@ -38,7 +38,8 @@ define module packetizer
 
   export $broken-ipv4, hexdump;
 
-  export frame-fields, getter;
+  export sorted-frame-fields, get-frame-field,
+    frame-fields, getter;
 end module packetizer;
 
 define module packet-filter
