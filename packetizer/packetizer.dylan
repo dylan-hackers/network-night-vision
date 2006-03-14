@@ -9,6 +9,12 @@ end;
 define class <alignment-error> (<error>)
 end;
 
+define class <out-of-range-error> (<error>)
+end;
+
+define class <parse-error> (<error>)
+end;
+
 define class <unknown-at-compile-time> (<number>)
 end;
 
@@ -177,7 +183,12 @@ define abstract class <variable-size-translated-leaf-frame>
 end;
 
 define generic read-frame
-  (frame-type :: subclass(<leaf-frame>), stream :: <stream>) => (frame :: <leaf-frame>);
+  (frame-type :: subclass(<leaf-frame>), string :: <string>) => (frame);
+
+define method read-frame (frame-type :: subclass(<leaf-frame>), string :: <string>)
+ => (frame)
+  error("read-frame not supported for frame-type %=", frame-type);
+end;
 
 define abstract class <container-frame> (<variable-size-untranslated-frame>)
   virtual constant slot name :: <string>;
@@ -188,12 +199,12 @@ end;
 
 define function get-frame-field (field-name :: <symbol>, frame :: <container-frame>)
  => (res :: <frame-field>)
-  //doesn't support padding..
   let res = element(frame.concrete-frame-fields, field-name, default: #f);
   unless (res)
     let field = choose(method(x) x.name = field-name end, frame-fields(frame))[0];
     let length = get-field-size-aux(frame, field);
     let start = 0;
+    //doesn't support padding..
     block(ret)
       for (f in frame-fields(frame))
         if (f.name = field-name)
@@ -213,14 +224,9 @@ define function get-frame-field (field-name :: <symbol>, frame :: <container-fra
   end;
 end;
 
-define method sorted-frame-fields (frame :: <container-frame>)
-  let field-table = frame.concrete-frame-fields;
-  map(method(x) field-table[x] end,
-      sort!(key-sequence(field-table),
-            test: method(a, b)
-                      field-table[a].start-offset < 
-                      field-table[b].start-offset
-                  end))
+define function sorted-frame-fields (frame :: <container-frame>)
+  map(method(x) get-frame-field(x.name, frame) end,
+      frame-fields(frame))
 end;
 
 define method name(frame :: <container-frame>)
@@ -747,6 +753,16 @@ define method as (class == <string>, frame :: <unsigned-integer-bit-frame>)
                                 size: byte-offset(frame-size(frame) + 7) * 2));
 end;
 
+define method read-frame (type :: subclass(<unsigned-integer-bit-frame>),
+                          string :: <string>)
+ => (res)
+  let res = string-to-integer(string);
+  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+    signal(make(<out-of-range-error>))
+  end;
+  res;
+end;
+
 define abstract class <fixed-size-byte-vector-frame> (<fixed-size-untranslated-leaf-frame>)
   slot data :: <byte-vector>, required-init-keyword: data:;
 end;
@@ -800,6 +816,15 @@ define method as (class == <string>, frame :: <fixed-size-byte-vector-frame>) =>
   cleanup
     close(out-stream)
   end
+end;
+
+define method read-frame (frame-type :: subclass(<fixed-size-byte-vector-frame>),
+                          string :: <string>)
+ => (res)
+  make(frame-type,
+       data: copy-sequence(string,
+                           start: 0,
+                           end: byte-offset(field-size(frame-type))));
 end;
 
 define method \= (frame1 :: <fixed-size-byte-vector-frame>,
@@ -906,6 +931,16 @@ define method as (class == <string>, frame :: <big-endian-unsigned-integer-byte-
                                      size: ash(2 * frame-size(frame.object-class), -3)));
 end;
 
+define method read-frame (type :: subclass(<big-endian-unsigned-integer-byte-frame>),
+                          string :: <string>)
+ => (res)
+  let res = string-to-integer(string);
+  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+    signal(make(<out-of-range-error>))
+  end;
+  res;
+end;
+
 define sealed domain parse-frame (subclass(<little-endian-unsigned-integer-byte-frame>),
                                   <byte-sequence>);
 
@@ -956,6 +991,15 @@ define method as (class == <string>, frame :: <little-endian-unsigned-integer-by
                                      size: ash(2 * frame-size(frame.object-class), -3)));
 end;
 
+define method read-frame (type :: subclass(<little-endian-unsigned-integer-byte-frame>),
+                          string :: <string>)
+ => (res)
+  let res = string-to-integer(string);
+  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+    signal(make(<out-of-range-error>))
+  end;
+  res;
+end;
 
 define class <raw-frame> (<variable-size-untranslated-leaf-frame>)
   slot data :: <byte-vector>, required-init-keyword: data:;
@@ -1001,3 +1045,9 @@ define method as (class == <string>, frame :: <raw-frame>) => (res :: <string>)
   end
 end;
 
+define method read-frame (type == <raw-frame>,
+                          string :: <string>)
+ => (res)
+  make(<raw-frame>,
+       data: copy-sequence(string));
+end;

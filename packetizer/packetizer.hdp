@@ -19,5 +19,4 @@ major-version:	1
 minor-version:	0
 library-pack:	0
 compilation-mode:	loose
-target-type:	dll
 comment:	additional keywords

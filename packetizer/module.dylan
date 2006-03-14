@@ -30,6 +30,8 @@ define module packetizer
     <frame-field>, <repeated-field>, field, name,
     <pcap-file>, <pcap-file-header>, <pcap-packet>, packets;
 
+  export read-frame;
+
   export <icmp-frame>, code, type, checksum;
 
   export <raw-frame>;

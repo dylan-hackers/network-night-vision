@@ -4,6 +4,31 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define n-byte-vector(<mac-address>, 6) end;
 
+define method read-frame(type == <mac-address>,
+                         string :: <string>)
+ => (res)
+  let res = as-lowercase(string);
+  if (any?(method(x) x = ':' end, res))
+    //input: 00:de:ad:be:ef:00
+    let fields = split(res, ':');
+    unless(fields.size = 6)
+      signal(make(<parse-error>))
+    end;
+    make(<mac-address>,
+         data: map-as(<byte-vector>, rcurry(string-to-integer, base: 16), fields));
+  else
+    //input: 00deadbeef00
+    unless (res.size = 12)
+      signal(make(<parse-error>));
+    end;
+    let data = make(<byte-vector>, size: 6);
+    for (i from 0 below data.size)
+      data[i] := string-to-integer(res, start: i * 2, stop: i * 2 + 1, base: 16);
+    end;
+    make(<mac-address>, data: data);
+  end;
+end;
+
 define method as (class == <string>, frame :: <mac-address>) => (string :: <string>);
   reduce1(method(a, b) concatenate(a, ":", b) end,
           map-as(<stretchy-vector>,
