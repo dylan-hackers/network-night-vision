@@ -23,7 +23,7 @@ define method read-frame(type == <mac-address>,
     end;
     let data = make(<byte-vector>, size: 6);
     for (i from 0 below data.size)
-      data[i] := string-to-integer(res, start: i * 2, stop: i * 2 + 1, base: 16);
+      data[i] := string-to-integer(res, start: i * 2, end: (i + 1) * 2, base: 16);
     end;
     make(<mac-address>, data: data);
   end;

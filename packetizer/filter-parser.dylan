@@ -75,7 +75,7 @@ define constant $filter-productions
         make(<field-equals>,
              frame: as(<symbol>, p[0]),
              name: as(<symbol>, p[2]),
-             value: p[4]); //read-frame(<ipv4-address>, p[4]));
+             value: read-frame(<ipv4-address>, p[4]));
     end;
 
   production compound-filter => [filter], action:
@@ -142,7 +142,7 @@ define method print-filter (filter :: <field-equals>)
   format-out("%=.%= = %= ?\n",
              filter.frame-name,
              filter.field-name,
-             as(<string>, filter.field-value));
+             filter.field-value);
 end;
 
 define method print-filter (filter :: <and-expression>)
@@ -162,6 +162,6 @@ define method print-filter (filter :: <not-expression>)
   print-filter(filter.expression);
 end;
 
-begin
- print-filter(parse-filter("ip.source-address = 23.23.23.23")); // & ((tcp.source-port = 23) & (foo))"));
-end;
+//begin
+// print-filter(parse-filter("ip.source-address = 23.23.23.23")); // & ((tcp.source-port = 23) & (foo))"));
+//end;
