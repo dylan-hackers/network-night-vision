@@ -27,6 +27,7 @@ define module packetizer
     <fixed-size-byte-vector-frame>, data,
     total-length, concrete-frame-fields,
     <leaf-frame>, <container-frame>, frame, type,
+    <header-frame>,
     <frame-field>, <repeated-field>, field, name,
     <pcap-file>, <pcap-file-header>, <pcap-packet>, packets;
 

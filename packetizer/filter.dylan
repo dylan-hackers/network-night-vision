@@ -22,7 +22,9 @@ define method matches? (packet :: <frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
   let field = choose(method(x) x.name == filter.field-name end,
                      packet.frame-fields);
-  field.size > 0 & field.first.getter(packet) = filter.field-value
+  field.size > 0 
+    & field.first.getter(packet) = read-frame(field.first.type, 
+                                              filter.field-value);
 end;
 
 define class <and-expression> (<filter-expression>)

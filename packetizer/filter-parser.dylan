@@ -75,7 +75,7 @@ define constant $filter-productions
         make(<field-equals>,
              frame: as(<symbol>, p[0]),
              name: as(<symbol>, p[2]),
-             value: read-frame(<ipv4-address>, p[4]));
+             value: p[4]); //read-frame(<ipv4-address>, p[4]));
     end;
 
   production compound-filter => [filter], action:
