@@ -134,34 +134,32 @@ define function parse-filter (input :: <string>)
   data.filter;
 end;
 
-define method print-filter (filter :: <frame-present>)
-  format-out("%= present?\n", filter.frame-name);
+define method print-object (filter :: <frame-present>, stream :: <stream>) => ();
+  format(stream, "%s", filter.frame-name);
 end;
 
-define method print-filter (filter :: <field-equals>)
-  format-out("%=.%= = %= ?\n",
-             filter.frame-name,
-             filter.field-name,
-             filter.field-value);
+define method print-object (filter :: <field-equals>, stream :: <stream>) => ();
+  format(stream,
+         "%s.%s = %s",
+         filter.frame-name,
+         filter.field-name,
+         filter.field-value);
 end;
 
-define method print-filter (filter :: <and-expression>)
-  print-filter(filter.left-expression);
-  format-out(" and\n");
-  print-filter(filter.right-expression);
+define method print-object (filter :: <and-expression>, stream :: <stream>) => ();
+  format(stream, "(%=) & (%=)", filter.left-expression, filter.right-expression);
 end;
 
-define method print-filter (filter :: <or-expression>)
-  print-filter(filter.left-expression);
-  format-out(" or\n");
-  print-filter(filter.right-expression);
+define method print-object (filter :: <or-expression>, stream :: <stream>) => ();
+  format(stream, "(%=) | (%=)", filter.left-expression, filter.right-expression);
 end;
 
-define method print-filter (filter :: <not-expression>)
-  format-out("not ");
-  print-filter(filter.expression);
+define method print-filter (filter :: <not-expression>, stream :: <stream>) => ();
+  format(stream, "~ (%=)", filter.expression);
 end;
 
-//begin
-// print-filter(parse-filter("ip.source-address = 23.23.23.23")); // & ((tcp.source-port = 23) & (foo))"));
-//end;
+define function test-filter()
+  format-out("%=\n",
+             parse-filter("(ip.source-address = 23.23.23.23) & ((tcp.source-port = 23) & (foo))"));
+end;
+

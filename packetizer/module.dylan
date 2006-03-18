@@ -46,7 +46,9 @@ end module packetizer;
 
 define module packet-filter
   use common-dylan;
+  use format;
   use format-out;
+  use print;
   use simple-parser;
   use source-location;
   use source-location-rangemap;
