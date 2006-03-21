@@ -68,6 +68,30 @@ define method push-data-aux (input :: <push-input>,
   end
 end;
 
+define class <ethernet-filter> (<filter>)
+  slot frame-filter :: <filter-expression>,
+    required-init-keyword: frame-filter:;
+end;
+
+define method make (class == <ethernet-filter>,
+                    #rest rest,
+                    #key frame-filter,
+                    #all-keys) => (res :: <ethernet-filter>)
+  if (instance?(frame-filter, <string>))
+    apply(next-method, class, frame-filter: parse-filter(frame-filter), rest);
+  else
+    apply(next-method, class, rest);
+  end if;
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <ethernet-filter>,
+                             frame :: <frame>)
+  if (matches?(frame, node.frame-filter))
+    push-data(node.the-output, frame)
+  end;
+end;
+
 define class <pcap-file-reader> (<single-push-output-node>)
   slot file-name :: <string>, required-init-keyword: name:;
 end;
@@ -83,12 +107,46 @@ define method toplevel (reader :: <pcap-file-reader>)
   end
 end;                    
 
+define class <ethernet-interface> (<filter>)
+  slot unix-interface :: <interface>;
+  slot interface-name :: <string>, required-init-keyword: name:;
+end;
+
+define method initialize (node :: <ethernet-interface>,
+                          #rest rest, #key, #all-keys)
+  next-method();
+  node.unix-interface := make(<interface>, name: node.interface-name);
+end;
+
+define method toplevel (node :: <ethernet-interface>)
+  while(#t)
+    let packet = receive(node.unix-interface);
+    block()
+      let frame = make(unparsed-class(<ethernet-frame>), packet: packet);
+      push-data(node.the-output, frame);
+    exception (error :: <condition>)
+      let frame = parse-frame(<ethernet-frame>, packet);
+      format(*standard-output*,
+             "%= handling packet\n%s\n",
+             error,
+             as(<string>, frame));
+      hexdump(*standard-output*, packet);
+      force-output(*standard-output*);
+    end block;
+  end while;
+end;
+
 begin
-  let reader = make(<pcap-file-reader>, name: "c:\\dylan\\capture.pcap");
+  let interface = make(<ethernet-interface>, name: "eth0");
+  //let reader = make(<pcap-file-reader>, name: "club.pcap");
   let printer = make(<summary-printer>, stream: *standard-output*);
   let decapsulator = make(<decapsulator>);
-  connect(reader, decapsulator);
+  let ip-decap = make(<decapsulator>);
+  //let filter = make(<ethernet-filter>, frame-filter: "ip.source-address = 23.23.23.221");
+  connect(interface, decapsulator);
+  //connect(decapsulator, ip-decap);
+  //connect(ip-decap, filter);
   connect(decapsulator, printer);
-  toplevel(reader);
+  toplevel(interface);
 end;
       

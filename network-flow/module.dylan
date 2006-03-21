@@ -13,7 +13,7 @@ define module network-flow
   use flow;
   use packetizer;
   use packet-filter;
-  
+  use interfaces;
 
   // Add binding exports here.
 

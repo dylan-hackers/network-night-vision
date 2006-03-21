@@ -10,5 +10,4 @@ Files:            library
 	network-flow
 Linker-Options:   $(guilflags)
 Compilation-Mode: loose
-Target-Type:      dll
 
