@@ -33,7 +33,8 @@ define function main()
                        <verbose-printer>
                      else
                        <summary-printer>
-                     end);
+                     end,
+                     stream: *standard-output*);
 
   if (parser.filter)
     let frame-filter = make(<frame-filter>, filter-expression: parser.filter);

@@ -78,7 +78,7 @@ define method make (class == <frame-filter>,
                     #key filter-expression,
                     #all-keys) => (res :: <frame-filter>)
   if (instance?(filter-expression, <string>))
-    apply(next-method, class, frame-filter: parse-filter(filter-expression), rest);
+    apply(next-method, class, filter-expression: parse-filter(filter-expression), rest);
   else
     apply(next-method, class, rest);
   end if;
