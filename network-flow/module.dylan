@@ -17,4 +17,11 @@ define module network-flow
 
   // Add binding exports here.
 
+  export <summary-printer>, <verbose-printer>,
+    <decapsulator>, <demultiplexer>,
+    create-output-for-filter,
+    <frame-filter>,
+    <pcap-file-reader>,
+    <ethernet-interface>,
+    toplevel;
 end module network-flow;

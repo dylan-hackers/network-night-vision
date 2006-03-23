@@ -68,26 +68,26 @@ define method push-data-aux (input :: <push-input>,
   end
 end;
 
-define class <ethernet-filter> (<filter>)
-  slot frame-filter :: <filter-expression>,
-    required-init-keyword: frame-filter:;
+define class <frame-filter> (<filter>)
+  slot frame-filter-expression :: <filter-expression>,
+    required-init-keyword: filter-expression:;
 end;
 
-define method make (class == <ethernet-filter>,
+define method make (class == <frame-filter>,
                     #rest rest,
-                    #key frame-filter,
-                    #all-keys) => (res :: <ethernet-filter>)
-  if (instance?(frame-filter, <string>))
-    apply(next-method, class, frame-filter: parse-filter(frame-filter), rest);
+                    #key filter-expression,
+                    #all-keys) => (res :: <frame-filter>)
+  if (instance?(filter-expression, <string>))
+    apply(next-method, class, frame-filter: parse-filter(filter-expression), rest);
   else
     apply(next-method, class, rest);
   end if;
 end;
 
 define method push-data-aux (input :: <push-input>,
-                             node :: <ethernet-filter>,
+                             node :: <frame-filter>,
                              frame :: <frame>)
-  if (matches?(frame, node.frame-filter))
+  if (matches?(frame, node.frame-filter-expression))
     push-data(node.the-output, frame)
   end;
 end;
@@ -136,17 +136,18 @@ define method toplevel (node :: <ethernet-interface>)
   end while;
 end;
 
+/*
 begin
   let interface = make(<ethernet-interface>, name: "eth0");
   //let reader = make(<pcap-file-reader>, name: "club.pcap");
   let printer = make(<summary-printer>, stream: *standard-output*);
   let decapsulator = make(<decapsulator>);
   let ip-decap = make(<decapsulator>);
-  //let filter = make(<ethernet-filter>, frame-filter: "ip.source-address = 23.23.23.221");
+  //let filter = make(<frame-filter>, filter-expression: "ip.source-address = 23.23.23.221");
   connect(interface, decapsulator);
   //connect(decapsulator, ip-decap);
   //connect(ip-decap, filter);
   connect(decapsulator, printer);
   toplevel(interface);
 end;
-      
+*/    
