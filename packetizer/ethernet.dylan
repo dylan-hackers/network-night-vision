@@ -2,7 +2,7 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define n-byte-vector(<mac-address>, 6) end;
+define n-byte-vector(mac-address, 6) end;
 
 define method read-frame(type == <mac-address>,
                          string :: <string>)

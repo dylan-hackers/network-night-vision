@@ -57,7 +57,7 @@ define protocol security-ip-option-frame (<ip-option-frame>)
   field transmission-control-code :: <3byte-big-endian-unsigned-integer>;
 end;
 
-define n-byte-vector(<ipv4-address>, 4) end;
+define n-byte-vector(ipv4-address, 4) end;
 
 define method read-frame (frame-type == <ipv4-address>, string :: <string>)
  => (res)
@@ -177,14 +177,14 @@ define protocol udp-frame (<header-frame>)
 end;
 
 // FIXME: must do for now
-define n-byte-vector(<4byte-big-endian-unsigned-integer>, 4) end;
+define n-byte-vector(big-endian-unsigned-integer-4byte, 4) end;
 
 define protocol tcp-frame (<header-frame>)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
-  field sequence-number :: <4byte-big-endian-unsigned-integer>;
-  field acknowledgement-number :: <4byte-big-endian-unsigned-integer>;
+  field sequence-number :: <big-endian-unsigned-integer-4byte>;
+  field acknowledgement-number :: <big-endian-unsigned-integer-4byte>;
   field data-offset :: <4bit-unsigned-integer>;
   field reserved :: <6bit-unsigned-integer>;
   field urg :: <1bit-unsigned-integer>;

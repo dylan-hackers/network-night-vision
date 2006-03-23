@@ -769,12 +769,15 @@ end;
 
 define macro n-byte-vector-definer
     { define n-byte-vector(?:name, ?n:*) end }
-     => { define class ?name (<fixed-size-byte-vector-frame>)
+     => { define class "<" ## ?name ## ">" (<fixed-size-byte-vector-frame>)
           end;
 
-          define inline method field-size (type == ?name) => (length :: <integer>)
+          define inline method field-size (type == "<" ## ?name ## ">") => (length :: <integer>)
             ?n * 8;
-          end; }
+          end; 
+
+          define leaf-frame-constructor(?name) end;
+}
 end;
 
 define sealed domain parse-frame (subclass(<fixed-size-byte-vector-frame>),

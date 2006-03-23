@@ -343,3 +343,26 @@ define macro protocol-definer
         gen-classes(?name);
         frame-field-generator("<unparsed-" ## ?name ## ">"; 0; ?fields); }
 end;
+
+define macro leaf-frame-constructor-definer
+  { define leaf-frame-constructor(?:name) end }
+ =>
+  {
+    define method ?name (data :: <byte-vector>) 
+     => (res :: "<" ## ?name ## ">");
+      parse-frame("<" ## ?name ## ">", data)
+    end;
+
+    define method ?name (data :: <collection>)
+     => (res :: "<" ## ?name ## ">");
+      ?name(as(<byte-vector>, data))
+    end;
+
+    define method ?name (data :: <string>)
+     => (res :: "<" ## ?name ## ">");
+      read-frame("<" ## ?name ## ">", data)
+    end;
+
+  }
+end;
+
