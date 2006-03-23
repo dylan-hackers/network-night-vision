@@ -73,7 +73,7 @@ define constant $filter-productions
   production filter => [Name DOT Name EQUALS value], action:
     method(p :: <simple-parser>, data, s, e)
         make(<field-equals>,
-             frame: as(<symbol>, p[0]),
+             frame: as(<symbol>, concatenate("<", p[0], "-frame>")),
              name: as(<symbol>, p[2]),
              value: p[4]); //read-frame(<ipv4-address>, p[4]));
     end;
