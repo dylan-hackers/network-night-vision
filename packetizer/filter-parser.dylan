@@ -62,12 +62,12 @@ define constant $filter-productions
 
   production filter => [TILDE LPAREN filter RPAREN], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<not-expression>, left: p[2]);
+        make(<not-expression>, expression: p[2]);
     end;
 
   production filter => [Name], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<frame-present>, frame: as(<symbol>, p[0]));
+        make(<frame-present>, frame: as(<symbol>, concatenate("<", p[0], "-frame>")));
     end;
 
   production filter => [Name DOT Name EQUALS value], action:

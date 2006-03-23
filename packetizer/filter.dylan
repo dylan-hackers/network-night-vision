@@ -12,6 +12,25 @@ define class <frame-present> (<filter-expression>)
   slot frame-name :: <symbol>, required-init-keyword: frame:;
 end;
 
+define method matches? (packet :: <frame>, filter :: <frame-present>)
+ => (match? :: <boolean>)
+  #f;
+end;
+
+define method matches? (packet :: <container-frame>, filter :: <frame-present>)
+ => (match? :: <boolean>)
+  if (as(<symbol>, packet.name) = filter.frame-name)
+    #t;
+  else
+    #f;
+  end;
+end;
+
+define method matches? (packet :: <header-frame>, filter :: <frame-present>)
+ => (match? :: <boolean>)
+  next-method() | matches?(packet.payload, filter)
+end;
+
 define class <field-equals> (<filter-expression>)
   slot frame-name :: <symbol>, required-init-keyword: frame:;
   slot field-name :: <symbol>, required-init-keyword: name:;
