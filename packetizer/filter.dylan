@@ -39,11 +39,20 @@ end;
 
 define method matches? (packet :: <frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
-  let field = choose(method(x) x.name == filter.field-name end,
-                     packet.frame-fields);
-  field.size > 0 
-    & field.first.getter(packet) = read-frame(field.first.type, 
-                                              filter.field-value);
+  if (as(<symbol>, packet.name) = filter.frame-name)
+    let field = choose(method(x) x.name == filter.field-name end,
+                       packet.frame-fields);
+    field.size > 0 
+      & field.first.getter(packet) = read-frame(field.first.type, 
+                                                filter.field-value);
+  else
+    #f
+  end;
+end;
+
+define method matches? (packet :: <header-frame>, filter :: <field-equals>)
+ => (match? :: <boolean>)
+  next-method() | matches?(packet.payload, filter)
 end;
 
 define class <and-expression> (<filter-expression>)
