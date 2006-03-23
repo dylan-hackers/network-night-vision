@@ -8,13 +8,12 @@ end;
 define generic matches? (packet :: <frame>, filter :: <filter-expression>)
   => (match? :: <boolean>);
 
-define class <frame-present> (<filter-expression>)
-  slot frame-name :: <symbol>, required-init-keyword: frame:;
-end;
-
-define method matches? (packet :: <frame>, filter :: <frame-present>)
+define method matches? (packet :: <frame>, filter :: <filter-expression>)
  => (match? :: <boolean>)
   #f;
+end;
+define class <frame-present> (<filter-expression>)
+  slot frame-name :: <symbol>, required-init-keyword: frame:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <frame-present>)
@@ -37,7 +36,7 @@ define class <field-equals> (<filter-expression>)
   slot field-value, required-init-keyword: value:;
 end;
 
-define method matches? (packet :: <frame>, filter :: <field-equals>)
+define method matches? (packet :: <container-frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
   if (as(<symbol>, packet.name) = filter.frame-name)
     let field = choose(method(x) x.name == filter.field-name end,
