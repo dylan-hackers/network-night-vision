@@ -8,6 +8,7 @@ define library sniffer
   use parse-arguments;
   use flow;
   use network-flow;
+  use system;
 end;
 
 define module sniffer
@@ -15,6 +16,7 @@ define module sniffer
   use streams;
   use format;
   use standard-io;
+  use file-system;
   use flow;
   use network-flow;
   use parse-arguments;

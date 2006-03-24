@@ -14,6 +14,7 @@ define module packetizer
   use byte-vector;
   use subseq;
   use file-system;
+  use date;
 
   // Add binding exports here.
   export <frame>, <ethernet-frame>, <ipv4-frame>,
@@ -29,7 +30,7 @@ define module packetizer
     <leaf-frame>, <container-frame>, frame, type,
     <header-frame>,
     <frame-field>, <repeated-field>, field, name,
-    <pcap-file>, <pcap-file-header>, <pcap-packet>, packets;
+    <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets;
 
   export read-frame;
 

@@ -12,6 +12,8 @@ define argument-parser <sniffer-argument-parser> ()
     kind: <parameter-option-parser>, long: "interface", short: "i";
   option read-pcap, "Dump packets from given pcap file",
     kind: <parameter-option-parser>, long: "read-pcap", short: "r";
+  option write-pcap, "Write packets to given pcap file",
+    kind: <parameter-option-parser>, long: "write-pcap", short: "w";
   option filter, "Filter, ~, |, &, and bracketed filters",
     kind: <parameter-option-parser>, long: "filter", short: "f";
 end;
@@ -22,19 +24,21 @@ define function main()
     print-synopsis(parser, *standard-output*);
     exit-application(0);
   end;
-  let source-name = parser.read-pcap | parser.interface;
-  let source = make(if (parser.read-pcap)
-                      <pcap-file-reader>
-                    else
-                      <ethernet-interface>
-                    end if, name: source-name);
+  let source = if (parser.read-pcap)
+                 make(<pcap-file-reader>,
+                      stream: make(<file-stream>,
+                                   locator: parser.read-pcap,
+                                   direction: #"input"));
+               else
+                 make(<ethernet-interface>,
+                      name: parser.interface);
+               end if;
   let printer = make(if (parser.verbose?)
                        <verbose-printer>
                      else
                        <summary-printer>
                      end,
                      stream: *standard-output*);
-
   if (parser.filter)
     let frame-filter = make(<frame-filter>, filter-expression: parser.filter);
     connect(source, frame-filter);
@@ -42,8 +46,21 @@ define function main()
   else
     connect(source, printer);
   end;
-
   toplevel(source);
+/*
+  if (parser.write-pcap)
+    let writer = make(<pcap-file-writer>,
+                      stream: make(<file-stream>,
+                                   locator: parser.write-pcap,
+                                   direction: #"output",
+                                   if-exists: #"replace"));
+    connect(source, writer);
+    toplevel(source);
+    close(writer.file-stream);
+  end; */
+  if (parser.read-pcap)
+    close(source.file-stream);
+  end;
 end;
 
 main();

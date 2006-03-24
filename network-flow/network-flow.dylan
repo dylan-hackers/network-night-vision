@@ -93,19 +93,37 @@ define method push-data-aux (input :: <push-input>,
 end;
 
 define class <pcap-file-reader> (<single-push-output-node>)
-  slot file-name :: <string>, required-init-keyword: name:;
+  slot file-stream :: <stream>, required-init-keyword: stream:;
 end;
 
 define method toplevel (reader :: <pcap-file-reader>)
-  let file = as(<byte-vector>, with-open-file (stream = reader.file-name,
-                                               direction: #"input")
-                                 stream-contents(stream);
-                               end);
+  let file = as(<byte-vector>, stream-contents(reader.file-stream));
   let pcap-file = parse-frame(<pcap-file>, file);
+//  push-data(reader.the-output, pcap-file.header);
   for(frame in pcap-file.packets)
     push-data(reader.the-output, frame.payload)
   end
 end;                    
+
+define class <pcap-file-writer> (<single-push-input-node>)
+  slot file-stream :: <stream>, required-init-keyword: stream:;
+end;
+
+define method initialize (writer :: <pcap-file-writer>,
+                          #rest rest, #key, #all-keys)
+  next-method();
+  write(writer.file-stream, assemble-frame(make(<pcap-file-header>)));
+  force-output(writer.file-stream);
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <pcap-file-writer>,
+                             frame :: <frame>)
+  format(*standard-output*, "%s\n", as(<string>, frame));
+  write(node.file-stream,
+        assemble-frame(make(<pcap-packet>,
+                            payload: frame)));
+end;
 
 define class <ethernet-interface> (<filter>)
   slot unix-interface :: <interface>;

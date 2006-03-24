@@ -22,6 +22,8 @@ define module network-flow
     create-output-for-filter,
     <frame-filter>,
     <pcap-file-reader>,
+    <pcap-file-writer>,
     <ethernet-interface>,
-    toplevel;
+    toplevel,
+    file-stream;
 end module network-flow;
