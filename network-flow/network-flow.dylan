@@ -39,6 +39,29 @@ define class <demultiplexer> (<single-push-input-node>)
   slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
+define class <fan-out> (<single-push-input-node>)
+  slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
+end;
+
+define method create-output
+ (fan-out :: <fan-out>)
+  let res = make(<push-output>, node: fan-out);
+  add!(fan-out.outputs, res);
+  res;
+end;
+
+define method connect (fan-out :: <fan-out>, input :: <object>)
+  connect(create-output(fan-out), input);
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <fan-out>,
+                             frame :: <frame>)
+  for (output in node.outputs)
+    push-data(output, frame)
+  end;
+end;
+
 define class <filtered-push-output> (<push-output>)
   slot frame-filter :: <filter-expression>,
     required-init-keyword: frame-filter:;
@@ -122,7 +145,7 @@ define method push-data-aux (input :: <push-input>,
   write(node.file-stream,
         assemble-frame(make(<pcap-packet>,
                             payload: frame)));
-  force-output(writer.file-stream);
+  force-output(node.file-stream);
 end;
 
 define class <ethernet-interface> (<filter>)

@@ -46,7 +46,7 @@ define generic get-inputs (node :: <node>) => (inputs);
 
 define generic get-outputs (node :: <node>) => (outputs);
 
-define generic connect (output, input);
+define open generic connect (output, input);
 
 define method connect (output :: <push-output>, input :: <push-input>)
   output.connected-input := input;

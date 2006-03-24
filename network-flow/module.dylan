@@ -23,5 +23,6 @@ define module network-flow
     <pcap-file-reader>,
     <pcap-file-writer>,
     <ethernet-interface>,
+    <fan-out>,
     toplevel;
 end module network-flow;

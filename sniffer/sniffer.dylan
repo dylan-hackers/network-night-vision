@@ -12,7 +12,7 @@ define argument-parser <sniffer-argument-parser> ()
     kind: <parameter-option-parser>, long: "interface", short: "i";
   option read-pcap, "Dump packets from given pcap file",
     kind: <parameter-option-parser>, long: "read-pcap", short: "r";
-  option write-pcap, "Write packets to given pcap file",
+  option write-pcap, "Also write packets to given pcap file",
     kind: <parameter-option-parser>, long: "write-pcap", short: "w";
   option filter, "Filter, ~, |, &, and bracketed filters",
     kind: <parameter-option-parser>, long: "filter", short: "f";
@@ -42,24 +42,29 @@ define function main()
                              direction: #"output",
                              if-exists: #"replace")
                       end;
-  let output = if (parser.write-pcap)
-                 make(<pcap-file-writer>,
-                      stream: output-stream);
-               else
-                 make(if (parser.verbose?)
-                        <verbose-printer>
-                      else
-                        <summary-printer>
-                      end,
-                      stream: *standard-output*);
-               end;
+  let fan-out = make(<fan-out>);
+
   if (parser.filter)
     let frame-filter = make(<frame-filter>, filter-expression: parser.filter);
     connect(source, frame-filter);
-    connect(frame-filter, output);
+    connect(frame-filter, fan-out);
   else
-    connect(source, output);
+    connect(source, fan-out);
   end;
+
+  if (output-stream)
+    connect(fan-out, make(<pcap-file-writer>,
+                          stream: output-stream));
+  end;
+  
+  let output = make(if (parser.verbose?)
+                      <verbose-printer>
+                    else
+                      <summary-printer>
+                    end,
+                    stream: *standard-output*);
+
+  connect(fan-out, output);
   
   toplevel(source);
   
