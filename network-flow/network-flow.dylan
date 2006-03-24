@@ -119,7 +119,6 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <pcap-file-writer>,
                              frame :: <frame>)
-  format(*standard-output*, "%s\n", as(<string>, frame));
   write(node.file-stream,
         assemble-frame(make(<pcap-packet>,
                             payload: frame)));

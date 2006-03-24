@@ -200,7 +200,9 @@ end;
 define function get-frame-field (field-name :: <symbol>, frame :: <container-frame>)
  => (res :: <frame-field>)
   let res = element(frame.concrete-frame-fields, field-name, default: #f);
-  unless (res)
+  if (res)
+    res
+  else
     let field = choose(method(x) x.name = field-name end, frame-fields(frame))[0];
     let length = get-field-size-aux(frame, field);
     let start = 0;

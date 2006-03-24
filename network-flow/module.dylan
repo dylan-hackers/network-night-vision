@@ -7,9 +7,8 @@ define module network-flow
   use common-dylan;
   use threads;
   use format;
-  use standard-io;
   use streams;
-  use file-system;
+  use standard-io;
   use flow;
   use packetizer;
   use packet-filter;
@@ -24,6 +23,5 @@ define module network-flow
     <pcap-file-reader>,
     <pcap-file-writer>,
     <ethernet-interface>,
-    toplevel,
-    file-stream;
+    toplevel;
 end module network-flow;

@@ -24,42 +24,50 @@ define function main()
     print-synopsis(parser, *standard-output*);
     exit-application(0);
   end;
-  let source = if (parser.read-pcap)
+  let input-stream = if (parser.read-pcap)
+                       make(<file-stream>,
+                            locator: parser.read-pcap,
+                            direction: #"input")
+                     end;
+  let source = if (input-stream)
                  make(<pcap-file-reader>,
-                      stream: make(<file-stream>,
-                                   locator: parser.read-pcap,
-                                   direction: #"input"));
+                      stream: input-stream);
                else
                  make(<ethernet-interface>,
                       name: parser.interface);
                end if;
-  let printer = make(if (parser.verbose?)
-                       <verbose-printer>
-                     else
-                       <summary-printer>
-                     end,
-                     stream: *standard-output*);
+  let output-stream = if (parser.write-pcap)
+                        make(<file-stream>,
+                             locator: parser.write-pcap,
+                             direction: #"output",
+                             if-exists: #"replace")
+                      end;
+  let output = if (parser.write-pcap)
+                 make(<pcap-file-writer>,
+                      stream: output-stream);
+               else
+                 make(if (parser.verbose?)
+                        <verbose-printer>
+                      else
+                        <summary-printer>
+                      end,
+                      stream: *standard-output*);
+               end;
   if (parser.filter)
     let frame-filter = make(<frame-filter>, filter-expression: parser.filter);
     connect(source, frame-filter);
-    connect(frame-filter, printer);
+    connect(frame-filter, output);
   else
-    connect(source, printer);
+    connect(source, output);
   end;
+  
   toplevel(source);
-/*
-  if (parser.write-pcap)
-    let writer = make(<pcap-file-writer>,
-                      stream: make(<file-stream>,
-                                   locator: parser.write-pcap,
-                                   direction: #"output",
-                                   if-exists: #"replace"));
-    connect(source, writer);
-    toplevel(source);
-    close(writer.file-stream);
-  end; */
-  if (parser.read-pcap)
-    close(source.file-stream);
+  
+  if (input-stream)
+    close(input-stream);
+  end;
+  if (output-stream)
+    close(output-stream);
   end;
 end;
 
