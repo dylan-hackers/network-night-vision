@@ -6,19 +6,14 @@ define argument-parser <sniffer-argument-parser> ()
   synopsis print-synopsis,
     usage: "sniffer [options]",
     description: "Capture and display packets from a network interface.";
-  option verbose?, short: "v", long: "verbose";
-  option interface = "eth0",
+  option verbose?, "Verbose output, print whole packet",
+    short: "v", long: "verbose";
+  option interface = "eth0", "Interface to listen on (defaults to eth0)",
     kind: <parameter-option-parser>, long: "interface", short: "i";
-  option filter,
+  option read-pcap, "Dump packets from given pcap file",
+    kind: <parameter-option-parser>, long: "read-pcap", short: "r";
+  option filter, "Filter, ~, |, &, and bracketed filters",
     kind: <parameter-option-parser>, long: "filter", short: "f";
-end;
-
-define function join(joiner :: <string>, strings :: <collection>)
-  if(strings.size = 0)
-    ""
-  else
-    reduce1(method (x, y) concatenate(x, joiner, y) end, strings);
-  end;
 end;
 
 define function main()
@@ -27,8 +22,12 @@ define function main()
     print-synopsis(parser, *standard-output*);
     exit-application(0);
   end;
-
-  let source = make(<ethernet-interface>, name: parser.interface);
+  let source-name = parser.read-pcap | parser.interface;
+  let source = make(if (parser.read-pcap)
+                      <pcap-file-reader>
+                    else
+                      <ethernet-interface>
+                    end if, name: source-name);
   let printer = make(if (parser.verbose?)
                        <verbose-printer>
                      else

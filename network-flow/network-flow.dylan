@@ -103,7 +103,7 @@ define method toplevel (reader :: <pcap-file-reader>)
                                end);
   let pcap-file = parse-frame(<pcap-file>, file);
   for(frame in pcap-file.packets)
-    push-data(reader.the-output, frame)
+    push-data(reader.the-output, frame.payload)
   end
 end;                    
 
