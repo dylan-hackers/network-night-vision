@@ -122,6 +122,7 @@ define method push-data-aux (input :: <push-input>,
   write(node.file-stream,
         assemble-frame(make(<pcap-packet>,
                             payload: frame)));
+  force-output(writer.file-stream);
 end;
 
 define class <ethernet-interface> (<filter>)
