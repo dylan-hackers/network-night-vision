@@ -12,6 +12,8 @@ define argument-parser <sniffer-argument-parser> ()
     kind: <parameter-option-parser>, long: "interface", short: "i";
   option read-pcap, "Dump packets from given pcap file",
     kind: <parameter-option-parser>, long: "read-pcap", short: "r";
+  option show-ethernet, "Show Ethernet header information",
+    long: "show-ethernet", short: "e";
   option write-pcap, "Also write packets to given pcap file",
     kind: <parameter-option-parser>, long: "write-pcap", short: "w";
   option filter, "Filter, ~, |, &, and bracketed filters",
@@ -63,8 +65,13 @@ define function main()
                       <summary-printer>
                     end,
                     stream: *standard-output*);
-
-  connect(fan-out, output);
+  if (parser.show-ethernet)
+    connect(fan-out, output)
+  else
+    let decapsulator = make(<decapsulator>);
+    connect(fan-out, decapsulator);
+    connect(decapsulator, output)
+  end;
   
   toplevel(source);
   
