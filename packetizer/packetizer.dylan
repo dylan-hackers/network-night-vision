@@ -423,9 +423,17 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
   apply(concatenate,
         format-to-string("%=\n", frame.object-class),
         map(method(field :: <field>)
+                           let field-value = field.getter(frame);
+                           let field-as-string 
+                             = if (instance?(field-value, <collection>))
+                                 reduce(method(x, y) concatenate(x, " ", as(<string>, y)) end,
+                                        "", field-value)
+                               else
+                                 as(<string>, field-value)
+                               end;
                            concatenate(as(<string>, field.name),
                                        ": ",
-                                       as(<string>, field.getter(frame)),
+                                       field-as-string,
                                        "\n")
                          end, frame-fields(frame)))
 end;
