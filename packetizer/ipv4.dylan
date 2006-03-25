@@ -2,13 +2,13 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define protocol ip-option-type-frame (<container-frame>)
+define protocol ip-option-type-frame (container-frame)
   field flag :: <1bit-unsigned-integer>;
   field class :: <2bit-unsigned-integer>;
   field number :: <5bit-unsigned-integer>;
 end;
 
-define protocol ip-option-frame (<container-frame>)
+define protocol ip-option-frame (container-frame)
   field option-type :: <ip-option-type-frame>;
 end;
 
@@ -43,13 +43,13 @@ define method parse-frame (frame-type == <ip-option-frame>,
    parse-frame(option-frame-type, packet, start: start);
 end;
 
-define protocol end-of-option-ip-option (<ip-option-frame>)
+define protocol end-of-option-ip-option (ip-option-frame)
 end;
 
-define protocol no-operation-ip-option (<ip-option-frame>)
+define protocol no-operation-ip-option (ip-option-frame)
 end;
 
-define protocol security-ip-option-frame (<ip-option-frame>)
+define protocol security-ip-option-frame (ip-option-frame)
   field length :: <unsigned-byte>;
   field security :: <2byte-big-endian-unsigned-integer>;
   field compartments :: <2byte-big-endian-unsigned-integer>;
@@ -110,7 +110,7 @@ define method fixup! (frame :: <icmp-frame>,
   next-method();
 end;
 
-define protocol ipv4-frame (<header-frame>)
+define protocol ipv4-frame (header-frame)
   summary "IP SRC %= DST %=/%s",
     source-address, destination-address, compose(summary, payload);
   field version :: <4bit-unsigned-integer> = 4;
@@ -159,7 +159,7 @@ define constant $broken-ipv4
          #x00, #x00, #x00, #x00]);
 
 
-define protocol icmp-frame (<header-frame>)
+define protocol icmp-frame (header-frame)
   summary "ICMP type %= code %=", type, code;
   field type :: <unsigned-byte>;
   field code :: <unsigned-byte>;
@@ -167,19 +167,25 @@ define protocol icmp-frame (<header-frame>)
   field payload :: <raw-frame>;
 end;
 
-define protocol udp-frame (<header-frame>)
-  summary "UDP port %= -> %=", source-port, destination-port;
+define protocol udp-frame (header-frame)
+  summary "UDP port %= -> %=/%s", source-port, destination-port, compose(summary, payload);
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
   field length :: <2byte-big-endian-unsigned-integer>;
   field checksum :: <2byte-big-endian-unsigned-integer>;
-  field payload :: <raw-frame>, end: frame.length * 8;  
+  variably-typed-field payload,
+    end: frame.length * 8,
+    type-function: if (frame.source-port = 53 | frame.destination-port = 53)
+                     <dns-header>
+                   else
+                     <raw-frame>
+                   end;  
 end;
 
 // FIXME: must do for now
 define n-byte-vector(big-endian-unsigned-integer-4byte, 4) end;
 
-define protocol tcp-frame (<header-frame>)
+define protocol tcp-frame (header-frame)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
@@ -207,7 +213,7 @@ define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
             list("U", "A", "P", "R", "S", "F")))
 end;
               
-define protocol arp-frame (<container-frame>)
+define protocol arp-frame (container-frame)
   field mac-address-type :: <2byte-big-endian-unsigned-integer> = 1;
   field protocol-address-type :: <2byte-big-endian-unsigned-integer> = #x800;
   field mac-address-size :: <unsigned-byte> = byte-offset(field-size(<mac-address>));

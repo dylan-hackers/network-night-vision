@@ -3,7 +3,7 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 
-define protocol dns-header (<container-frame>)
+define protocol dns-header (container-frame)
   field identifier :: <2byte-big-endian-unsigned-integer>;
   field query-or-response :: <1bit-unsigned-integer>;
   field opcode :: <4bit-unsigned-integer>;
@@ -28,17 +28,53 @@ define protocol dns-header (<container-frame>)
 end;
 
 
-define protocol label (<container-frame>)
-  field length :: <unsigned-byte>;
-  repeated field data :: <unsigned-byte>,
-    count: frame.length;
+define protocol domain-name (container-frame)
+  field type-code :: <2bit-unsigned-integer>;
+  field length-or-offset :: <6bit-unsigned-integer>;
 end;
 
-define protocol dns-question (<container-frame>)
-  repeated field domainname :: <label>,
-    reached-end?: method(frame :: <label>)
-                      frame.length = 0
+define protocol label-offset (domain-name)
+end;
+
+define protocol label (domain-name)
+  repeated field data :: <unsigned-byte>,
+    count: frame.length-or-offset;
+end;
+
+define method parse-frame (frame-type == <domain-name>,
+                           packet :: <byte-sequence>,
+                           #key start :: <integer> = 0)
+ => (value :: <domain-name>, next-unparsed :: <integer>)
+  byte-aligned(start);
+  let domain-name = make(unparsed-class(<domain-name>),
+                         packet: subsequence(packet, start: byte-offset(start)));
+  let label-frame-type
+    = select (domain-name.type-code)
+        0 => <label>;
+        3 => <label-offset>;
+        otherwise => signal(make(<malformed-packet-error>))
+      end;
+   parse-frame(label-frame-type, packet, start: start);
+end;
+
+
+define protocol dns-question (container-frame)
+  repeated field domainname :: <domain-name>,
+    reached-end?: method(frame :: <domain-name>)
+                      frame.length-or-offset = 0 | frame.type-code = 3
                   end;
   field question-type :: <2byte-big-endian-unsigned-integer>;
   field question-class :: <2byte-big-endian-unsigned-integer>;
+end;
+
+define protocol dns-resource-record (container-frame)
+  repeated field domainname :: <domain-name>,
+    reached-end?: method(frame :: <domain-name>)
+                      frame.length-or-offset = 0 | frame.type-code = 3
+                  end;
+  field rr-type :: <2byte-big-endian-unsigned-integer>;
+  field rr-class :: <2byte-big-endian-unsigned-integer>;
+  field ttl :: <big-endian-unsigned-integer-4byte>;
+  field rdlength :: <2byte-big-endian-unsigned-integer>;
+  field rdata :: <raw-frame>, length: frame.rdlength;
 end;

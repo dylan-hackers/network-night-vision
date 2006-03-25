@@ -36,7 +36,7 @@ define method as (class == <string>, frame :: <mac-address>) => (string :: <stri
                  frame.data))
 end;
 
-define protocol ethernet-frame (<header-frame>)
+define protocol ethernet-frame (header-frame)
   summary "ETH %= -> %=/%s",
     source-address, destination-address, compose(summary, payload);
   field destination-address :: <mac-address>;

@@ -19,23 +19,26 @@ define class <unknown-at-compile-time> (<number>)
 end;
 
 define constant $unknown-at-compile-time = make(<unknown-at-compile-time>);
-define sealed domain \+ (<number>, <unknown-at-compile-time>);
-define sealed domain \+ (<unknown-at-compile-time>, <number>);
+
+define constant <integer-or-unknown> = type-union(<integer>,
+                                                  singleton($unknown-at-compile-time));
+define sealed domain \+ (<integer-or-unknown>, <unknown-at-compile-time>);
+define sealed domain \+ (<unknown-at-compile-time>, <integer-or-unknown>);
 define sealed domain \+ (<unknown-at-compile-time>, <unknown-at-compile-time>);
 
-define method \+ (a :: <number>, b :: <unknown-at-compile-time>)
- => (res :: <number>)
-  b
+define method \+ (a :: <integer-or-unknown>, b :: <unknown-at-compile-time>)
+ => (res :: singleton($unknown-at-compile-time))
+  $unknown-at-compile-time
 end;
 
-define method \+ (a :: <unknown-at-compile-time>, b :: <number>)
- => (res :: <number>)
-  a
+define method \+ (a :: <unknown-at-compile-time>, b :: <integer-or-unknown>)
+ => (res :: singleton($unknown-at-compile-time))
+  $unknown-at-compile-time
 end;
 
 define method \+ (a :: <unknown-at-compile-time>, b :: <unknown-at-compile-time>)
- => (res :: <number>)
-  a
+ => (res :: singleton($unknown-at-compile-time))
+  $unknown-at-compile-time
 end;
 
 define constant <byte-sequence> = <byte-vector-subsequence>;
@@ -197,6 +200,15 @@ define abstract class <container-frame> (<variable-size-untranslated-frame>)
     init-keyword: frame-fields:;
 end;
 
+define abstact class <container-frame-cache> (<container-frame>) end;
+define abstact class <decoded-container-frame> (<container-frame>) end;
+define abstact class <unparsed-container-frame> (<container-frame>)
+  slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
+    init-keyword: packet:;
+  slot cache :: <container-frame-cache>;
+end;
+
+
 define function get-frame-field (field-name :: <symbol>, frame :: <container-frame>)
  => (res :: <frame-field>)
   let res = element(frame.concrete-frame-fields, field-name, default: #f);
@@ -238,6 +250,16 @@ end;
 define abstract class <header-frame> (<container-frame>)
 end;
 
+define abstract class <header-frame-cache>
+  (<header-frame>, <container-frame-cache>)
+end;
+define abstract class <decoded-header-frame>
+  (<header-frame>, <decoded-container-frame>)
+end;
+define abstract class <unparsed-header-frame>
+  (<header-frame>, <unparsed-container-frame>)
+end;
+
 define method payload (frame :: <header-frame>) => (payload :: <frame>)
   error("No payload specified");
 end;
@@ -255,11 +277,16 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.frame-fields));
 end;
 
+define variable *recursion-count* = 0;
 define method parse-frame (frame-type :: subclass(<container-frame>),
                            packet :: <byte-vector-subsequence>,
                            #key start :: <integer> = 0,
                            parent :: false-or(<container-frame>) = #f)
  => (frame :: <container-frame>, next-unparsed :: <integer>);
+  *recursion-count* := *recursion-count* + 1;
+  if (*recursion-count* > 20)
+    break()
+  end;
   let res = make(unparsed-class(frame-type),
                  packet: subsequence(packet, start: byte-offset(start)),
                  parent: parent);
@@ -268,7 +295,8 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
   for (field in frame-fields(res),
        i from 0)
     let type = get-frame-type(field, res);
-    let end-of-field = start + field-size(type);
+
+    let end-of-field = start + static-field-size(field);
     if (end-of-field = $unknown-at-compile-time)
       if (field.end-offset)
         end-of-field := field.end-offset(res);
@@ -297,7 +325,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                                          packet.size
                                        end),
                       res);
-
+    field.setter(value, res.cache);
     concrete-frame-fields[field.name] :=  make(<frame-field>,
                                                start: start,
                                                end: offset,
@@ -321,6 +349,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
   args := add!(args, concrete-frame-fields);
   let decoded-frame = apply(make, decoded-class(frame-type), args);
   fixup-parent(decoded-frame, parent);
+  *recursion-count* := *recursion-count* - 1;
   values(decoded-frame, start);
 end;
 
@@ -472,9 +501,11 @@ define abstract class <field> (<object>)
   slot length = #f, init-keyword: length:;
 end;
 
-define abstract class <fixed-position-mixin> (<object>)
-  slot start-offset :: <integer>, required-init-keyword: start:;
-  slot end-offset :: <integer>, required-init-keyword: end:;
+define generic static-field-size (field :: <field>) => (res :: <integer-or-unknown>);
+
+define method static-field-size (field :: <field>)
+ => (res :: singleton($unknown-at-compile-time));
+  $unknown-at-compile-time
 end;
 
 define abstract class <statically-typed-field> (<field>)
@@ -482,6 +513,10 @@ define abstract class <statically-typed-field> (<field>)
 end;
 
 define class <single-field> (<statically-typed-field>)
+end;
+
+define method static-field-size (field :: <single-field>) => (res :: <integer-or-unknown>)
+  field.type.field-size
 end;
 
 define class <variably-typed-field> (<field>)

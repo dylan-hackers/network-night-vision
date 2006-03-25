@@ -139,7 +139,7 @@ define macro decoded-class-definer
 end;
 
 define macro gen-classes
-  { gen-classes(?:name) }
+  { gen-classes(?:name; ?superframe:name) }
  => { define inline method cache-class
        (type :: subclass("<" ## ?name ## ">")) => (class == "<" ## ?name ## "-cache>");
         "<" ## ?name ## "-cache>"
@@ -155,10 +155,8 @@ define macro gen-classes
         "<decoded-" ## ?name ## ">"
       end;
 
-      define class "<unparsed-" ## ?name ## ">" ("<" ## ?name ## ">")
-        slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
-          init-keyword: packet:;
-        slot cache :: "<" ## ?name ## ">" = make("<" ## ?name ## "-cache>");
+      define class "<unparsed-" ## ?name ## ">" ("<" ## ?name ## ">", "<unparsed-" ## ?superframe ## ">")
+        inherited slot cache :: "<" ## ?name ## ">" = make("<" ## ?name ## "-cache>");
       end; }
 end;
 
@@ -327,20 +325,24 @@ define macro summary-generator
 end;
 
 define macro protocol-definer
-    { define protocol ?:name (?superclasses:*)
+    { define protocol ?:name (?superprotocol:name)
         summary ?summary:* ;
         ?fields:*
       end } =>
       { summary-generator("<" ## ?name ## ">"; ?summary);
-        define protocol ?name (?superclasses) ?fields end; }
+        define protocol ?name (?superprotocol) ?fields end; }
 
-    { define protocol ?:name (?superclasses:*)
+    { define protocol ?:name (?superprotocol:name)
         ?fields:*
       end } =>
-      { real-class-definer("<" ## ?name ## ">"; ?superclasses; ?fields);
-        cache-class-definer("<" ## ?name ## "-cache>"; "<" ## ?name ## ">"; ?fields);
-        decoded-class-definer("<decoded-" ## ?name ## ">"; "<" ## ?name ## ">"; ?fields);
-        gen-classes(?name);
+      { real-class-definer("<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
+        cache-class-definer("<" ## ?name ## "-cache>";
+                            "<" ## ?name ## ">", "<" ## ?superprotocol ## "-cache>";
+                            ?fields);
+        decoded-class-definer("<decoded-" ## ?name ## ">";
+                              "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
+                              ?fields);
+        gen-classes(?name; ?superprotocol);
         frame-field-generator("<unparsed-" ## ?name ## ">"; 0; ?fields); }
 end;
 
