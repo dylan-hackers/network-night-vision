@@ -200,12 +200,12 @@ define abstract class <container-frame> (<variable-size-untranslated-frame>)
     init-keyword: frame-fields:;
 end;
 
-define abstact class <container-frame-cache> (<container-frame>) end;
-define abstact class <decoded-container-frame> (<container-frame>) end;
-define abstact class <unparsed-container-frame> (<container-frame>)
+define abstract class <container-frame-cache> (<container-frame>) end;
+define abstract class <decoded-container-frame> (<container-frame>) end;
+define abstract class <unparsed-container-frame> (<container-frame>)
   slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
     init-keyword: packet:;
-  slot cache :: <container-frame-cache>;
+  slot cache :: <container-frame>;
 end;
 
 
