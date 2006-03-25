@@ -277,16 +277,11 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.frame-fields));
 end;
 
-define variable *recursion-count* = 0;
 define method parse-frame (frame-type :: subclass(<container-frame>),
                            packet :: <byte-vector-subsequence>,
                            #key start :: <integer> = 0,
                            parent :: false-or(<container-frame>) = #f)
  => (frame :: <container-frame>, next-unparsed :: <integer>);
-  *recursion-count* := *recursion-count* + 1;
-  if (*recursion-count* > 20)
-    break()
-  end;
   let res = make(unparsed-class(frame-type),
                  packet: subsequence(packet, start: byte-offset(start)),
                  parent: parent);
@@ -349,7 +344,6 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
   args := add!(args, concrete-frame-fields);
   let decoded-frame = apply(make, decoded-class(frame-type), args);
   fixup-parent(decoded-frame, parent);
-  *recursion-count* := *recursion-count* - 1;
   values(decoded-frame, start);
 end;
 
@@ -733,6 +727,7 @@ define n-bit-unsigned-integer(<4bit-unsigned-integer>; 4) end;
 define n-bit-unsigned-integer(<5bit-unsigned-integer>; 5) end;
 define n-bit-unsigned-integer(<6bit-unsigned-integer>; 6) end;
 define n-bit-unsigned-integer(<13bit-unsigned-integer>; 13) end;
+define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
 
 define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
                            packet :: <byte-sequence>,
