@@ -44,6 +44,13 @@ define protocol label (domain-name)
     count: frame.length;
 end;
 
+define method as (class == <string>, label :: <label>)
+ => (res :: <string>)
+  let res = make(<string>, size: label.length);
+  copy-bytes(label.data, 0, res, 0, label.length);
+  res;
+end;  
+
 define method parse-frame (frame-type == <domain-name>,
                            packet :: <byte-sequence>,
                            #key start :: <integer> = 0)
