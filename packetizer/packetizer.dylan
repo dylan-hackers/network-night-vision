@@ -1044,38 +1044,42 @@ define method read-frame (type :: subclass(<little-endian-unsigned-integer-byte-
   res;
 end;
 
-define class <raw-frame> (<variable-size-untranslated-leaf-frame>)
+
+define abstract class <variable-size-byte-vector> (<variable-size-untranslated-leaf-frame>)
   slot data :: <byte-vector>, required-init-keyword: data:;
 end;
 
-define method frame-size (raw-frame :: <raw-frame>) => (res :: <integer>)
-  raw-frame.data.size * 8
+define method frame-size (frame :: <variable-size-byte-vector>) => (res :: <integer>)
+  frame.data.size * 8
 end;
 
-define method parse-frame (frame-type == <raw-frame>,
+define method parse-frame (frame-type :: subclass(<variable-size-byte-vector>),
                            packet :: <byte-sequence>,
                            #key start :: <integer> = 0)
- => (frame :: <raw-frame>, next-unparsed :: <integer>)
+ => (frame :: <variable-size-byte-vector>, next-unparsed :: <integer>)
  byte-aligned(start);
  if (packet.size < byte-offset(start))
    signal(make(<malformed-packet-error>))
  else
-   values(make(<raw-frame>,
+   values(make(frame-type,
                data: copy-sequence(packet, start: byte-offset(start))),
           packet.size * 8)
  end
 end;
 
-define method assemble-frame (frame :: <raw-frame>)
+define method assemble-frame (frame :: <variable-size-byte-vector>)
  => (packet :: <byte-vector>)
  frame.data
 end;
 
-define method assemble-frame-into (frame :: <raw-frame>,
+define method assemble-frame-into (frame :: <variable-size-byte-vector>,
                                    packet :: <byte-vector>,
                                    start :: <integer>)
   byte-aligned(start);
   copy-bytes(frame.data, 0, packet, byte-offset(start), frame.data.size);
+end;
+
+define class <raw-frame> (<variable-size-byte-vector>)
 end;
 
 define method as (class == <string>, frame :: <raw-frame>) => (res :: <string>)
@@ -1094,3 +1098,4 @@ define method read-frame (type == <raw-frame>,
   make(<raw-frame>,
        data: copy-sequence(string));
 end;
+
