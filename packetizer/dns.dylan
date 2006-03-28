@@ -31,7 +31,7 @@ end;
 
 
 define protocol domain-name (container-frame)
-  repeated field data :: <domain-name-fragment>,
+  repeated field fragment :: <domain-name-fragment>,
     reached-end?: method(frame :: <domain-name-fragment>)
                       frame.type-code = 3 | frame.length = 0
                   end;
@@ -39,7 +39,7 @@ end;
 
 define method as (class == <string>, domain-name :: <domain-name>)
  => (res :: <string>)
-  let strings = map(curry(as, <string>), domain-name.data);
+  let strings = map(curry(as, <string>), domain-name.fragment);
   reduce1(method(a, b) concatenate(a, ".",  b) end, strings);
 end;
 
@@ -52,7 +52,7 @@ define protocol label-offset (domain-name-fragment)
 end;
 
 define function find-label (label-offset :: <label-offset>)
- => (label :: false-or(<label>))
+ => (label :: false-or(<domain-name>))
   local method find-dns-frame (frame :: <frame>)
           if (instance?(frame, <dns-header>))
             frame;
@@ -60,9 +60,8 @@ define function find-label (label-offset :: <label-offset>)
             find-dns-frame(frame.parent);
           end;
         end;
-  let frame = find-dns-frame(label-offset);
-  any?(method(x) x.start-offset = label-offset.offset end,
-       sorted-frame-fields(frame));
+  let dns-frame = find-dns-frame(label-offset);
+  dns-frame & parse-frame(<domain-name>, assemble-frame(dns-frame), start: label-offset.offset * 8, parent: dns-frame);
 end;
 
 define method as (class == <string>, label-offset :: <label-offset>)
@@ -70,17 +69,25 @@ define method as (class == <string>, label-offset :: <label-offset>)
   as(<string>, find-label(label-offset));
 end;
 
+define class <variable-length-byte-vector> (<variable-size-byte-vector>)
+end;
+
+define method as (class == <string>, frame :: <variable-length-byte-vector>)
+ => (res :: <string>)
+  let res = make(<string>, size: byte-offset(frame-size(frame)));
+  copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
+  res;
+end;
+
 define protocol label (domain-name-fragment)
   field length :: <6bit-unsigned-integer>;
-  repeated field data :: <unsigned-byte>,
-    count: frame.length;
+  field raw-data :: <variable-length-byte-vector>,
+    length: frame.length * 8;
 end;
 
 define method as (class == <string>, label :: <label>)
  => (res :: <string>)
-  let res = make(<string>, size: label.length);
-  copy-bytes(label.data, 0, res, 0, label.length);
-  res;
+  as(<string>, label.raw-data);
 end;  
 
 define method parse-frame (frame-type == <domain-name-fragment>,
