@@ -51,9 +51,23 @@ define protocol label-offset (domain-name-fragment)
   field offset :: <14bit-unsigned-integer>;
 end;
 
+define function find-label (label-offset :: <label-offset>)
+ => (label :: false-or(<label>))
+  local method find-dns-frame (frame :: <frame>)
+          if (instance?(frame, <dns-header>))
+            frame;
+          elseif (frame.parent)
+            find-dns-frame(frame.parent);
+          end;
+        end;
+  let frame = find-dns-frame(label-offset);
+  any?(method(x) x.start-offset = label-offset.offset end,
+       sorted-frame-fields(frame));
+end;
+
 define method as (class == <string>, label-offset :: <label-offset>)
  => (res :: <string>)
-  concatenate(" offset at ", integer-to-string(label-offset.offset));
+  as(<string>, find-label(label-offset));
 end;
 
 define protocol label (domain-name-fragment)
@@ -65,7 +79,7 @@ end;
 define method as (class == <string>, label :: <label>)
  => (res :: <string>)
   let res = make(<string>, size: label.length);
-  copy-bytes(label.data, 0, res, 0, label.data.size);
+  copy-bytes(label.data, 0, res, 0, label.length);
   res;
 end;  
 
