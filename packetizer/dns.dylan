@@ -118,7 +118,7 @@ define protocol dns-resource-record (container-frame)
   field domainname :: <domain-name>;
   field rr-type :: <2byte-big-endian-unsigned-integer>;
   field rr-class :: <2byte-big-endian-unsigned-integer>;
-  field ttl :: <big-endian-unsigned-integer-4byte>;
+  field ttl :: <big-endian-unsigned-integer>;
   field rdlength :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field rdata,
     type-function: select (frame.rr-type)
@@ -127,9 +127,9 @@ define protocol dns-resource-record (container-frame)
                      5 => <canonical-name>;
                      6 => <start-of-authority>;
                      12 => <domain-name-pointer>;
-                     //13 => <host-information>;
+                     13 => <host-information>;
                      15 => <mail-exchange>;
-                     //16 => <text-strings>;
+                     16 => <text-strings>;
                      otherwise => <raw-frame>;
                    end,
     length: frame.rdlength * 8;
@@ -151,16 +151,16 @@ define protocol start-of-authority (container-frame)
   field nameserver :: <domain-name>;
   field hostmaster :: <domain-name>;
   field serial :: <big-endian-unsigned-integer-4byte>;
-  field refresh :: <big-endian-unsigned-integer-4byte>;
-  field retry :: <big-endian-unsigned-integer-4byte>;
-  field expire :: <big-endian-unsigned-integer-4byte>;
-  field minimum :: <big-endian-unsigned-integer-4byte>;
+  field refresh :: <big-endian-unsigned-integer>;
+  field retry :: <big-endian-unsigned-integer>;
+  field expire :: <big-endian-unsigned-integer>;
+  field minimum :: <big-endian-unsigned-integer>;
 end;
 
 define protocol domain-name-pointer (container-frame)
   field ptr-name :: <domain-name>;
 end;
-/*
+
 define protocol host-information (container-frame)
   field cpu :: <character-string>;
   field operating-system :: <character-string>; 
@@ -168,17 +168,21 @@ end;
 
 define protocol character-string (container-frame)
   field length :: <unsinged-byte>;
-  field data :: <string>, length: frame.length;
+  field data :: <variable-length-byte-vector>,
+    length: frame.length * 8;
 end;
-*/
+
+define method as (class == <string>, frame :: <character-string>)
+ => (res :: <string>)
+  as(<string>, frame.data);
+end;
 
 define protocol mail-exchange (container-frame)
   field preference :: <2byte-big-endian-unsigned-integer>;
   field exchange :: <domain-name>;
 end;
 
-/*
 define protocol text-strings (container-frame)
   repeated field data :: <character-string>;
 end;
-*/
+

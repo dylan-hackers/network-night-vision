@@ -87,16 +87,11 @@ define variable *frame* = #f;
 
 begin
   let file = as(<byte-vector>, 
-                with-open-file (stream = "c:\\dylan\\capture.pcap",
+                with-open-file (stream = "c:\\cap.pcap",
                                 direction: #"input")
                   stream-contents(stream);
                 end);
-  let filter = make(<field-equals>,
-                    name: #"destination-address",
-                    value: parse-frame(<mac-address>,
-                                       as(<byte-vector>, #[#x01, #x00, #x0c, #xcc, #xcc, #xcd]))); 
-  *frame* := choose(rcurry(matches?, filter),
-                    map(payload, parse-frame(<pcap-file>, file).packets));
+ *frame* := map(payload, parse-frame(<pcap-file>, file).packets);
   contain(frame-viewer(*frame*));
 end;
 
