@@ -161,15 +161,15 @@ define protocol domain-name-pointer (container-frame)
   field ptr-name :: <domain-name>;
 end;
 
+define protocol character-string (container-frame)
+  field length :: <unsigned-byte>;
+  field data :: <variable-length-byte-vector>,
+    length: frame.length * 8;
+end;
+
 define protocol host-information (container-frame)
   field cpu :: <character-string>;
   field operating-system :: <character-string>; 
-end;
-
-define protocol character-string (container-frame)
-  field length :: <unsinged-byte>;
-  field data :: <variable-length-byte-vector>,
-    length: frame.length * 8;
 end;
 
 define method as (class == <string>, frame :: <character-string>)
@@ -183,6 +183,6 @@ define protocol mail-exchange (container-frame)
 end;
 
 define protocol text-strings (container-frame)
-  repeated field data :: <character-string>;
+  field data :: <character-string>;
 end;
 
