@@ -2,28 +2,42 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+
 define macro real-class-definer
-  { real-class-definer(?:name; ?superclasses:*; ?fields:*) }
+  { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
       end;
-      define inline method frame-fields (frame :: subclass(?name), #next next-method) => (fields :: <list>)
-        concatenate(next-method(), list(?fields));
+      define inline method fields (frame :: ?name) => (res :: <simple-vector>)
+          "$" ## ?name ## "-fields"
       end;
+      define method fields-initializer
+          (frame :: subclass(?name), #next next-method) => (frame-fields :: <simple-vector>)
+        let res = concatenate(next-method(), vector(?fields-aux));
+        for (ele in res,
+             i from 0)
+          ele.index := i;
+        end;
+        res;
+      end;
+      define constant "$" ## ?name ## "-fields" = fields-initializer(?name);
       define inline method name (frame :: ?name)
         ?"name"
       end;
+      define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
+        static-end(last("$" ## ?name ## "-fields"));
+      end;
       define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
         let frame = apply(make, cache-class(?name), rest);
-        for (field in frame-fields(?name))
+        for (field in fields(frame))
           if (field.getter(frame) = #f)
             field.setter(field.init-value, frame);
           end;
         end;
         frame;
       end;
- }
+    }
 
-  fields:
+  fields-aux:
    { } => { }
    { field ?:name \:: ?field-type:name; ... }
      => { make(<single-field>,
@@ -54,14 +68,14 @@ define macro real-class-definer
    { field ?:name \:: ?field-type:name = ?init:expression ; ... }
      => { make(<single-field>,
                name: ?#"name",
-               init: ?init,
+               init-value: ?init,
                type: ?field-type,
                getter: ?name,
                setter: ?name ## "-setter"), ... }
    { field ?:name \:: ?field-type:name = ?init:expression , ?args:*; ... }
      => { make(<single-field>,
                name: ?#"name",
-               init: ?init,
+               init-value: ?init,
                type: ?field-type,
                getter: ?name,
                setter: ?name ## "-setter",
@@ -69,14 +83,14 @@ define macro real-class-definer
    { variably-typed-field ?:name = ?init:expression , ?args:*; ... }
      => { make(<variably-typed-field>,
                name: ?#"name",
-               init: ?init,
+               init-value: ?init,
                getter: ?name,
                setter: ?name ## "-setter",
                ?args), ... }
    { repeated field ?:name \:: ?field-type:name = ?init:expression, ?args:*; ... }
      => { make(<repeated-field>,
                name: ?#"name",
-               init: ?init,
+               init-value: ?init,
                type: ?field-type,
                getter: ?name,
                setter: ?name ## "-setter",
@@ -99,6 +113,7 @@ define macro real-class-definer
     { fixup: ?fixup:expression, ... }
       => { fixup: method(?=frame :: <frame>) ?fixup end, ... }
 end;
+
 
 define macro cache-class-definer
     { cache-class-definer(?:name; ?superclasses:*; ?fields:*) } 
@@ -343,7 +358,8 @@ define macro protocol-definer
                               "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
                               ?fields);
         gen-classes(?name; ?superprotocol);
-        frame-field-generator("<unparsed-" ## ?name ## ">"; 0; ?fields); }
+        frame-field-generator("<unparsed-" ## ?name ## ">"; 0; ?fields);
+      }
 end;
 
 define macro leaf-frame-constructor-definer

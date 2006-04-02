@@ -40,7 +40,7 @@ define method matches? (packet :: <container-frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
   if (as(<symbol>, packet.name) = filter.frame-name)
     let field = choose(method(x) x.name == filter.field-name end,
-                       packet.frame-fields);
+                       packet.fields);
     field.size > 0 
       & field.first.getter(packet) = read-frame(field.first.type, 
                                                 filter.field-value);

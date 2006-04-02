@@ -94,17 +94,6 @@ define inline method high-level-type (object :: subclass(<frame>)) => (res :: <t
   object
 end;
 
-define generic frame-fields (frame :: type-union(<container-frame>,
-                                                 subclass(<container-frame>)))
-  => (fields :: <sequence>);
-
-define inline method frame-fields (frame :: subclass(<container-frame>)) => (fields :: <list>)
-  #()
-end;
-
-define inline method frame-fields (frame :: <container-frame>) => (fields :: <list>)
-  frame-fields(frame.object-class);
-end;
 
 define method fixup!(frame :: type-union(<container-frame>, <raw-frame>),
                      packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
@@ -123,6 +112,7 @@ define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-fra
 define generic field-size (frame :: subclass(<frame>))
  => (length :: <number>);
 
+define sealed domain field-size(subclass(<frame>));
 define inline method field-size (frame :: subclass(<frame>))
  => (length :: <unknown-at-compile-time>)
   $unknown-at-compile-time;
@@ -200,6 +190,14 @@ define abstract class <container-frame> (<variable-size-untranslated-frame>)
     init-keyword: frame-fields:;
 end;
 
+define open generic fields (frame :: <container-frame>)
+ => (res :: <simple-vector>);
+
+define inline method fields-initializer
+    (frame :: subclass(<container-frame>)) => (fields :: <simple-vector>)
+    as(<simple-object-vector>, #[]);
+end;
+
 define abstract class <container-frame-cache> (<container-frame>) end;
 define abstract class <decoded-container-frame> (<container-frame>) end;
 define abstract class <unparsed-container-frame> (<container-frame>)
@@ -215,12 +213,12 @@ define function get-frame-field (field-name :: <symbol>, frame :: <container-fra
   if (res)
     res
   else
-    let field = choose(method(x) x.name = field-name end, frame-fields(frame))[0];
+    let field = choose(method(x) x.name = field-name end, fields(frame))[0];
     let length = get-field-size-aux(frame, field);
     let start = 0;
     //doesn't support padding..
     block(ret)
-      for (f in frame-fields(frame))
+      for (f in fields(frame))
         if (f.name = field-name)
           ret();
         end;
@@ -240,7 +238,7 @@ end;
 
 define function sorted-frame-fields (frame :: <container-frame>)
   map(method(x) get-frame-field(x.name, frame) end,
-      frame-fields(frame))
+      fields(frame))
 end;
 
 define method name(frame :: <container-frame>)
@@ -264,17 +262,8 @@ define method payload (frame :: <header-frame>) => (payload :: <frame>)
   error("No payload specified");
 end;
 
-define method field-size (frame :: subclass(<container-frame>)) => (res :: <number>)
-  reduce1(\+, map(method(x) if ((instance?(x, <statically-typed-field>)) & subtype?(x.type, <fixed-size-frame>))
-                              field-size(x.type)
-                            else
-                              $unknown-at-compile-time
-                            end
-                          end, frame-fields(frame)))
-end;
-
 define method frame-size (frame :: <container-frame>) => (res :: <integer>)
-  reduce1(\+, map(curry(get-field-size-aux, frame), frame.frame-fields));
+  reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
 define method parse-frame (frame-type :: subclass(<container-frame>),
@@ -287,7 +276,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                  parent: parent);
   let args = make(<stretchy-vector>);
   let concrete-frame-fields = make(<table>);
-  for (field in frame-fields(res),
+  for (field in fields(res),
        i from 0)
     let type = get-frame-type(field, res);
 
@@ -297,10 +286,10 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
         end-of-field := field.end-offset(res);
       elseif (field.length)
         end-of-field := start + field.length(res);
-      elseif (i + 1 < frame-fields(res).size)
+      elseif (i + 1 < fields(res).size)
         //search for next fixed or computable start-offset-field
-        if (frame-fields(res)[i + 1].start-offset)
-          end-of-field := frame-fields(res)[i + 1].start-offset(res);
+        if (fields(res)[i + 1].start-offset)
+          end-of-field := fields(res)[i + 1].start-offset(res);
         end;
       end;
     end;
@@ -351,7 +340,7 @@ end;
 define method fixup-parent (frame :: <container-frame>,
                             parent-frame :: false-or(<container-frame>)) => ()
   frame.parent := parent-frame;
-  for (field in frame-fields(frame))
+  for (field in fields(frame))
     let subframe = field.getter(frame);
     if (instance?(subframe, <container-frame>))
       fixup-parent(subframe, frame);
@@ -435,13 +424,13 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
                                        ": ",
                                        field-as-string,
                                        "\n")
-                         end, frame-fields(frame)))
+                         end, fields(frame)))
 end;
 
 define method assemble-frame-into (frame :: <container-frame>,
                                    packet :: <byte-vector>,
                                    start :: <integer>)
-  for (field in frame-fields(frame),
+  for (field in fields(frame),
        offset = start then offset + get-field-size-aux(frame, field))
     if (field.getter(frame) = #f)
       if (field.fixup-function)
@@ -493,14 +482,18 @@ define method assemble-aux (frame-type :: subclass(<translated-frame>),
 end;                            
 
 define abstract class <field> (<object>)
-  slot name, required-init-keyword: name:;
-  slot init-value = #f, init-keyword: init:;
-  slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
-  slot getter, required-init-keyword: getter:;
-  slot setter, required-init-keyword: setter:;
-  slot start-offset = #f, init-keyword: start:;
-  slot end-offset = #f, init-keyword: end:;
-  slot length = #f, init-keyword: length:;
+  slot index :: <integer>, init-keyword: index:;
+  constant slot name, required-init-keyword: name:;
+  slot static-start :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-start:;
+  slot static-length :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-length:;
+  slot static-end :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-end:;
+  slot init-value = #f, init-keyword: init-value:;
+  constant slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
+  constant slot getter, required-init-keyword: getter:;
+  constant slot setter, required-init-keyword: setter:;
+  constant slot start-offset = #f, init-keyword: start:;
+  constant slot end-offset = #f, init-keyword: end:;
+  constant slot length = #f, init-keyword: length:;
 end;
 
 define generic static-field-size (field :: <field>) => (res :: <integer-or-unknown>);
@@ -584,22 +577,6 @@ define sideways method print-object (frame-field :: <frame-field>, stream :: <st
   format(stream, "%s: %=", frame-field.field.name, frame-field.frame)
 end;
 
-/*
-define method get-value (frame-field :: <frame-field>) => (result);
-  frame-field.field.getter(frame-field.frame)
-end:
-
-define method get-frame-fields (frame :: <container-frame>) => (frame-fields :: <sequence>);
-  map(method(x)
-        make(<frame-field>, frame: frame, field: x)
-      end,
-      frame.frame-fields)
-end;
-
-define method get-field-size (frame-field :: <frame-field>) => (size);
-  get-field-size-aux(frame-field.frame, frame-field.field)
-end;
-*/
 define method get-field-size-aux (frame :: <container-frame>, field :: <statically-typed-field>)
  => (size :: <integer>)
   get-field-size-aux-aux(frame, field, field.type);
@@ -1112,7 +1089,7 @@ define method parse-frame (frame-type :: subclass(<variable-size-byte-vector>),
  else
    values(make(frame-type,
                data: copy-sequence(packet, start: byte-offset(start))),
-          packet.size * 8)
+          start + packet.size * 8)
  end
 end;
 
