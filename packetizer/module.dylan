@@ -31,6 +31,8 @@ define module packetizer
     <header-frame>,
     <frame-field>, <repeated-field>, field, name;
 
+  export <field>;
+
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets;
 
   export read-frame;
@@ -44,7 +46,7 @@ define module packetizer
   export $broken-ipv4, hexdump;
 
   export sorted-frame-fields, get-frame-field,
-    fields, getter;
+    fields, getter, find-protocol, find-protocol-field;
 end module packetizer;
 
 define module packet-filter

@@ -43,6 +43,47 @@ end;
 
 define constant <byte-sequence> = <byte-vector-subsequence>;
 
+define constant $protocols = make(<table>);
+
+define method find-protocol-aux (protocol :: <string>) => (res :: false-or(<simple-vector>))
+  find-protocol-aux(as(<symbol>, protocol));
+end;
+define method find-protocol-aux (protocol :: <symbol>) => (res :: false-or(<simple-vector>))
+  element($protocols, protocol, default: #f);
+end;
+
+define function find-protocol (name :: <string>) => (res :: <simple-vector>, frame-name :: <string>)
+  let protocol-name = name;
+  let res = find-protocol-aux(protocol-name);
+  unless(res)
+    protocol-name := concatenate("<", name, ">");
+    res := find-protocol-aux(protocol-name);
+    unless(res)
+      protocol-name := concatenate("<", name, "-frame>");
+      res := find-protocol-aux(protocol-name);
+      unless(res)
+        error("Protocol not found %s\n", protocol);
+      end;
+    end;
+  end;
+  values(res, protocol-name);
+end;
+
+define function find-protocol-field (protocol-name :: <string>, field-name :: <string>)
+ => (res :: <field>, frame-name :: <string>)
+  let (protocol-fields, frame-name) = find-protocol(protocol-name);
+  let field-name-symbol = as(<symbol>, field-name);
+  let field = choose(method(x) x.name = field-name-symbol end, protocol-fields);
+  if (field.size = 1)
+    values(field.first, frame-name);
+  else
+    error("Field %s in protocol %s not found\n", field-name, protocol-name);
+  end;
+end;
+
+define method compute-static-offset(field :: <field>, list :: <simple-vector>)
+end;
+
 define abstract class <frame> (<object>)
 end;
 

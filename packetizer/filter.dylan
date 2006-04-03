@@ -33,17 +33,14 @@ end;
 define class <field-equals> (<filter-expression>)
   slot frame-name :: <symbol>, required-init-keyword: frame:;
   slot field-name :: <symbol>, required-init-keyword: name:;
+  slot field :: <field>, required-init-keyword: field:;
   slot field-value, required-init-keyword: value:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
   if (as(<symbol>, packet.name) = filter.frame-name)
-    let field = choose(method(x) x.name == filter.field-name end,
-                       packet.fields);
-    field.size > 0 
-      & field.first.getter(packet) = read-frame(field.first.type, 
-                                                filter.field-value);
+    filter.field.getter(packet) = filter.field-value;
   else
     #f
   end;

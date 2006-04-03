@@ -67,15 +67,19 @@ define constant $filter-productions
 
   production filter => [Name], action:
     method(p :: <simple-parser>, data, s, e)
-        make(<frame-present>, frame: as(<symbol>, concatenate("<", p[0], "-frame>")));
+        let (res, frame-name) = find-protocol(p[0]);
+        make(<frame-present>, frame: as(<symbol>, frame-name));
     end;
 
   production filter => [Name DOT Name EQUALS value], action:
     method(p :: <simple-parser>, data, s, e)
+        let (field, frame-name) = find-protocol-field(p[0], p[2]);
         make(<field-equals>,
-             frame: as(<symbol>, concatenate("<", p[0], "-frame>")),
+             frame: as(<symbol>, frame-name),
              name: as(<symbol>, p[2]),
-             value: p[4]); //read-frame(<ipv4-address>, p[4]));
+             value: read-frame(field.type, p[4]),
+             field: field);
+             //XXX: only works for statically typed fields, no support for repeated fields..
     end;
 
   production compound-filter => [filter], action:

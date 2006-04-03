@@ -7,12 +7,16 @@ define macro real-class-definer
   { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
       end;
+      define inline method name (frame :: ?name)
+        ?"name"
+      end;
       define inline method fields (frame :: ?name) => (res :: <simple-vector>)
           "$" ## ?name ## "-fields"
       end;
       define method fields-initializer
           (frame :: subclass(?name), #next next-method) => (frame-fields :: <simple-vector>)
         let res = concatenate(next-method(), vector(?fields-aux));
+
         for (ele in res,
              i from 0)
           ele.index := i;
@@ -20,8 +24,14 @@ define macro real-class-definer
         res;
       end;
       define constant "$" ## ?name ## "-fields" = fields-initializer(?name);
-      define inline method name (frame :: ?name)
-        ?"name"
+      begin
+        compute-static-offset(last("$" ## ?name ## "-fields"), "$" ## ?name ## "-fields");
+        if (element($protocols, ?#"name", default: #f))
+          format-out("Protocol %s already exists\n", ?#"name");
+          error("Protocol with same name already exists");
+        else
+          $protocols[?#"name"] := "$" ## ?name ## "-fields";
+        end;
       end;
       define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
         static-end(last("$" ## ?name ## "-fields"));
