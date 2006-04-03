@@ -45,14 +45,18 @@ define constant <byte-sequence> = <byte-vector-subsequence>;
 
 define constant $protocols = make(<table>);
 
-define method find-protocol-aux (protocol :: <string>) => (res :: false-or(<simple-vector>))
+define method find-protocol-aux (protocol :: <string>)
+ => (res :: false-or(<simple-vector>))
   find-protocol-aux(as(<symbol>, protocol));
 end;
-define method find-protocol-aux (protocol :: <symbol>) => (res :: false-or(<simple-vector>))
+
+define method find-protocol-aux (protocol :: <symbol>)
+ => (res :: false-or(<simple-vector>))
   element($protocols, protocol, default: #f);
 end;
 
-define function find-protocol (name :: <string>) => (res :: <simple-vector>, frame-name :: <string>)
+define function find-protocol (name :: <string>)
+ => (res :: <simple-vector>, frame-name :: <string>)
   let protocol-name = name;
   let res = find-protocol-aux(protocol-name);
   unless(res)
@@ -62,7 +66,7 @@ define function find-protocol (name :: <string>) => (res :: <simple-vector>, fra
       protocol-name := concatenate("<", name, "-frame>");
       res := find-protocol-aux(protocol-name);
       unless(res)
-        error("Protocol not found %s\n", protocol);
+        error("Protocol not found %s\n", name);
       end;
     end;
   end;
@@ -81,7 +85,23 @@ define function find-protocol-field (protocol-name :: <string>, field-name :: <s
   end;
 end;
 
-define method compute-static-offset(field :: <field>, list :: <simple-vector>)
+define function compute-static-offset(list :: <simple-vector>)
+  //input is a list of <field>
+  //set static-start, static-end, static-length for all fields
+  let start = 0;
+  for (field in list)
+    if (start ~= $unknown-at-compile-time)
+      field.static-start := start;
+    end;
+    let length = static-field-size(field);
+    if (length ~= $unknown-at-compile-time)
+      field.static-length := length;
+    end;
+    start := start + length;
+    if (start ~= $unknown-at-compile-time)
+      field.static-end := start;
+    end;
+  end;
 end;
 
 define abstract class <frame> (<object>)

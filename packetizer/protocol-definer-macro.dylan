@@ -25,9 +25,8 @@ define macro real-class-definer
       end;
       define constant "$" ## ?name ## "-fields" = fields-initializer(?name);
       begin
-        compute-static-offset(last("$" ## ?name ## "-fields"), "$" ## ?name ## "-fields");
+        compute-static-offset("$" ## ?name ## "-fields");
         if (element($protocols, ?#"name", default: #f))
-          format-out("Protocol %s already exists\n", ?#"name");
           error("Protocol with same name already exists");
         else
           $protocols[?#"name"] := "$" ## ?name ## "-fields";
