@@ -16,7 +16,6 @@ define macro real-class-definer
       define method fields-initializer
           (frame :: subclass(?name), #next next-method) => (frame-fields :: <simple-vector>)
         let res = concatenate(next-method(), vector(?fields-aux));
-
         for (ele in res,
              i from 0)
           ele.index := i;
@@ -187,155 +186,241 @@ end;
 define macro unparsed-frame-field-generator
   { unparsed-frame-field-generator(?:name,
                                    ?frame-type:name,
-                                   ?field-type:name,
-                                   ?start:expression) }
- => { define inline method ?name (frame :: ?frame-type)
-        frame.cache.?name |
-          (if (?start = $unknown-at-compile-time)
-             //parse full container frame
-             frame.cache := parse-frame(frame.object-class, frame.packet, parent: frame.parent);
-             frame.cache.?name;
-           else
-             frame.cache.?name := maybe-parse-frame(?field-type, ?start, frame.packet, frame);
-           end)
-       end;
-       define sealed domain ?name (?frame-type); }
+                                   ?field-index:expression) }
+ => { define inline method ?name (mframe :: ?frame-type)
+         if (mframe.cache.?name)
+           mframe.cache.?name
+         else
+          let field = fields(mframe)[?field-index];
+          mframe.cache.?name := parse-frame-field(field, mframe).frame;
+          mframe.cache.?name
+        end;
+      end;
+      define sealed domain ?name (?frame-type); }
 end;
 
-define macro unparsed-frame-variable-field-generator
-  { unparsed-frame-variable-field-generator(?:name,
-                                            ?frame-type:name,
-                                            ?field-type-function:expression,
-                                            ?start:expression) }
- => { define inline method ?name (frame :: ?frame-type)
-        frame.cache.?name |
-          (if (?start = $unknown-at-compile-time)
-             frame.cache := parse-frame(frame.object-class,
-                                        frame.packet,
-                                        parent: frame.parent);
-             frame.cache.?name;
-           else
-             let field-type = ?field-type-function(frame);
-             frame.cache.?name := maybe-parse-frame(field-type, ?start, frame.packet, frame);
-           end)
+define method parse-frame-field
+   (field :: <field>, frame :: <unparsed-container-frame>)
+ => (frame-field :: <frame-field>);
+ let start
+   = if (field.static-start = $unknown-at-compile-time)
+       if (field.start-offset)
+         field.start-offset(frame)
+       else
+         //ugh, we need to get end of the predecessor frame
+         if (field.index = 0)
+           error("first field doesn't know where it starts");
+         end;
+         let predecessor-field = fields(frame)[field.index - 1];
+         end-offset(get-frame-field(predecessor-field.name, frame));
        end;
-       define sealed domain ?name (?frame-type); }
+     else
+       //hey, we can just parse it :)
+       if (field.start-offset)
+         error("found a gap: in %s knew start offset statically (%d), but got a dynamic offset (%d)\n",
+               field.name,
+               field.static-start,
+               field.start-offset(frame))
+       end;
+       field.static-start;
+     end;
+  let end-of-field
+    = if (field.static-length = $unknown-at-compile-time)
+        if (field.length)
+          //dynamic :)
+          start + field.length(frame);
+        else
+          //damn, we need to get end dynamically 
+          if (field.end-offset)
+            field.end-offset(frame);
+          else
+            if (field.index = frame.fields.size - 1)
+              //last field, just return the end...
+              frame.packet.size * 8
+            else
+              let successor-field = frame.fields[field.index + 1];
+              if (successor-field.start-offset)
+                //should we generate a half-done frame-field here?
+                //somehow, we should cache the result...
+                successor-field.start-offset(frame)
+              else
+                format-out("Not able to find end of field %s\n", field.name);
+                //count repeated fields (like dns questions) break otherwise
+                //(not last field, but last field in this frame)
+                frame.packet.size * 8;
+              end;
+            end
+          end;
+        end;
+      else
+        //hey, we have a static length :)
+        if (field.length)
+          error("found a gap: in %s knew length statically (%d), but got a dynamic length (%d)\n",
+                field.name,
+                field.static-length,
+                field.length(frame));
+        end;
+        if (field.end-offset)
+          error("found a gap: in %s knew end offset statically (%d), but got a dynamic end (%d)\n",
+                field.name,
+                field.static-end,
+                field.end-offset(frame));
+        end;
+        start + field.static-length;
+      end;
+  if (end-of-field > frame.packet.size * 8)
+    format-out("Want to read beyond frame, field %s start %d end %d frame-size %d\n",
+               field.name, start, end-of-field, frame.packet.size * 8);
+    end-of-field := frame.packet.size * 8;
+  end;
+  let (subframe, length)
+    = parse-frame-field-aux(field,
+                            frame,
+                            bit-offset(start),
+                            subsequence(frame.packet,
+                                        start: byte-offset(start),
+                                        end: byte-offset(end-of-field + 7)));
+  unless (instance?(subframe, <container-frame>))
+    unless (length - bit-offset(start) + start = end-of-field)
+      error("found a gap (padding?): in %s, start %d end %d (%d bits), used only %d\n",
+            field.name,
+            start,
+            end-of-field,
+            end-of-field - start,
+            length - bit-offset(start));
+    end;
+  end;
+  let frame-field = make(<frame-field>,
+                         start: start,
+                         end: end-of-field,
+                         length: end-of-field - start,
+                         frame: subframe,
+                         field: field);
+  frame.concrete-frame-fields[field.name] := frame-field;
+  frame.concrete-frame-fields[field.index] := frame-field;
+  frame-field;
+end;
+
+define method parse-frame-field-aux
+ (field :: <single-field>,
+  frame :: <unparsed-container-frame>,
+  start :: <integer>,
+  packet :: <byte-sequence>)
+ maybe-parse-frame(field.type, packet, start, frame);
+end;
+define method parse-frame-field-aux
+  (field :: <variably-typed-field>,
+   frame :: <unparsed-container-frame>,
+   start :: <integer>,
+   packet :: <byte-sequence>)
+  let type = field.type-function(frame);
+  maybe-parse-frame(type, packet, start, frame);
+end;
+
+define method parse-frame-field-aux
+  (field :: <self-delimited-repeated-field>,
+   frame :: <unparsed-container-frame>,
+   start :: <integer>,
+   packet :: <byte-sequence>)
+  let frames = make(<stretchy-vector>);
+  let start = start;
+  if (packet.size > 0)
+    let (value, offset)
+      = maybe-parse-frame(field.type,
+                          subsequence(packet,
+                                      start: byte-offset(start)),
+                          bit-offset(start),
+                          frame);
+    unless (offset)
+        let last-child-field = value.fields.last;
+        offset := end-offset(get-frame-field(last-child-field.name, value));
+    end;
+    frames := add!(frames, value);
+    start := byte-offset(start) * 8 + offset;
+    while ((~ field.reached-end?(frames.last)) & (byte-offset(start) < packet.size))
+      let (value, offset)
+        = maybe-parse-frame(field.type,
+                            subsequence(packet,
+                                        start: byte-offset(start)),
+                            bit-offset(start),
+                            frame);
+      unless (offset)
+        let last-child-field = value.fields.last;
+        offset := end-offset(get-frame-field(last-child-field.name, value));
+      end;
+      frames := add!(frames, value);
+      start :=  byte-offset(start) * 8 + offset;
+    end;
+  end;
+  values(frames, start);
+end;
+define method parse-frame-field-aux
+  (field :: <count-repeated-field>,
+   frame :: <unparsed-container-frame>,
+   start :: <integer>,
+   packet :: <byte-sequence>)
+  let frames = make(<stretchy-vector>);
+  let start = start;
+  if (packet.size > 0)
+    for (i from 0 below field.count(frame))
+      let (value, offset)
+        = maybe-parse-frame(field.type,
+                            subsequence(packet,
+                                        start: byte-offset(start)),
+                            bit-offset(start),
+                            frame);
+      unless (offset)
+        let last-child-field = value.fields.last;
+        offset := end-offset(get-frame-field(last-child-field.name, value));
+      end;
+      frames := add!(frames, value);
+      start := byte-offset(start) * 8 + offset;
+    end;
+  end;
+  values(frames, start);
 end;
 
 define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
-                                 start :: <integer>,
-                                 packet :: <byte-vector>,
-                                 parent :: false-or(<container-frame>))
-  maybe-parse-frame(frame-type, start, subsequence(packet), parent);
+                                        packet :: <byte-vector>,
+                                        start :: <integer>,
+                                        parent :: false-or(<container-frame>))
+  maybe-parse-frame(frame-type, subsequence(packet), start, parent);
 end;
-define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
-                                 start :: <integer>,
-                                 packet :: <byte-vector-subsequence>,
-                                 parent :: false-or(<container-frame>))
-  //find out end of subsequence -- start is always known at compile-time
-  let packet-subsequence = subsequence(packet, start: byte-offset(start));
-  if (subtype?(frame-type, <container-frame>))
-    //we need to be byte-aligned?!
-    make(unparsed-class(frame-type),
-         packet: packet-subsequence,
-         parent: parent);
+
+define method parse-frame (frame-type :: subclass(<container-frame>),
+                           packet :: <byte-sequence>,
+                           #key start :: <integer> = 0,
+                           parent :: false-or(<container-frame>) = #f)
+  byte-aligned(start);
+  let frame = make(unparsed-class(frame-type),
+                   packet: packet,
+                   parent: parent);
+  let length = field-size(frame-type);
+  if (length = $unknown-at-compile-time)
+    frame;
   else
-    parse-frame(frame-type, packet-subsequence, start: bit-offset(start), parent: parent);
-  end
+    values(frame, length)
+  end;
+end;
+define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
+                                        packet :: <byte-sequence>,
+                                        start :: <integer>,
+                                        parent :: false-or(<container-frame>))
+  parse-frame(frame-type, packet, start: bit-offset(start), parent: parent);
 end;
 
-define macro unparsed-frame-self-delimited-repeated-field-generator
-  { unparsed-frame-self-delimited-repeated-field-generator
-     (?:name, ?frame-type:name, ?field-type:name, ?start:expression, ?reached-end:expression) }
- => { define inline method ?name (frame :: ?frame-type)
-        frame.cache.?name |
-          (if (?start = $unknown-at-compile-time)
-             frame.cache := parse-frame(frame.object-class, frame.packet, parent: frame.parent);
-             frame.cache.?name;
-           else
-             frame.cache.?name := get-field-value(?#"name", frame);
-           end)
-       end;
-       define sealed domain ?name (?frame-type);
-       define inline method get-field-value (field-name == ?#"name",
-                                      frame :: ?frame-type)
-        => (res)
-         //here we should have a lazy list which parses on demand
-           //this will need information about field-type, start, fixed length,
-           // fallback to runtime length, fallback to a parser state saved _somewhere_
-         //also, lots of duplicated code as in parse-frame-aux()
-         let res = make(<stretchy-vector>);
-         let start = ?start;
-         if (frame.packet.size > 0)
-           let (value, offset) = parse-frame(?field-type, frame.packet, start: start, parent: frame);
-           res := add!(res, value);
-           start := offset;
-           while ((~ ?reached-end(res.last)) & (byte-offset(start) < frame.packet.size))
-             let (value, offset) = parse-frame(?field-type, frame.packet, start: start, parent: frame);
-             start := offset;
-             res := add!(res, value);
-           end;
-         end;
-         res;
-       end; }
-end;
-
-define macro unparsed-frame-count-repeated-field-generator
- { unparsed-frame-count-repeated-field-generator
-    (?:name, ?frame-type:name, ?field-type:name, ?start:expression, ?count:expression) }
- => { define inline method ?name (frame :: ?frame-type)
-        frame.cache.?name |
-          (if (?start = $unknown-at-compile-time)
-             frame.cache := parse-frame(frame.object-class, frame.packet, parent: frame.parent);
-             frame.cache.?name;
-           else
-             frame.cache.?name := get-field-value(?#"name", frame);
-           end)
-       end;
-       define sealed domain ?name (?frame-type);
-       define inline method get-field-value (field-name == ?#"name",
-                                      frame :: ?frame-type)
-        => (res)
-         let res = make(<stretchy-vector>);
-         let start = ?start;
-         if (frame.packet.size > 0)
-           for (i from 0 below field.count(parent))
-             let (value, offset) = parse-frame(?field-type, frame.packet, start: start, parent: frame);
-             res := add!(res, value);
-             start := offset;
-           end;
-         end;
-         res;
-       end; }
-end;
 
 define macro frame-field-generator
-    { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name  ; ?rest:*) }
-    => { unparsed-frame-field-generator(?field-name, ?type, ?field-type, ?count);
-         frame-field-generator(?type; ?count + field-size(?field-type); ?rest) }
-    { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name = ?init:expression ; ?rest:*) }
-    => { unparsed-frame-field-generator(?field-name, ?type, ?field-type, ?count);
-         frame-field-generator(?type; ?count + field-size(?field-type); ?rest) }
-    { frame-field-generator(?type:name; ?count:*; field ?field-name:name \:: ?field-type:name, ?args:* ; ?rest:*) }
-    => { unparsed-frame-field-generator(?field-name, ?type, ?field-type, ?count);
-         frame-field-generator(?type; ?count + field-size(?field-type); ?rest) }
-    { frame-field-generator(?type:name; ?count:*; variably-typed-field ?field-name:name, ?args:* ; ?rest:*) }
-    => { unparsed-frame-variable-field-generator(?field-name, ?type, ?args, ?count);
-         frame-field-generator(?type; $unknown-at-compile-time; ?rest) }
-        //hmm, there might be fixed-size variably-typed-fields...
-    { frame-field-generator(?type:name; ?count:*; repeated field ?field-name:name \:: ?field-type:name, reached-end?: ?reached:expression ; ?rest:*) }
-    => { unparsed-frame-self-delimited-repeated-field-generator(?field-name, ?type, ?field-type, ?count, ?reached);
-         frame-field-generator(?type; $unknown-at-compile-time; ?rest) }
-    { frame-field-generator(?type:name; ?count:*; repeated field ?field-name:name \:: ?field-type:name, count: ?count2:expression ; ?rest:*) }
-    => { unparsed-frame-count-repeated-field-generator(?field-name, ?type, ?field-type, ?count, ?count2);
-         frame-field-generator(?type; $unknown-at-compile-time; ?rest) }
-    { frame-field-generator(?:name; ?count:*) } => { }
-
-  args:
-    { } => { }
-    { reached-end?: ?rest:expression, ...  } => { ?rest }
-    { type-function: ?rest:expression, ... } => { method(?=frame :: <frame>) ?rest end }
-    { ?key:token ?value:expression, ... } => { ... }
+    { frame-field-generator(?type:name; ?count:expression; field ?field-name:name ?foo:*  ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?type:name; ?count:expression; variably-typed-field ?field-name:name ?foo:* ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?type:name; ?count:expression; repeated field ?field-name:name ?foo:* ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?:name; ?count:expression) } => { }
 end;
 
 define macro summary-generator

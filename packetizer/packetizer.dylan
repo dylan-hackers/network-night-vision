@@ -73,13 +73,28 @@ define function find-protocol (name :: <string>)
   values(res, protocol-name);
 end;
 
+define method find-field (field-name :: <string>, list :: <simple-vector>)
+ => (res :: false-or(<field>))
+  find-field(as(<symbol>, field-name), list);
+end;
+
+define method find-field (field-name :: <symbol>, list :: <simple-vector>)
+ => (res :: false-or(<field>))
+   block(ret)
+     for (field in list)
+       if (field.name = field-name)
+         ret(field)
+       end;
+     end;
+     #f;
+   end;
+ end;
 define function find-protocol-field (protocol-name :: <string>, field-name :: <string>)
  => (res :: <field>, frame-name :: <string>)
   let (protocol-fields, frame-name) = find-protocol(protocol-name);
-  let field-name-symbol = as(<symbol>, field-name);
-  let field = choose(method(x) x.name = field-name-symbol end, protocol-fields);
-  if (field.size = 1)
-    values(field.first, frame-name);
+  let field = find-field(field-name, protocol-fields);
+  if (field)
+    values(field, frame-name);
   else
     error("Field %s in protocol %s not found\n", field-name, protocol-name);
   end;
@@ -106,13 +121,10 @@ end;
 
 define abstract class <frame> (<object>)
 end;
-
 define generic parse-frame
   (frame-type :: subclass (<frame>),
    packet :: <sequence>,
-   #rest rest, #key, #all-keys)
- => (value :: <object>, next-unparsed :: <integer>);
-
+   #rest rest, #key, #all-keys);
 define method parse-frame
   (frame-type :: subclass (<frame>),
    packet :: <byte-vector>,
@@ -122,7 +134,6 @@ define method parse-frame
  let packet-subseq = subsequence(packet);
  apply(parse-frame, frame-type, packet-subseq, rest);
 end;
-
 define generic assemble-frame-into (frame :: <frame>,
                                     packet :: <byte-vector>,
                                     start :: <integer>);
@@ -274,26 +285,8 @@ define function get-frame-field (field-name :: <symbol>, frame :: <container-fra
   if (res)
     res
   else
-    let field = choose(method(x) x.name = field-name end, fields(frame))[0];
-    let length = get-field-size-aux(frame, field);
-    let start = 0;
-    //doesn't support padding..
-    block(ret)
-      for (f in fields(frame))
-        if (f.name = field-name)
-          ret();
-        end;
-        start := start + get-field-size-aux(frame, f);
-      end;
-    end;
-    let frame-field = make(<frame-field>,
-                           field: field,
-                           frame: field.getter(frame),
-                           start: start,
-                           end: start + length,
-                           length: length);
-    frame.concrete-frame-fields[field-name] := frame-field;
-    frame-field;
+    let field = find-field(field-name, fields(frame));
+    parse-frame-field(field, frame);
   end;
 end;
 
@@ -327,7 +320,7 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
-define method parse-frame (frame-type :: subclass(<container-frame>),
+/* define method parse-frame (frame-type :: subclass(<container-frame>),
                            packet :: <byte-vector-subsequence>,
                            #key start :: <integer> = 0,
                            parent :: false-or(<container-frame>) = #f)
@@ -341,7 +334,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
        i from 0)
     let type = get-frame-type(field, res);
 
-    let end-of-field = start + static-field-size(field);
+    let end-of-field = field.static-end;
     if (end-of-field = $unknown-at-compile-time)
       if (field.end-offset)
         end-of-field := field.end-offset(res);
@@ -371,12 +364,14 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                                        end),
                       res);
     field.setter(value, res.cache);
-    concrete-frame-fields[field.name] :=  make(<frame-field>,
-                                               start: start,
-                                               end: offset,
-                                               frame: value,
-                                               field: field,
-                                               length: offset - start);
+    let frame-field = make(<frame-field>,
+                           start: start,
+                           end: offset,
+                           frame: value,
+                           field: field,
+                           length: offset - start);
+    concrete-frame-fields[field.name] := frame-field;
+    concrete-frame-fields[field.index] := frame-field;
     start := byte-offset(start) * 8 + offset;
 
     if (end-of-field ~= $unknown-at-compile-time)
@@ -396,7 +391,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
   fixup-parent(decoded-frame, parent);
   values(decoded-frame, start);
 end;
-
+*/
 
 define method fixup-parent (frame :: <container-frame>,
                             parent-frame :: false-or(<container-frame>)) => ()
@@ -613,14 +608,6 @@ define method make(class == <repeated-field>,
         rest);
 end;
 
-define abstract class <unknown-offset-field> (<field>)
-end;
-
-define abstract class <computable-offset-field> (<field>)
-end;
-
-define abstract class <fixed-offset-field> (<field>)
-end;
 
 
 define generic assemble-field (frame :: <frame>, field :: <field>)

@@ -91,7 +91,9 @@ begin
                                 direction: #"input")
                   stream-contents(stream);
                 end);
- *frame* := map(payload, parse-frame(<pcap-file>, file).packets);
+  let pcap-file = make(unparsed-class(<pcap-file>),
+                       packet: file);
+  *frame* := map(payload, packets(pcap-file));
   contain(frame-viewer(*frame*));
 end;
 
