@@ -274,7 +274,7 @@ define method read-frame (frame-type :: subclass(<leaf-frame>), string :: <strin
 end;
 
 define open abstract class <container-frame> (<variable-size-untranslated-frame>)
-  virtual constant slot name :: <string>;
+  virtual constant slot frame-name :: <string>;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
   constant slot concrete-frame-fields :: <table> = make(<table>),
     init-keyword: frame-fields:;
@@ -381,7 +381,7 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
                                else
                                  as(<string>, field-value)
                                end;
-                           concatenate(as(<string>, field.name),
+                           concatenate(as(<string>, field.field-name),
                                        ": ",
                                        field-as-string,
                                        "\n")
@@ -397,7 +397,7 @@ define method assemble-frame-into (frame :: <container-frame>,
       if (field.fixup-function)
         field.setter(field.fixup-function(frame), frame);
       else
-        error("No value for field %s while assembling", field.name);
+        error("No value for field %s while assembling", field.field-name);
       end;
     end;
     assemble-field-into(field, frame, packet, offset)
@@ -517,17 +517,72 @@ end;
 
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
-
 define class <frame-field> (<object>)
-  constant slot frame :: <object>, required-init-keyword: frame:;
+  slot frame :: false-or(<object>) = #f, init-keyword: frame:;
   constant slot field :: <field>, required-init-keyword: field:;
-  constant slot start-offset :: <integer>, required-init-keyword: start:;
-  constant slot end-offset :: <integer>, required-init-keyword: end:;
-  constant slot length :: <integer>, required-init-keyword: length:;
+  slot start-offset :: false-or(<integer>) = #f, init-keyword: start:;
+  slot end-offset :: false-or(<integer>) = #f, init-keyword: end:;
+  slot length :: false-or(<integer>) = #f, init-keyword: length:;
+  slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
+  slot raw-packet :: false-or(<byte-sequence>) = #f, init-keyword: packet:;
 end;
-
+/*
+define inline method start-offset (frame-field :: <frame-field>) => (res :: <integer>)
+  unless (frame-field.%start-offset)
+    let my-field = frame-field.field;
+    if (my-field.static-start ~= $unknown-at-compile-time)
+      frame-field.%start-offset := my-field.static-start;
+      if (my-field.dynamic-start)
+        error("found a gap: in %s knew start offset statically (%d), but got a dynamic offset (%d)\n",
+              my-field.field-name, my-field.static-start, my-field.dynamic-start(frame-field.parent))
+      end;
+    elseif (my-field.dynamic-start)
+      frame-field.%start-offset := my-field.dynamic-start(frame-field.parent)
+    else
+      if (my-field.index > 0)
+        frame-field.%start-offset
+          := end-offset(get-frame-field(my-field.index - 1, frame-field.parent));
+    end;
+  end;
+  frame-field.%start-offset
+end;
+define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
+  unless (frame-field.%length)
+    let my-field = frame-field.field;
+    if (my-field.static-length ~= $unknown-at-compile-time)
+      frame-field.%length := my-field.static-length;
+      if (my-field.dynamic-length)
+        error("found a gap: in %s knew length statically (%d), but got a dynamic offset (%d)\n",
+              my-field.field-name, my-field.static-length, my-field.dynamic-length(frame-field.parent))
+      end;
+    elseif (my-field.dynamic-length)
+      frame-field.%length := my-field.dynamic-length(frame-field.parent);
+  end;
+  frame-field.%length;
+end;
+define inline method end-offset (frame-field :: <frame-field>) => (res :: <integer>)
+  unless (frame-field.%end-offset)
+    let my-field = frame-field.field;
+    if (my-field.static-end ~= $unknown-at-compile-time)
+      frame-field.%end-offset := my-field.static-end;
+      if (my-field.dynamic-end)
+        error("found a gap: in %s knew end statically (%d), but got a dynamic end (%d)\n",
+              my-field.field-name, my-field.static-end, my-field.dynamic-end(frame-field.parent));
+      end;
+    elseif (my-field.dynamic-end)
+      frame-field.%end-offset := my-field.dynamic-end(frame-field.parent);
+    elseif (my-field.index < field-count(frame-field.parent.object-class) - 1)
+      let successor-field = fields(frame-field.parent)[my-field.index + 1];
+      if (successor-field.field.dynamic-start)
+        frame-field.%end-offset := start-offset(get-frame-field(successor-field, parent))
+      end;
+    end;
+  end;
+  frame-field.%end-offset;
+end;
+*/
 define sideways method print-object (frame-field :: <frame-field>, stream :: <stream>) => ();
-  format(stream, "%s: %=", frame-field.field.name, frame-field.frame)
+  format(stream, "%s: %=", frame-field.field.field-name, frame-field.frame)
 end;
 
 define method get-field-size-aux (frame :: <container-frame>, field :: <statically-typed-field>)
