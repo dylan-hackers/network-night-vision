@@ -7,7 +7,7 @@ define macro real-class-definer
   { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
       end;
-      define inline method name (frame :: ?name)
+      define inline method frame-name (frame :: ?name) => (res :: <string>)
         ?"name"
       end;
       define inline method fields (frame :: ?name) => (res :: <simple-vector>)
@@ -107,11 +107,11 @@ define macro real-class-definer
   args: //FIXME: better types, not <frame>!
     { } => { }
     { start: ?start:expression, ... }
-      => { start: method(?=frame :: <frame>) ?start end, ... }
+      => { dynamic-start: method(?=frame :: <frame>) ?start end, ... }
     { end: ?end:expression, ... }
-      => { end: method(?=frame :: <frame>) ?end end, ... }
+      => { dynamic-end: method(?=frame :: <frame>) ?end end, ... }
     { length: ?length:expression, ... }
-      => { length: method(?=frame :: <frame>) ?length end, ... }
+      => { dynamic-length: method(?=frame :: <frame>) ?length end, ... }
     { count: ?count:expression, ... }
       => { count: method(?=frame :: <frame>) ?count end, ... }
     { type-function: ?type:expression, ... }
@@ -208,86 +208,70 @@ end;
 define method parse-frame-field
    (field :: <field>, frame :: <unparsed-container-frame>)
  => (frame-field :: <frame-field>);
+ let full-frame-size = frame.packet.size * 8;
  let start
    = if (field.static-start = $unknown-at-compile-time)
-       if (field.start-offset)
-         field.start-offset(frame)
+       if (field.dynamic-start)
+         field.dynamic-start(frame)
        else
          //ugh, we need to get end of the predecessor frame
          if (field.index = 0)
            error("first field doesn't know where it starts");
          end;
-         let predecessor-field = fields(frame)[field.index - 1];
-         end-offset(get-frame-field(predecessor-field.name, frame));
+         let predecessor-index = field.index - 1;
+         end-offset(get-frame-field(predecessor-index, frame));
        end;
      else
        //hey, we can just parse it :)
-       if (field.start-offset)
+       if (field.dynamic-start)
          error("found a gap: in %s knew start offset statically (%d), but got a dynamic offset (%d)\n",
-               field.name,
-               field.static-start,
-               field.start-offset(frame))
+               field.field-name, field.static-start, field.dynamic-start(frame))
        end;
        field.static-start;
      end;
   let end-of-field
     = if (field.static-length = $unknown-at-compile-time)
-        if (field.length)
+        if (field.dynamic-length)
           //dynamic :)
-          start + field.length(frame);
+          start + field.dynamic-length(frame);
         else
           //damn, we need to get end dynamically 
-          if (field.end-offset)
-            field.end-offset(frame);
+          if (field.dynamic-end)
+            field.dynamic-end(frame);
           else
-            if (field.index = frame.fields.size - 1)
+            if (field.index = field-count(frame.object-class) - 1)
               //last field, just return the end...
-              frame.packet.size * 8
+              full-frame-size;
             else
               let successor-field = frame.fields[field.index + 1];
-              if (successor-field.start-offset)
+              if (successor-field.dynamic-start)
                 //should we generate a half-done frame-field here?
                 //somehow, we should cache the result...
-                successor-field.start-offset(frame)
+                successor-field.dynamic-start(frame)
               else
-                format-out("Not able to find end of field %s\n", field.name);
-                //count repeated fields (like dns questions) break otherwise
-                //(not last field, but last field in this frame)
-                let field-list = fields(frame);
-                block(ret)
-                  for (i from field.index below field-list.size)
-                    if (field-list[i].static-length ~= $unknown-at-compile-time)
-                      ret($unknown-at-compile-time)
-                    end;
-                  end;
-                  ret(frame.packet.size * 8);
-                end;
+                //maybe we should try to find length of remaining fixed-size fields?
+                format-out("Not able to find end of field %s\n", field.field-name);
+                full-frame-size;
               end;
             end
           end;
         end;
       else
         //hey, we have a static length :)
-        if (field.length)
+        if (field.dynamic-length)
           error("found a gap: in %s knew length statically (%d), but got a dynamic length (%d)\n",
-                field.name,
-                field.static-length,
-                field.length(frame));
+                field.field-name, field.static-length, field.dynamic-length(frame));
         end;
-        if (field.end-offset)
+        if (field.dynamic-end)
           error("found a gap: in %s knew end offset statically (%d), but got a dynamic end (%d)\n",
-                field.name,
-                field.static-end,
-                field.end-offset(frame));
+                field.field-name, field.static-end, field.dynamic-end(frame));
         end;
         start + field.static-length;
       end;
-  unless(end-of-field = $unknown-at-compile-time)
-    if (end-of-field > frame.packet.size * 8)
-      format-out("Want to read beyond frame, field %s start %d end %d frame-size %d\n",
-                 field.name, start, end-of-field, frame.packet.size * 8);
-      end-of-field := frame.packet.size * 8;
-    end;
+  if (end-of-field > full-frame-size)
+    format-out("Wanted to read beyond frame, field %s start %d end %d frame-size %d\n",
+               field.field-name, start, end-of-field, full-frame-size);
+    end-of-field := full-frame-size;
   end;
   let (subframe, length)
     = parse-frame-field-aux(field,
@@ -295,29 +279,22 @@ define method parse-frame-field
                             bit-offset(start),
                             subsequence(frame.packet,
                                         start: byte-offset(start),
-                                        end: if (end-of-field = $unknown-at-compile-time)
-                                               frame.packet.size
-                                             else
-                                               byte-offset(end-of-field + 7)
-                                             end));
-  if (end-of-field = $unknown-at-compile-time)
-    if (length)
-      end-of-field := length;
-    else
-      end-of-field := end-offset(get-frame-field(name(last(fields(subframe))), subframe));
+                                        end: byte-offset(end-of-field + 7)));
+  if (length)
+    let real-end = length - bit-offset(start) + start;
+    unless (real-end = end-of-field)
+      if (real-end < end-of-field)
+        format-out("estimated end in %s at %d (%d bytes), but parser was ready after %d (%d bytes)\n",
+                   field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
+        //padding? only if end-of-field ~= end-of-frame!?
+        end-of-field := real-end;
+      else
+        error("This shouldn't happen... in %s, start %d end %d (%d bits), used %d\n",
+            field.field-name, start, end-of-field, end-of-field - start, length - bit-offset(start));
+      end;
     end;
-    end-of-field := start - bit-offset(start) + end-of-field;
-  end;
-  unless (instance?(subframe, <container-frame>))
-    unless (length - bit-offset(start) + start = end-of-field)
-      format-out("found a gap (padding?): in %s, start %d end %d (%d bits), used only %d\n",
-                 field.name,
-                 start,
-                 end-of-field,
-                 end-of-field - start,
-                 length - bit-offset(start));
-      end-of-field := start - bit-offset(start) + length;
-    end;
+  elseif ((~ length) & (field.index + 1 ~= field-count(frame.object-class)))
+    end-of-field := end-offset(get-frame-field(field-count(subframe.object-class) - 1, subframe));
   end;
   let frame-field = make(<frame-field>,
                          start: start,
@@ -325,7 +302,7 @@ define method parse-frame-field
                          length: end-of-field - start,
                          frame: subframe,
                          field: field);
-  frame.concrete-frame-fields[field.name] := frame-field;
+  frame.concrete-frame-fields[field.field-name] := frame-field;
   frame.concrete-frame-fields[field.index] := frame-field;
   frame-field;
 end;
@@ -362,7 +339,7 @@ define method parse-frame-field-aux
                           frame);
     unless (offset)
         let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.name, value));
+        offset := end-offset(get-frame-field(last-child-field.field-name, value));
     end;
     frames := add!(frames, value);
     start := byte-offset(start) * 8 + offset;
@@ -375,7 +352,7 @@ define method parse-frame-field-aux
                             frame);
       unless (offset)
         let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.name, value));
+        offset := end-offset(get-frame-field(last-child-field.field-name, value));
       end;
       frames := add!(frames, value);
       start :=  byte-offset(start) * 8 + offset;
@@ -400,7 +377,7 @@ define method parse-frame-field-aux
                             frame);
       unless (offset)
         let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.name, value));
+        offset := end-offset(get-frame-field(last-child-field.field-name, value));
       end;
       frames := add!(frames, value);
       start := byte-offset(start) * 8 + offset;
@@ -450,7 +427,7 @@ define macro frame-field-generator
     => { unparsed-frame-field-generator(?field-name, ?type, ?count);
          frame-field-generator(?type; ?count + 1; ?rest) }
     { frame-field-generator(?:name; ?count:expression) }
-    => { define inline method my-field-count (type :: subclass(?name)) => (res :: <integer>) ?count end; }
+    => { define inline method field-count (type :: subclass(?name)) => (res :: <integer>) ?count end; }
 end;
 
 define macro summary-generator
@@ -483,7 +460,7 @@ define macro protocol-definer
                               ?fields);
         gen-classes(?name; ?superprotocol);
         frame-field-generator("<unparsed-" ## ?name ## ">";
-                              my-field-count("<unparsed-" ## ?superprotocol ## ">");
+                              field-count("<unparsed-" ## ?superprotocol ## ">");
                               ?fields);
       }
 end;

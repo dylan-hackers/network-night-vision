@@ -139,15 +139,15 @@ define function parse-filter (input :: <string>)
 end;
 
 define method print-object (filter :: <frame-present>, stream :: <stream>) => ();
-  format(stream, "%s", filter.frame-name);
+  format(stream, "%s", filter.filter-frame-name);
 end;
 
 define method print-object (filter :: <field-equals>, stream :: <stream>) => ();
   format(stream,
          "%s.%s = %s",
-         filter.frame-name,
-         filter.field-name,
-         filter.field-value);
+         filter.filter-frame-name,
+         filter.filter-field-name,
+         filter.filter-field-value);
 end;
 
 define method print-object (filter :: <and-expression>, stream :: <stream>) => ();

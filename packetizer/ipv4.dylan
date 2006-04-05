@@ -226,7 +226,7 @@ define protocol arp-frame (container-frame)
   field target-ip-address :: <ipv4-address>;
 end;
 
-define method summary (frame :: <arp-frame>)
+define method summary (frame :: <arp-frame>) => (res :: <string>)
   if(frame.operation = 1)
     format-to-string("ARP WHO-HAS %=", frame.target-ip-address)
   elseif(frame.operation = 2)

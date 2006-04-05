@@ -17,43 +17,76 @@ define module packetizer
   use date;
 
   // Add binding exports here.
-  export <frame>, <ethernet-frame>, <ipv4-frame>,
-    <ipv4-address>, <mac-address>, payload,
+  export <ethernet-frame>, <ipv4-frame>,
+    <ipv4-address>, <mac-address>,
     operation, source-address, destination-address,
     type-code, <arp-frame>,
     target-ip-address, source-ip-address, source-mac-address,
-    assemble-frame,
     <decoded-arp-frame>, <decoded-ethernet-frame>,
-    parse-frame, summary, unparsed-class,
     <fixed-size-byte-vector-frame>, data,
     total-length, concrete-frame-fields,
-    <leaf-frame>, <container-frame>, frame, type,
-    <header-frame>,
-    <repeated-field>, field, name;
+    <repeated-field>;
 
-  export <frame-field>, start-offset, length, end-offset;
-
-  export <field>, static-start, static-length, static-end,
-    field-size;
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets;
-
-  export read-frame;
 
   export <icmp-frame>, code, type, checksum;
 
   export <raw-frame>;
 
-  export fixup!;
-
   export $broken-ipv4, hexdump;
 
-  export sorted-frame-fields, get-frame-field,
-    fields, getter, find-protocol, find-protocol-field;
-
   export <unsigned-byte>;
+
   export <integer-or-unknown>, $unknown-at-compile-time;
-  export <container-frame-cache>, <unparsed-container-frame>, <decoded-container-frame>;
+
+  export <frame-field>,
+    start-offset,
+    length,
+    end-offset,
+    frame,
+    field;
+
+  export <field>,
+    static-start,
+    static-length,
+    static-end,
+    field-name,
+    field-size,
+    getter,
+    type;
+
+  export <frame>,
+    <leaf-frame>,
+    parse-frame,
+    assemble-frame,
+    read-frame,
+    summary;
+
+  export sorted-frame-fields,
+    get-frame-field,
+    fields,
+    find-protocol,
+    find-protocol-field;
+
+  export <container-frame>,
+    <container-frame-cache>,
+    <unparsed-container-frame>,
+    <decoded-container-frame>,
+    frame-name,
+    unparsed-class,
+    decoded-class,
+    cache-class,
+    field-count,
+    fixup!;
+
+  export <header-frame>,
+    <header-frame-cache>,
+    <unparsed-header-frame>,
+    <decoded-header-frame>,
+    payload;
+
   export protocol-definer;
+  //XXX: we shouldn't need to export those
   export real-class-definer, cache-class-definer, decoded-class-definer, gen-classes,
     frame-field-generator, summary-generator, unparsed-frame-field-generator; 
 end module packetizer;
@@ -78,12 +111,6 @@ define module packet-filter
     <not-expression>,
     matches?,
     parse-filter;
-end;
-
-define module packetizer-test
-  use common-dylan;
-  use testworks;
-  use packetizer;
 end;
 
 

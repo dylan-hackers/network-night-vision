@@ -155,10 +155,10 @@ define protocol start-of-authority (container-frame)
   field nameserver :: <domain-name>;
   field hostmaster :: <domain-name>;
   field serial :: <big-endian-unsigned-integer-4byte>;
-  field refresh :: <big-endian-unsigned-integer>;
-  field retry :: <big-endian-unsigned-integer>;
-  field expire :: <big-endian-unsigned-integer>;
-  field minimum :: <big-endian-unsigned-integer>;
+  field refresh :: <big-endian-unsigned-integer-4byte>;
+  field retry :: <big-endian-unsigned-integer-4byte>;
+  field expire :: <big-endian-unsigned-integer-4byte>;
+  field minimum :: <big-endian-unsigned-integer-4byte>;
 end;
 
 define protocol domain-name-pointer (container-frame)

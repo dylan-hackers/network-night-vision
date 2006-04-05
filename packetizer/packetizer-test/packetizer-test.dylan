@@ -5,11 +5,11 @@ define function static-checker
    start :: <integer-or-unknown>,
    length :: <integer-or-unknown>,
    end-offset :: <integer-or-unknown>)
-  check-equal(concatenate("Field ", as(<string>, field.name), " has static start"),
+  check-equal(concatenate("Field ", as(<string>, field.field-name), " has static start"),
               start, field.static-start);
-  check-equal(concatenate("Field ", as(<string>, field.name), " has static length"),
+  check-equal(concatenate("Field ", as(<string>, field.field-name), " has static length"),
               length, field.static-length);
-  check-equal(concatenate("Field ", as(<string>, field.name), " has static end"),
+  check-equal(concatenate("Field ", as(<string>, field.field-name), " has static end"),
               end-offset, field.static-end);
 end;
 
@@ -39,7 +39,7 @@ define test packetizer-parser ()
   frame-field-checker(1, frame, 8, 8, 16);
 end;
 
-define protocol dynamic-test (container-frame)
+define protocol dynamic-test (header-frame)
   field foobar :: <unsigned-byte>;
   field payload :: <raw-frame>,
     start: frame.foobar * 8;
@@ -90,7 +90,7 @@ define test repeated-test ()
 end;
   
 
-define protocol repeated-and-dynamic-test (container-frame)
+define protocol repeated-and-dynamic-test (header-frame)
   field header-length :: <unsigned-byte>;
   field type-code :: <unsigned-byte>;
   repeated field options :: <unsigned-byte>,
@@ -191,7 +191,7 @@ end;
   
 define protocol b-sub (a-super)
   field payload-length :: <unsigned-byte>;
-  field payload :: <raw-frame>,
+  field data :: <raw-frame>,
     length: frame.payload-length * 8;
 end;
 
@@ -209,13 +209,6 @@ define test inheritance-dynamic-length()
   frame-field-checker(2, aframe, 16, 24, 40);
 end;
 
-define protocol c-sub (a-super)
-  repeated field payload :: <b-sub>,
-    reached-end?: method(frame) frame.payload-length = 0 end;
-end;
-
-define test inheritance-repeated-field()
-end;
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -231,7 +224,7 @@ end;
 
 begin
   run-test-application(packetizer-suite, arguments: #("-debug"));
- // while(#t)
-  //end;
+  while(#t)
+  end;
 end;
 

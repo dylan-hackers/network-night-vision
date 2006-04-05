@@ -13,12 +13,12 @@ define method matches? (packet :: <frame>, filter :: <filter-expression>)
   #f;
 end;
 define class <frame-present> (<filter-expression>)
-  slot frame-name :: <symbol>, required-init-keyword: frame:;
+  slot filter-frame-name :: <symbol>, required-init-keyword: frame:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <frame-present>)
  => (match? :: <boolean>)
-  if (as(<symbol>, packet.name) = filter.frame-name)
+  if (as(<symbol>, packet.frame-name) = filter.filter-frame-name)
     #t;
   else
     #f;
@@ -31,16 +31,16 @@ define method matches? (packet :: <header-frame>, filter :: <frame-present>)
 end;
 
 define class <field-equals> (<filter-expression>)
-  slot frame-name :: <symbol>, required-init-keyword: frame:;
-  slot field-name :: <symbol>, required-init-keyword: name:;
-  slot field :: <field>, required-init-keyword: field:;
-  slot field-value, required-init-keyword: value:;
+  slot filter-frame-name :: <symbol>, required-init-keyword: frame:;
+  slot filter-field-name :: <symbol>, required-init-keyword: name:;
+  slot filter-field :: <field>, required-init-keyword: field:;
+  slot filter-field-value, required-init-keyword: value:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <field-equals>)
   => (match? :: <boolean>);
-  if (as(<symbol>, packet.name) = filter.frame-name)
-    filter.field.getter(packet) = filter.field-value;
+  if (as(<symbol>, packet.frame-name) = filter.filter-frame-name)
+    filter.filter-field.getter(packet) = filter.filter-field-value;
   else
     #f
   end;

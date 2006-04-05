@@ -14,7 +14,6 @@ define library packetizer
   use simple-parser;
   use regular;
 
-  use testworks;
   // Add any more module exports here.
   export packetizer, packet-filter;
 end library packetizer;

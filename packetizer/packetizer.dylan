@@ -78,11 +78,11 @@ define method find-field (field-name :: <string>, list :: <simple-vector>)
   find-field(as(<symbol>, field-name), list);
 end;
 
-define method find-field (field-name :: <symbol>, list :: <simple-vector>)
+define method find-field (name :: <symbol>, list :: <simple-vector>)
  => (res :: false-or(<field>))
    block(ret)
      for (field in list)
-       if (field.name = field-name)
+       if (field.field-name = name)
          ret(field)
        end;
      end;
@@ -106,7 +106,7 @@ define function compute-static-offset(list :: <simple-vector>)
   let start = 0;
   for (field in list)
     if (start ~= $unknown-at-compile-time)
-      unless (field.start-offset)
+      unless (field.dynamic-start)
         if (field.static-start = $unknown-at-compile-time)
           field.static-start := start;
         else
@@ -116,7 +116,7 @@ define function compute-static-offset(list :: <simple-vector>)
     end;
     let my-length = static-field-size(field);
     if (my-length ~= $unknown-at-compile-time)
-      unless (field.length)
+      unless (field.dynamic-length)
         if (field.static-length = $unknown-at-compile-time)
           field.static-length := my-length;
         else
@@ -126,7 +126,7 @@ define function compute-static-offset(list :: <simple-vector>)
     end;
     start := start + my-length;
     if (start ~= $unknown-at-compile-time)
-      unless (field.end-offset)
+      unless (field.dynamic-end)
         if (field.static-end = $unknown-at-compile-time)
           field.static-end := start;
         else
@@ -148,7 +148,7 @@ define method parse-frame
    packet :: <byte-vector>,
    #rest rest,
    #key, #all-keys)
- => (value :: <object>, next-unparsed :: <integer>);
+ => (value :: <object>, next-unparsed :: false-or(<integer>));
  let packet-subseq = subsequence(packet);
  apply(parse-frame, frame-type, packet-subseq, rest);
 end;
@@ -199,15 +199,15 @@ end;
 define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
  => (length :: <integer>);
 
-define generic field-size (frame :: subclass(<frame>))
+define open generic field-size (frame :: subclass(<frame>))
  => (length :: <number>);
 
-define sealed domain field-size(subclass(<frame>));
 define inline method field-size (frame :: subclass(<frame>))
  => (length :: <unknown-at-compile-time>)
   $unknown-at-compile-time;
 end;
 
+define open generic summary (frame :: <frame>) => (summary :: <string>);
 define method summary (frame :: <frame>) => (summary :: <string>)
   format-to-string("%=", frame.object-class);
 end;
@@ -273,27 +273,45 @@ define method read-frame (frame-type :: subclass(<leaf-frame>), string :: <strin
   error("read-frame not supported for frame-type %=", frame-type);
 end;
 
-define abstract class <container-frame> (<variable-size-untranslated-frame>)
+define open abstract class <container-frame> (<variable-size-untranslated-frame>)
   virtual constant slot name :: <string>;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
   constant slot concrete-frame-fields :: <table> = make(<table>),
     init-keyword: frame-fields:;
 end;
 
-define inline method my-field-count (frame :: subclass(<container-frame>)) => (res :: <integer>)
+define open generic frame-name (frame :: <container-frame>) => (res :: <string>);
+
+define method frame-name(frame :: <container-frame>) => (res :: <string>)
+  "anonymous"
+end;
+define open generic field-count (frame :: subclass(<container-frame>))
+ => (res :: <integer>);
+
+define inline method field-count (frame :: subclass(<container-frame>))
+ => (res :: <integer>)
   0
 end;
 define open generic fields (frame :: <container-frame>)
  => (res :: <simple-vector>);
 
-define inline method fields-initializer
-    (frame :: subclass(<container-frame>)) => (fields :: <simple-vector>)
-    as(<simple-object-vector>, #[]);
+define open generic fields-initializer (frame :: subclass(<container-frame>))
+ => (res :: <simple-vector>);
+
+define inline method fields-initializer (frame :: subclass(<container-frame>))
+ => (fields :: <simple-vector>)
+  as(<simple-object-vector>, #[]);
 end;
 
-define abstract class <container-frame-cache> (<container-frame>) end;
-define abstract class <decoded-container-frame> (<container-frame>) end;
-define abstract class <unparsed-container-frame> (<container-frame>)
+define open generic unparsed-class (type :: subclass(<container-frame>))
+  => (class :: <class>);
+define open generic decoded-class (type :: subclass(<container-frame>))
+  => (class :: <class>);
+define open generic cache-class (type :: subclass(<container-frame>))
+  => (class :: <class>);
+define open abstract class <container-frame-cache> (<container-frame>) end;
+define open abstract class <decoded-container-frame> (<container-frame>) end;
+define open abstract class <unparsed-container-frame> (<container-frame>)
   slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
     init-keyword: packet:;
   slot cache :: <container-frame>;
@@ -317,27 +335,24 @@ define method get-frame-field (name :: <symbol>, frame :: <container-frame>)
 end;
 
 define function sorted-frame-fields (frame :: <container-frame>)
-  map(method(x) get-frame-field(x.name, frame) end,
+  map(method(x) get-frame-field(x.field-name, frame) end,
       fields(frame))
 end;
 
-define method name(frame :: <container-frame>)
-  "anonymous"
+define open abstract class <header-frame> (<container-frame>)
 end;
 
-define abstract class <header-frame> (<container-frame>)
-end;
-
-define abstract class <header-frame-cache>
+define open abstract class <header-frame-cache>
   (<header-frame>, <container-frame-cache>)
 end;
-define abstract class <decoded-header-frame>
+define open abstract class <decoded-header-frame>
   (<header-frame>, <decoded-container-frame>)
 end;
-define abstract class <unparsed-header-frame>
+define open abstract class <unparsed-header-frame>
   (<header-frame>, <unparsed-container-frame>)
 end;
 
+define open generic payload (frame :: <header-frame>);
 define method payload (frame :: <header-frame>) => (payload :: <frame>)
   error("No payload specified");
 end;
@@ -346,142 +361,6 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
-/* define method parse-frame (frame-type :: subclass(<container-frame>),
-                           packet :: <byte-vector-subsequence>,
-                           #key start :: <integer> = 0,
-                           parent :: false-or(<container-frame>) = #f)
- => (frame :: <container-frame>, next-unparsed :: <integer>);
-  let res = make(unparsed-class(frame-type),
-                 packet: subsequence(packet, start: byte-offset(start)),
-                 parent: parent);
-  let args = make(<stretchy-vector>);
-  let concrete-frame-fields = make(<table>);
-  for (field in fields(res),
-       i from 0)
-    let type = get-frame-type(field, res);
-
-    let end-of-field = field.static-end;
-    if (end-of-field = $unknown-at-compile-time)
-      if (field.end-offset)
-        end-of-field := field.end-offset(res);
-      elseif (field.length)
-        end-of-field := start + field.length(res);
-      elseif (i + 1 < fields(res).size)
-        //search for next fixed or computable start-offset-field
-        if (fields(res)[i + 1].start-offset)
-          end-of-field := fields(res)[i + 1].start-offset(res);
-        end;
-      end;
-    end;
-
-    //hexdump(*standard-output*, packet);
-    //format-out("field %s start %d end %=\n", field.name, start, end-of-field);
-    let (value, offset) =
-      parse-frame-aux(field,
-                      type,
-                      bit-offset(start),
-                      subsequence(packet,
-                                  start: byte-offset(start),
-                                  end: if ((end-of-field ~= $unknown-at-compile-time) &
-                                           (byte-offset(end-of-field + 7) < packet.size))
-                                         byte-offset(end-of-field + 7)
-                                       else
-                                         packet.size
-                                       end),
-                      res);
-    field.setter(value, res.cache);
-    let frame-field = make(<frame-field>,
-                           start: start,
-                           end: offset,
-                           frame: value,
-                           field: field,
-                           length: offset - start);
-    concrete-frame-fields[field.name] := frame-field;
-    concrete-frame-fields[field.index] := frame-field;
-    start := byte-offset(start) * 8 + offset;
-
-    if (end-of-field ~= $unknown-at-compile-time)
-      unless (start = end-of-field)
-        //format-out("found a gap, start: %d (%d Bytes), end: %d (%d Bytes)\n", start, byte-offset(start),
-        //           end-of-field, byte-offset(end-of-field));
-        start := end-of-field;
-      end;
-    end;
-
-    args := add!(args, field.name);
-    args := add!(args, value);
-  end;
-  args := add!(args, #"frame-fields");
-  args := add!(args, concrete-frame-fields);
-  let decoded-frame = apply(make, decoded-class(frame-type), args);
-  fixup-parent(decoded-frame, parent);
-  values(decoded-frame, start);
-end;
-*/
-
-define method fixup-parent (frame :: <container-frame>,
-                            parent-frame :: false-or(<container-frame>)) => ()
-  frame.parent := parent-frame;
-  for (field in fields(frame))
-    let subframe = field.getter(frame);
-    if (instance?(subframe, <container-frame>))
-      fixup-parent(subframe, frame);
-    end;
-  end;
-end;
-
-define method parse-frame-aux (field :: <single-field>,
-                               frame-type :: subclass(<frame>),
-                               start :: <integer>,
-                               packet :: <byte-sequence>,
-                               parent :: false-or(<container-frame>))
-  parse-frame(frame-type, packet, start: start, parent: parent);
-end;
-
-define method parse-frame-aux (field :: <variably-typed-field>,
-                               frame-type :: subclass(<frame>),
-                               start :: <integer>,
-                               packet :: <byte-sequence>,
-                               parent :: false-or(<container-frame>))
-  parse-frame(frame-type, packet, start: start, parent: parent);
-end;
-
-define method parse-frame-aux (field :: <self-delimited-repeated-field>,
-                               frame-type :: subclass(<frame>),
-                               start :: <integer>,
-                               packet :: <byte-sequence>,
-                               parent :: false-or(<container-frame>))
-  let res = make(<stretchy-vector>);
-  let start = start;
-  if (packet.size > 0)
-    let (value, offset) = parse-frame(frame-type, packet, start: start, parent: parent);
-    res := add!(res, value);
-    start := offset;
-    while ((~ field.reached-end?(res.last)) & (byte-offset(start) < packet.size))
-      let (value, offset) = parse-frame(frame-type, packet, start: start, parent: parent);
-      res := add!(res, value);
-      start := offset;
-    end;
-  end;
-  values(res, start);
-end;
-
-define method parse-frame-aux (field :: <count-repeated-field>,
-                               frame-type :: subclass(<frame>),
-                               start :: <integer>,
-                               packet :: <byte-sequence>,
-                               parent :: false-or(<container-frame>))
-  let res = make(<stretchy-vector>);
-  let start = start;
-  if (packet.size > 0)
-    for (i from 0 below field.count(parent))
-      let (value, offset) = parse-frame(frame-type, packet, start: start, parent: parent);
-      res := add!(res, value);
-      start := offset;
-    end;
-  end;
-  values(res, start);
-end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <byte-vector>);
   let result = make(<byte-vector>, size: byte-offset(frame-size(frame)), fill: 0);
@@ -565,7 +444,7 @@ end;
 
 define abstract class <field> (<object>)
   slot index :: <integer>, init-keyword: index:;
-  constant slot name, required-init-keyword: name:;
+  constant slot field-name, required-init-keyword: name:;
   slot static-start :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-start:;
   slot static-length :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-length:;
   slot static-end :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-end:;
@@ -573,9 +452,9 @@ define abstract class <field> (<object>)
   constant slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
   constant slot getter, required-init-keyword: getter:;
   constant slot setter, required-init-keyword: setter:;
-  constant slot start-offset = #f, init-keyword: start:;
-  constant slot end-offset = #f, init-keyword: end:;
-  constant slot length = #f, init-keyword: length:;
+  constant slot dynamic-start :: false-or(<function>) = #f, init-keyword: dynamic-start:;
+  constant slot dynamic-end :: false-or(<function>) = #f, init-keyword: dynamic-end:;
+  constant slot dynamic-length :: false-or(<function>) = #f, init-keyword: dynamic-length:;
 end;
 
 define generic static-field-size (field :: <field>) => (res :: <integer-or-unknown>);

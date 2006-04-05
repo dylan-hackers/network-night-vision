@@ -43,24 +43,24 @@ end;
 
 define method frame-print-label (frame-field :: <frame-field>)
   if (~ frame-children-predicate(frame-field))
-    format-to-string("%s: %=", frame-field.field.name, frame-field.frame)
+    format-to-string("%s: %=", frame-field.field.field-name, frame-field.frame)
   elseif (instance?(frame-field.frame, <container-frame>))
     format-to-string("%s: %s %s",
-                     frame-field.field.name, 
-                     frame-field.frame.name,
+                     frame-field.field.field-name, 
+                     frame-field.frame.frame-name,
                      frame-field.frame.summary)
   elseif (instance?(frame-field.field, <repeated-field>))
     format-to-string("%s: %= %s",
-                     frame-field.field.name,
+                     frame-field.field.field-name,
                      frame-field.frame.size,
                      frame-field.field.type)
   else
-    format-to-string("%s", frame-field.field.name)
+    format-to-string("%s", frame-field.field.field-name)
   end
 end;
 
 define method frame-print-label (frame :: <container-frame>)
-  format-to-string("%s %s", frame.name, frame.summary);
+  format-to-string("%s %s", frame.frame-name, frame.summary);
 end;
 
 define method frame-print-label (frame :: <leaf-frame>)
