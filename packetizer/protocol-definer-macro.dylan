@@ -120,6 +120,12 @@ define macro real-class-definer
       => { reached-end?: ?reached, ... }
     { fixup: ?fixup:expression, ... }
       => { fixup: method(?=frame :: <frame>) ?fixup end, ... }
+    { static-start: ?start:expression, ... }
+      => { static-start: ?start, ... }
+    { static-length: ?length:expression, ... }
+      => { static-length: ?length, ... }
+    { static-end: ?end:expression, ... }
+      => { static-end: ?end, ... }
 end;
 
 
@@ -247,7 +253,15 @@ define method parse-frame-field
                 format-out("Not able to find end of field %s\n", field.name);
                 //count repeated fields (like dns questions) break otherwise
                 //(not last field, but last field in this frame)
-                frame.packet.size * 8;
+                let field-list = fields(frame);
+                block(ret)
+                  for (i from field.index below field-list.size)
+                    if (field-list[i].static-length ~= $unknown-at-compile-time)
+                      ret($unknown-at-compile-time)
+                    end;
+                  end;
+                  ret(frame.packet.size * 8);
+                end;
               end;
             end
           end;
@@ -268,10 +282,12 @@ define method parse-frame-field
         end;
         start + field.static-length;
       end;
-  if (end-of-field > frame.packet.size * 8)
-    format-out("Want to read beyond frame, field %s start %d end %d frame-size %d\n",
-               field.name, start, end-of-field, frame.packet.size * 8);
-    end-of-field := frame.packet.size * 8;
+  unless(end-of-field = $unknown-at-compile-time)
+    if (end-of-field > frame.packet.size * 8)
+      format-out("Want to read beyond frame, field %s start %d end %d frame-size %d\n",
+                 field.name, start, end-of-field, frame.packet.size * 8);
+      end-of-field := frame.packet.size * 8;
+    end;
   end;
   let (subframe, length)
     = parse-frame-field-aux(field,
@@ -279,15 +295,28 @@ define method parse-frame-field
                             bit-offset(start),
                             subsequence(frame.packet,
                                         start: byte-offset(start),
-                                        end: byte-offset(end-of-field + 7)));
+                                        end: if (end-of-field = $unknown-at-compile-time)
+                                               frame.packet.size
+                                             else
+                                               byte-offset(end-of-field + 7)
+                                             end));
+  if (end-of-field = $unknown-at-compile-time)
+    if (length)
+      end-of-field := length;
+    else
+      end-of-field := end-offset(get-frame-field(name(last(fields(subframe))), subframe));
+    end;
+    end-of-field := start - bit-offset(start) + end-of-field;
+  end;
   unless (instance?(subframe, <container-frame>))
     unless (length - bit-offset(start) + start = end-of-field)
-      error("found a gap (padding?): in %s, start %d end %d (%d bits), used only %d\n",
-            field.name,
-            start,
-            end-of-field,
-            end-of-field - start,
-            length - bit-offset(start));
+      format-out("found a gap (padding?): in %s, start %d end %d (%d bits), used only %d\n",
+                 field.name,
+                 start,
+                 end-of-field,
+                 end-of-field - start,
+                 length - bit-offset(start));
+      end-of-field := start - bit-offset(start) + length;
     end;
   end;
   let frame-field = make(<frame-field>,
@@ -406,7 +435,7 @@ define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
                                         packet :: <byte-sequence>,
                                         start :: <integer>,
                                         parent :: false-or(<container-frame>))
-  parse-frame(frame-type, packet, start: bit-offset(start), parent: parent);
+  parse-frame(frame-type, packet, start: start, parent: parent);
 end;
 
 
@@ -420,7 +449,8 @@ define macro frame-field-generator
     { frame-field-generator(?type:name; ?count:expression; repeated field ?field-name:name ?foo:* ; ?rest:*) }
     => { unparsed-frame-field-generator(?field-name, ?type, ?count);
          frame-field-generator(?type; ?count + 1; ?rest) }
-    { frame-field-generator(?:name; ?count:expression) } => { }
+    { frame-field-generator(?:name; ?count:expression) }
+    => { define inline method my-field-count (type :: subclass(?name)) => (res :: <integer>) ?count end; }
 end;
 
 define macro summary-generator
@@ -452,7 +482,9 @@ define macro protocol-definer
                               "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
                               ?fields);
         gen-classes(?name; ?superprotocol);
-        frame-field-generator("<unparsed-" ## ?name ## ">"; 0; ?fields);
+        frame-field-generator("<unparsed-" ## ?name ## ">";
+                              my-field-count("<unparsed-" ## ?superprotocol ## ">");
+                              ?fields);
       }
 end;
 

@@ -106,15 +106,33 @@ define function compute-static-offset(list :: <simple-vector>)
   let start = 0;
   for (field in list)
     if (start ~= $unknown-at-compile-time)
-      field.static-start := start;
+      unless (field.start-offset)
+        if (field.static-start = $unknown-at-compile-time)
+          field.static-start := start;
+        else
+          start := field.static-start;
+        end;
+      end;
     end;
-    let length = static-field-size(field);
-    if (length ~= $unknown-at-compile-time)
-      field.static-length := length;
+    let my-length = static-field-size(field);
+    if (my-length ~= $unknown-at-compile-time)
+      unless (field.length)
+        if (field.static-length = $unknown-at-compile-time)
+          field.static-length := my-length;
+        else
+          my-length := field.static-length;
+        end;
+      end;
     end;
-    start := start + length;
+    start := start + my-length;
     if (start ~= $unknown-at-compile-time)
-      field.static-end := start;
+      unless (field.end-offset)
+        if (field.static-end = $unknown-at-compile-time)
+          field.static-end := start;
+        else
+          start := field.static-end;
+        end;
+      end;
     end;
   end;
 end;
@@ -262,6 +280,9 @@ define abstract class <container-frame> (<variable-size-untranslated-frame>)
     init-keyword: frame-fields:;
 end;
 
+define inline method my-field-count (frame :: subclass(<container-frame>)) => (res :: <integer>)
+  0
+end;
 define open generic fields (frame :: <container-frame>)
  => (res :: <simple-vector>);
 
@@ -279,15 +300,20 @@ define abstract class <unparsed-container-frame> (<container-frame>)
 end;
 
 
-define function get-frame-field (field-name :: <symbol>, frame :: <container-frame>)
+define method get-frame-field (field-index :: <integer>, frame :: <container-frame>)
  => (res :: <frame-field>)
-  let res = element(frame.concrete-frame-fields, field-name, default: #f);
+  let res = element(frame.concrete-frame-fields, field-index, default: #f);
   if (res)
     res
   else
-    let field = find-field(field-name, fields(frame));
-    parse-frame-field(field, frame);
+    parse-frame-field(fields(frame)[field-index], frame); //XXX refactor here
   end;
+end;
+
+define method get-frame-field (name :: <symbol>, frame :: <container-frame>)
+ => (res :: <frame-field>)
+  let field = find-field(name, fields(frame));
+  get-frame-field(field.index, frame)
 end;
 
 define function sorted-frame-fields (frame :: <container-frame>)

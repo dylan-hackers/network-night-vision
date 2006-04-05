@@ -29,10 +29,12 @@ define module packetizer
     total-length, concrete-frame-fields,
     <leaf-frame>, <container-frame>, frame, type,
     <header-frame>,
-    <frame-field>, <repeated-field>, field, name;
+    <repeated-field>, field, name;
 
-  export <field>;
+  export <frame-field>, start-offset, length, end-offset;
 
+  export <field>, static-start, static-length, static-end,
+    field-size;
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets;
 
   export read-frame;
@@ -47,6 +49,13 @@ define module packetizer
 
   export sorted-frame-fields, get-frame-field,
     fields, getter, find-protocol, find-protocol-field;
+
+  export <unsigned-byte>;
+  export <integer-or-unknown>, $unknown-at-compile-time;
+  export <container-frame-cache>, <unparsed-container-frame>, <decoded-container-frame>;
+  export protocol-definer;
+  export real-class-definer, cache-class-definer, decoded-class-definer, gen-classes,
+    frame-field-generator, summary-generator, unparsed-frame-field-generator; 
 end module packetizer;
 
 define module packet-filter
@@ -70,3 +79,11 @@ define module packet-filter
     matches?,
     parse-filter;
 end;
+
+define module packetizer-test
+  use common-dylan;
+  use testworks;
+  use packetizer;
+end;
+
+

@@ -121,10 +121,12 @@ end;
 
 define method toplevel (reader :: <pcap-file-reader>)
   let file = as(<byte-vector>, stream-contents(reader.file-stream));
-  let pcap-file = parse-frame(<pcap-file>, file);
+  let pcap-file = make(unparsed-class(<pcap-file>), packet: file);
 //  push-data(reader.the-output, pcap-file.header);
   for(frame in pcap-file.packets)
-    push-data(reader.the-output, frame.payload)
+    push-data(reader.the-output,
+              make(unparsed-class(<ethernet-frame>),
+                   packet: assemble-frame(frame.payload)))
   end
 end;                    
 

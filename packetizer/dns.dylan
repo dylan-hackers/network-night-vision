@@ -7,18 +7,22 @@ define protocol dns-header (container-frame)
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
   field identifier :: <2byte-big-endian-unsigned-integer>;
-  field query-or-response :: <1bit-unsigned-integer>;
+  field query-or-response :: <1bit-unsigned-integer> = 1;
   field opcode :: <4bit-unsigned-integer>;
   field authoritative-answer :: <1bit-unsigned-integer>;
-  field truncation :: <1bit-unsigned-integer>;
-  field recursion-desired :: <1bit-unsigned-integer>;
-  field recursion-available :: <1bit-unsigned-integer>;
-  field reserved :: <3bit-unsigned-integer>;
+  field truncation :: <1bit-unsigned-integer> = 0;
+  field recursion-desired :: <1bit-unsigned-integer> = 1;
+  field recursion-available :: <1bit-unsigned-integer> = 0;
+  field reserved :: <3bit-unsigned-integer> = 0;
   field response-code :: <4bit-unsigned-integer>;
-  field question-count :: <2byte-big-endian-unsigned-integer>;
-  field answer-count :: <2byte-big-endian-unsigned-integer>;
-  field name-server-count :: <2byte-big-endian-unsigned-integer>;
-  field additional-count :: <2byte-big-endian-unsigned-integer>;
+  field question-count :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.questions.size;
+  field answer-count :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.answers.size;
+  field name-server-count :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.name-servers.size;
+  field additional-count :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.additional-records.size;
   repeated field questions :: <dns-question>,
     count: frame.question-count;
   repeated field answers :: <dns-resource-record>,
@@ -94,7 +98,7 @@ define method parse-frame (frame-type == <domain-name-fragment>,
                            packet :: <byte-sequence>,
                            #key start :: <integer> = 0,
                            parent :: false-or(<container-frame>) = #f)
- => (value :: <domain-name-fragment>, next-unparsed :: <integer>)
+ => (value :: <domain-name-fragment>, next-unparsed :: false-or(<integer>))
   byte-aligned(start);
   let domain-name = make(unparsed-class(<domain-name-fragment>),
                          packet: subsequence(packet, start: byte-offset(start)));

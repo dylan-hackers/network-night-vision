@@ -12,6 +12,7 @@ files:	library
 	ipv4
 	pcap
 	dns
+	packetizer-test
 base-address:	0x63FE0000
 debug-arguments:	c:\foo.pcap
 linker-options:	$(guilflags)
