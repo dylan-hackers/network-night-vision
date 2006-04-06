@@ -557,6 +557,11 @@ define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
       end;
     elseif (my-field.dynamic-length)
       frame-field.%length := my-field.dynamic-length(frame-field.parent);
+    else
+      //parse frame to get actual length
+      //need to compute an optional upper bound for the end of the frame
+
+    end;
   end;
   frame-field.%length;
 end;
@@ -571,11 +576,8 @@ define inline method end-offset (frame-field :: <frame-field>) => (res :: <integ
       end;
     elseif (my-field.dynamic-end)
       frame-field.%end-offset := my-field.dynamic-end(frame-field.parent);
-    elseif (my-field.index < field-count(frame-field.parent.object-class) - 1)
-      let successor-field = fields(frame-field.parent)[my-field.index + 1];
-      if (successor-field.field.dynamic-start)
-        frame-field.%end-offset := start-offset(get-frame-field(successor-field, parent))
-      end;
+    else
+      frame-field.%end-offset := frame-field.start-offset + frame-field.length;
     end;
   end;
   frame-field.%end-offset;
