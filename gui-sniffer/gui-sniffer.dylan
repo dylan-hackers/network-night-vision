@@ -19,8 +19,8 @@ define method frame-children-predicate (object :: <object>)
 end;
 
 define method frame-children-predicate (frame-field :: <frame-field>)
-  instance?(frame-field.frame, <container-frame>)
-    | (instance?(frame-field.field, <repeated-field>) & frame-field.frame.size > 0)
+  instance?(frame-field.value, <container-frame>)
+    | (instance?(frame-field.field, <repeated-field>) & frame-field.value.size > 0)
 end;
 
 define method frame-children-generator (collection :: <collection>)
@@ -33,9 +33,9 @@ end;
 
 define method frame-children-generator (frame-field :: <frame-field>)
   if (instance?(frame-field.field, <repeated-field>))
-    frame-field.frame
-  elseif (instance?(frame-field.frame, <container-frame>))
-    sorted-frame-fields(frame-field.frame)
+    frame-field.value
+  elseif (instance?(frame-field.value, <container-frame>))
+    sorted-frame-fields(frame-field.value)
   else
     error("huh?")
   end
@@ -43,16 +43,16 @@ end;
 
 define method frame-print-label (frame-field :: <frame-field>)
   if (~ frame-children-predicate(frame-field))
-    format-to-string("%s: %=", frame-field.field.field-name, frame-field.frame)
-  elseif (instance?(frame-field.frame, <container-frame>))
+    format-to-string("%s: %=", frame-field.field.field-name, frame-field.value)
+  elseif (instance?(frame-field.value, <container-frame>))
     format-to-string("%s: %s %s",
                      frame-field.field.field-name, 
-                     frame-field.frame.frame-name,
-                     frame-field.frame.summary)
+                     frame-field.value.frame-name,
+                     frame-field.value.summary)
   elseif (instance?(frame-field.field, <repeated-field>))
     format-to-string("%s: %= %s",
                      frame-field.field.field-name,
-                     frame-field.frame.size,
+                     frame-field.value.size,
                      frame-field.field.type)
   else
     format-to-string("%s", frame-field.field.field-name)

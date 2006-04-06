@@ -322,9 +322,13 @@ define method get-frame-field (field-index :: <integer>, frame :: <container-fra
  => (res :: <frame-field>)
   let res = element(frame.concrete-frame-fields, field-index, default: #f);
   if (res)
-    res
+    res;
   else
-    parse-frame-field(fields(frame)[field-index], frame); //XXX refactor here
+    let frame-field = make(<frame-field>,
+                           frame: frame,
+                           field: fields(frame)[field-index]);
+    frame.concrete-frame-fields[field-index] := frame-field;
+    frame-field;
   end;
 end;
 
@@ -513,20 +517,24 @@ define method make(class == <repeated-field>,
         rest);
 end;
 
-
-
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
 define class <frame-field> (<object>)
-  slot frame :: false-or(<object>) = #f, init-keyword: frame:;
+  slot %value :: false-or(<object>) = #f, init-keyword: value:;
   constant slot field :: <field>, required-init-keyword: field:;
-  slot start-offset :: false-or(<integer>) = #f, init-keyword: start:;
-  slot end-offset :: false-or(<integer>) = #f, init-keyword: end:;
-  slot length :: false-or(<integer>) = #f, init-keyword: length:;
-  slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
-  slot raw-packet :: false-or(<byte-sequence>) = #f, init-keyword: packet:;
+  slot %start-offset :: false-or(<integer>) = #f, init-keyword: start:;
+  slot %end-offset :: false-or(<integer>) = #f, init-keyword: end:;
+  slot %length :: false-or(<integer>) = #f, init-keyword: length:;
+  slot frame :: <container-frame>, init-keyword: frame:;
 end;
-/*
+define inline method value (frame-field :: <frame-field>) => (res);
+  unless (frame-field.%value)
+    let (my-frame, my-length) = parse-frame-field(frame-field);
+    frame-field.%value := my-frame;
+    frame-field.%length := frame-field.end-offset - my-length;
+  end;
+  frame-field.%value;
+end;
 define inline method start-offset (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%start-offset)
     let my-field = frame-field.field;
@@ -534,55 +542,66 @@ define inline method start-offset (frame-field :: <frame-field>) => (res :: <int
       frame-field.%start-offset := my-field.static-start;
       if (my-field.dynamic-start)
         error("found a gap: in %s knew start offset statically (%d), but got a dynamic offset (%d)\n",
-              my-field.field-name, my-field.static-start, my-field.dynamic-start(frame-field.parent))
+              my-field.field-name, my-field.static-start, my-field.dynamic-start(frame-field.frame))
       end;
     elseif (my-field.dynamic-start)
-      frame-field.%start-offset := my-field.dynamic-start(frame-field.parent)
+      frame-field.%start-offset := my-field.dynamic-start(frame-field.frame);
     else
       if (my-field.index > 0)
         frame-field.%start-offset
-          := end-offset(get-frame-field(my-field.index - 1, frame-field.parent));
+          := end-offset(get-frame-field(my-field.index - 1, frame-field.frame));
+      end;
     end;
   end;
   frame-field.%start-offset
 end;
+define function compute-field-length (frame-field :: <frame-field>) => (res :: false-or(<integer>))
+  let my-field = frame-field.field;
+  if (my-field.static-length ~= $unknown-at-compile-time)
+    frame-field.%length := my-field.static-length;
+    if (my-field.dynamic-length)
+      error("found a gap: in %s knew length statically (%d), but got a dynamic offset (%d)\n",
+            my-field.field-name, my-field.static-length, my-field.dynamic-length(frame-field.frame))
+    end;
+  elseif (my-field.dynamic-length)
+    frame-field.%length := my-field.dynamic-length(frame-field.frame);
+  end;
+  frame-field.%length;
+end;
 define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%length)
-    let my-field = frame-field.field;
-    if (my-field.static-length ~= $unknown-at-compile-time)
-      frame-field.%length := my-field.static-length;
-      if (my-field.dynamic-length)
-        error("found a gap: in %s knew length statically (%d), but got a dynamic offset (%d)\n",
-              my-field.field-name, my-field.static-length, my-field.dynamic-length(frame-field.parent))
-      end;
-    elseif (my-field.dynamic-length)
-      frame-field.%length := my-field.dynamic-length(frame-field.parent);
-    else
+    unless (compute-field-length(frame-field))
       //parse frame to get actual length
       //need to compute an optional upper bound for the end of the frame
-
+      let (my-frame, my-end)
+        = parse-frame-field(frame-field);
+      frame-field.%value := my-frame;
+      frame-field.%length := my-end - frame-field.%start-offset;
     end;
   end;
   frame-field.%length;
 end;
+define function compute-field-end (frame-field :: <frame-field>) => (res :: false-or(<integer>))
+  let my-field = frame-field.field;
+  if (my-field.static-end ~= $unknown-at-compile-time)
+    frame-field.%end-offset := my-field.static-end;
+    if (my-field.dynamic-end)
+      error("found a gap: in %s knew end statically (%d), but got a dynamic end (%d)\n",
+            my-field.field-name, my-field.static-end, my-field.dynamic-end(frame-field.frame));
+    end;
+  elseif (my-field.dynamic-end)
+    frame-field.%end-offset := my-field.dynamic-end(frame-field.frame);
+  end;
+  frame-field.%end-offset;
+end;
 define inline method end-offset (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%end-offset)
-    let my-field = frame-field.field;
-    if (my-field.static-end ~= $unknown-at-compile-time)
-      frame-field.%end-offset := my-field.static-end;
-      if (my-field.dynamic-end)
-        error("found a gap: in %s knew end statically (%d), but got a dynamic end (%d)\n",
-              my-field.field-name, my-field.static-end, my-field.dynamic-end(frame-field.parent));
-      end;
-    elseif (my-field.dynamic-end)
-      frame-field.%end-offset := my-field.dynamic-end(frame-field.parent);
-    else
+    unless (compute-field-end(frame-field))
       frame-field.%end-offset := frame-field.start-offset + frame-field.length;
     end;
   end;
   frame-field.%end-offset;
 end;
-*/
 define sideways method print-object (frame-field :: <frame-field>, stream :: <stream>) => ();
   format(stream, "%s: %=", frame-field.field.field-name, frame-field.frame)
 end;

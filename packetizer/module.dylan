@@ -44,7 +44,8 @@ define module packetizer
     length,
     end-offset,
     frame,
-    field;
+    field,
+    value;
 
   export <field>,
     static-start,
