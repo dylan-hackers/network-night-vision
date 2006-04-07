@@ -76,7 +76,9 @@ end;
 define method create-output-for-filter
   (demux :: <demultiplexer>, filter :: <filter-expression>)
  => (output :: <filtered-push-output>)
-  let output = make(<filtered-push-output>, frame-filter: filter);
+  let output = make(<filtered-push-output>,
+                    frame-filter: filter,
+                    node: demux);
   add!(demux.outputs, output);
   output
 end;
@@ -159,6 +161,12 @@ define method initialize (node :: <ethernet-interface>,
                           #rest rest, #key, #all-keys)
   next-method();
   node.unix-interface := make(<interface>, name: node.interface-name);
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <ethernet-interface>,
+                             frame :: <frame>)
+  send(node.unix-interface, assemble-frame(frame));
 end;
 
 define method toplevel (node :: <ethernet-interface>)
