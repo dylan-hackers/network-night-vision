@@ -159,6 +159,11 @@ define generic assemble-frame-into (frame :: <frame>,
 define generic assemble-frame
   (frame :: <frame>) => (packet :: <vector>);
 
+define method assemble-frame
+  (frame :: <unparsed-container-frame>) => (packet :: <vector>)
+  frame.packet;
+end;
+
 define generic assemble-frame-as
     (frame-type :: subclass(<frame>), data :: <object>) => (packet :: <vector>);
 
@@ -531,7 +536,8 @@ define inline method value (frame-field :: <frame-field>) => (res);
   unless (frame-field.%value)
     let (my-frame, my-length) = parse-frame-field(frame-field);
     frame-field.%value := my-frame;
-    frame-field.%length := frame-field.end-offset - my-length;
+    frame-field.%end-offset := my-length;
+    frame-field.%length := frame-field.%end-offset - frame-field.%start-offset;
   end;
   frame-field.%value;
 end;

@@ -358,7 +358,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                            parent :: false-or(<container-frame>) = #f)
   byte-aligned(start);
   let frame = make(unparsed-class(frame-type),
-                   packet: packet,
+                   packet: subsequence(packet, start: byte-offset(start)),
                    parent: parent);
   let length = field-size(frame-type);
   if (length = $unknown-at-compile-time)
