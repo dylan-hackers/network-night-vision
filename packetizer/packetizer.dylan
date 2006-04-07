@@ -295,7 +295,12 @@ define open generic field-count (frame :: subclass(<container-frame>))
 
 define inline method field-count (frame :: subclass(<container-frame>))
  => (res :: <integer>)
-  0
+  field-count(unparsed-class(frame));
+end;
+
+define inline method field-count (frame :: subclass(<unparsed-container-frame>))
+ => (res :: <integer>)
+  0;
 end;
 define open generic fields (frame :: <container-frame>)
  => (res :: <simple-vector>);
@@ -525,11 +530,32 @@ end;
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
 define class <frame-field> (<object>)
-  constant slot field :: <field>, required-init-keyword: field:;
+  constant slot field :: <field>, init-keyword: field:;
+  constant slot frame :: <container-frame>, init-keyword: frame:;
   slot %start-offset :: false-or(<integer>) = #f, init-keyword: start:;
   slot %end-offset :: false-or(<integer>) = #f, init-keyword: end:;
   slot %length :: false-or(<integer>) = #f, init-keyword: length:;
-  slot frame :: <container-frame>, init-keyword: frame:;
+end;
+
+define class <repeated-frame-field> (<frame-field>)
+  slot frame-field-list :: <stretchy-vector> = make(<stretchy-vector>);
+end;
+
+define method make (class == <frame-field>, #rest rest, #key field, #all-keys) => (res :: <frame-field>)
+  if (instance?(field, <repeated-field>))
+    apply(make, <repeated-frame-field>, field: field, rest);
+  else
+    next-method();
+  end;
+end;
+
+/* define inline method find-frame-by-offset (frame :: <container-frame>, offset :: <integer>)
+  block(ret)
+    for (frame-field in sorted-frame-fields(frame))
+      if (frame-field.start-offset = offset
+end; */
+define inline method value (frame-field :: <frame-field>) => (res)
+  frame-field.field.getter(frame-field.frame);
 end;
 define inline method start-offset (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%start-offset)
@@ -551,7 +577,7 @@ define inline method start-offset (frame-field :: <frame-field>) => (res :: <int
   end;
   frame-field.%start-offset
 end;
-define function compute-field-length (frame-field :: <frame-field>) => (res :: false-or(<integer>))
+define inline function compute-field-length (frame-field :: <frame-field>) => (res :: false-or(<integer>))
   let my-field = frame-field.field;
   if (my-field.static-length ~= $unknown-at-compile-time)
     frame-field.%length := my-field.static-length;
@@ -574,7 +600,7 @@ define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
   end;
   frame-field.%length;
 end;
-define function compute-field-end (frame-field :: <frame-field>) => (res :: false-or(<integer>))
+define inline function compute-field-end (frame-field :: <frame-field>) => (res :: false-or(<integer>))
   let my-field = frame-field.field;
   if (my-field.static-end ~= $unknown-at-compile-time)
     frame-field.%end-offset := my-field.static-end;

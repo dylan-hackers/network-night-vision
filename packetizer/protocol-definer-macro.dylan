@@ -291,32 +291,39 @@ define method parse-frame-field-aux
    start :: <integer>,
    packet :: <byte-sequence>)
   let frames = make(<stretchy-vector>);
+  let frame-fields = get-frame-field(field.index, frame).frame-field-list;
   let start = start;
   if (packet.size > 0)
     let (value, offset)
       = maybe-parse-frame(field.type,
-                          subsequence(packet,
-                                      start: byte-offset(start)),
+                          subsequence(packet, start: byte-offset(start)),
                           bit-offset(start),
                           frame);
     unless (offset)
-        let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.field-name, value));
+      offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
     end;
     frames := add!(frames, value);
+    frame-fields := add!(frame-fields,
+                         make(<frame-field>,
+                              start: start,
+                              end: byte-offset(start) * 8 + offset,
+                              length: byte-offset(start) * 8 + offset - start));
     start := byte-offset(start) * 8 + offset;
     while ((~ field.reached-end?(frames.last)) & (byte-offset(start) < packet.size))
       let (value, offset)
         = maybe-parse-frame(field.type,
-                            subsequence(packet,
-                                        start: byte-offset(start)),
+                            subsequence(packet, start: byte-offset(start)),
                             bit-offset(start),
                             frame);
       unless (offset)
-        let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.field-name, value));
+        offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
       end;
       frames := add!(frames, value);
+      frame-fields := add!(frame-fields,
+                           make(<frame-field>,
+                                start: start,
+                                end: byte-offset(start) * 8 + offset,
+                                length: byte-offset(start) * 8 + offset - start));
       start :=  byte-offset(start) * 8 + offset;
     end;
   end;
@@ -328,6 +335,7 @@ define method parse-frame-field-aux
    start :: <integer>,
    packet :: <byte-sequence>)
   let frames = make(<stretchy-vector>);
+  let frame-fields = get-frame-field(field.index, frame).frame-field-list;
   let start = start;
   if (packet.size > 0)
     for (i from 0 below field.count(frame))
@@ -338,10 +346,14 @@ define method parse-frame-field-aux
                             bit-offset(start),
                             frame);
       unless (offset)
-        let last-child-field = value.fields.last;
-        offset := end-offset(get-frame-field(last-child-field.field-name, value));
+        offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
       end;
       frames := add!(frames, value);
+      frame-fields := add!(frame-fields,
+                           make(<frame-field>,
+                                start: start,
+                                end: byte-offset(start) * 8 + offset,
+                                length: byte-offset(start) * 8 + offset - start));
       start := byte-offset(start) * 8 + offset;
     end;
   end;
