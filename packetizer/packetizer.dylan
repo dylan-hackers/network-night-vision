@@ -593,9 +593,7 @@ end;
 define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%length)
     unless (compute-field-length(frame-field))
-      //parse frame to get actual length
-      //need to compute an optional upper bound for the end of the frame
-      frame-field.%length := get-field-size-aux(frame-field.frame, frame-field.field);
+      value(frame-field); // this has side effects ;)
     end;
   end;
   frame-field.%length;
