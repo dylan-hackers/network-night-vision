@@ -198,7 +198,10 @@ define macro unparsed-frame-field-generator
            mframe.cache.?name
          else
           let frame-field = get-frame-field(?field-index, mframe);
-          mframe.cache.?name := frame-field.value;
+          let (value, parsed-end) = parse-frame-field(frame-field);
+          mframe.cache.?name := value;
+          frame-field.%end-offset := parsed-end;
+          frame-field.%length := parsed-end - frame-field.start-offset;
           mframe.cache.?name
         end;
       end;

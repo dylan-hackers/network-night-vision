@@ -525,21 +525,11 @@ end;
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
 define class <frame-field> (<object>)
-  slot %value :: false-or(<object>) = #f, init-keyword: value:;
   constant slot field :: <field>, required-init-keyword: field:;
   slot %start-offset :: false-or(<integer>) = #f, init-keyword: start:;
   slot %end-offset :: false-or(<integer>) = #f, init-keyword: end:;
   slot %length :: false-or(<integer>) = #f, init-keyword: length:;
   slot frame :: <container-frame>, init-keyword: frame:;
-end;
-define inline method value (frame-field :: <frame-field>) => (res);
-  unless (frame-field.%value)
-    let (my-frame, my-length) = parse-frame-field(frame-field);
-    frame-field.%value := my-frame;
-    frame-field.%end-offset := my-length;
-    frame-field.%length := frame-field.%end-offset - frame-field.%start-offset;
-  end;
-  frame-field.%value;
 end;
 define inline method start-offset (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%start-offset)
@@ -579,10 +569,7 @@ define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
     unless (compute-field-length(frame-field))
       //parse frame to get actual length
       //need to compute an optional upper bound for the end of the frame
-      let (my-frame, my-end)
-        = parse-frame-field(frame-field);
-      frame-field.%value := my-frame;
-      frame-field.%length := my-end - frame-field.%start-offset;
+      frame-field.%length := get-field-size-aux(frame-field.frame, frame-field.field);
     end;
   end;
   frame-field.%length;
@@ -667,18 +654,6 @@ define method assemble-field (frame :: <frame>,
   apply(concatenate, map(curry(assemble-frame-as, field.type), field.getter(frame)))
 end;
 
-define generic get-frame-type (field :: <field>, frame :: <frame>)
- => (type :: <class>);
-
-define method get-frame-type (field :: <statically-typed-field>, frame :: <frame>)
- => (type :: <class>);
-  field.type;
-end;
-
-define method get-frame-type (field :: <variably-typed-field>, frame :: <frame>)
- => (type :: <class>);
-  field.type-function(frame);
-end;
 
 
 define class <unsigned-byte> (<fixed-size-translated-leaf-frame>)
