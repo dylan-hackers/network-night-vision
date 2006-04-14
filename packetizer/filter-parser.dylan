@@ -92,24 +92,6 @@ define constant $filter-automaton
   = simple-parser-automaton($filter-tokens, $filter-productions,
                             #[#"compound-filter"]);
 
-define function consume-token 	 
-    (consumer-data,
-     token-number :: <integer>,
-     token-name :: <object>,
-     semantic-value :: <object>,
-     start-position :: <integer>,
-     end-position :: <integer>)
- => ();
-  //let srcloc
-  //  = range-source-location(consumer-data, start-position, end-position);
-  format-out("%d - %d: token %d: %= value %=\n",
-             start-position,
-             end-position,
-             token-number,
-             token-name,
-             semantic-value);
-end function;
-
 define class <filter> (<object>)
   slot filter :: <filter-expression>
 end;
@@ -127,12 +109,10 @@ define function parse-filter (input :: <string>)
                     consumer-data: data);
   scan-tokens(scanner,
               simple-parser-consume-token,
-//              consume-token,
               parser,
               input,
               end: input.size,
               partial?: #f);
-  scan-tokens(scanner, simple-parser-consume-token, parser, "", partial?: #f);
   let end-position = scanner.scanner-source-position;
   simple-parser-consume-token(parser, 0, #"EOF", parser, end-position, end-position);
   data.filter;

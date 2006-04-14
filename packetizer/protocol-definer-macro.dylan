@@ -230,7 +230,7 @@ define method parse-frame-field
          successor-field.dynamic-start(frame-field.frame)
        else
          //maybe we should try to find length of remaining fixed-size fields?
-         format-out("Not able to find end of field %s\n", frame-field.field.field-name);
+         //format-out("Not able to find end of field %s\n", frame-field.field.field-name);
          full-frame-size;
        end;
      end;
@@ -251,8 +251,8 @@ define method parse-frame-field
     let real-end = length - bit-offset(start) + start;
     unless (real-end = end-of-field)
       if (real-end < end-of-field)
-        format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
-                   frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
+        //format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
+        //           frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
         //padding? only if end-of-field ~= end-of-frame!?
         end-of-field := real-end;
       else

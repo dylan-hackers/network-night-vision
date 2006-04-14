@@ -3,7 +3,7 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 
-define protocol dns-header (container-frame)
+define protocol dns-frame (container-frame)
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
   field identifier :: <2byte-big-endian-unsigned-integer>;
@@ -58,14 +58,18 @@ end;
 define function find-label (label-offset :: <label-offset>)
  => (label :: false-or(<domain-name>))
   local method find-dns-frame (frame :: <frame>)
-          if (instance?(frame, <dns-header>))
+          if (instance?(frame, <dns-frame>))
             frame;
           elseif (frame.parent)
             find-dns-frame(frame.parent);
           end;
         end;
   let dns-frame = find-dns-frame(label-offset);
-  dns-frame & parse-frame(<domain-name>, assemble-frame(dns-frame), start: label-offset.offset * 8, parent: dns-frame);
+  dns-frame
+    & parse-frame(<domain-name>,
+                  assemble-frame(dns-frame),
+                  start: label-offset.offset * 8,
+                  parent: dns-frame);
 end;
 
 define method as (class == <string>, label-offset :: <label-offset>)
@@ -73,10 +77,10 @@ define method as (class == <string>, label-offset :: <label-offset>)
   as(<string>, find-label(label-offset));
 end;
 
-define class <variable-length-byte-vector> (<variable-size-byte-vector>)
+define class <externally-delimited-string> (<variable-size-byte-vector>)
 end;
 
-define method as (class == <string>, frame :: <variable-length-byte-vector>)
+define method as (class == <string>, frame :: <externally-delimited-string>)
  => (res :: <string>)
   let res = make(<string>, size: byte-offset(frame-size(frame)));
   copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
@@ -85,7 +89,7 @@ end;
 
 define protocol label (domain-name-fragment)
   field length :: <6bit-unsigned-integer>;
-  field raw-data :: <variable-length-byte-vector>,
+  field raw-data :: <externally-delimited-string>,
     length: frame.length * 8;
 end;
 
@@ -167,7 +171,7 @@ end;
 
 define protocol character-string (container-frame)
   field length :: <unsigned-byte>;
-  field data :: <variable-length-byte-vector>,
+  field data :: <externally-delimited-string>,
     length: frame.length * 8;
 end;
 

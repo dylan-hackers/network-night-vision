@@ -129,11 +129,10 @@ define protocol ipv4-frame (header-frame)
   field header-checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
-  repeated field options :: <ip-option-frame>, // = make(<stretchy-vector>),
+  repeated field options :: <ip-option-frame>,
     reached-end?: method(value :: <ip-option-frame>)
                       instance?(value, <end-of-option-ip-option>)
                   end;
-  //field padding :: <4byte-boundary-padding>;
   variably-typed-field payload,
     start: frame.header-length * 4 * 8,
     end: frame.total-length * 8,
@@ -176,7 +175,7 @@ define protocol udp-frame (header-frame)
   variably-typed-field payload,
     end: frame.length * 8,
     type-function: if (frame.source-port = 53 | frame.destination-port = 53)
-                     <dns-header>
+                     <dns-frame>
                    else
                      <raw-frame>
                    end;  
