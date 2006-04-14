@@ -23,7 +23,7 @@ define module pcap-wrapper
   use machine-words;
   use byte-vector;
   use flow;
-  use network-flow, import: { <verbose-printer>, <fan-out> };
+  use network-flow, import: { <verbose-printer>, <summary-printer>, <fan-out> };
   use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
 end;
 

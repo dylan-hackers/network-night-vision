@@ -14,7 +14,6 @@ define method pcap-receive-callback
   for (i from 0 below packet.caplen)
     res[i] := bytes[i];
   end;
-  format-out("received res size: %d, size: %d\n", res.size, packet.caplen);
   push-data(real-interface.the-output, make(unparsed-class(<ethernet-frame>), packet: res));
 end;
 
@@ -105,14 +104,13 @@ define method push-data-aux (input :: <push-input>,
                              frame :: <frame>)
   let buffer = assemble-frame(frame);
   let res = pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
-  format-out("result %d\n", res);
 end;
 
 begin
   let pcap = make(<pcap-interface>);
   let fan-out = make(<fan-out>);
   connect(pcap, fan-out);
-  connect(fan-out, make(<verbose-printer>, stream: *standard-output*));
+  connect(fan-out, make(<summary-printer>, stream: *standard-output*));
   connect(fan-out, pcap);
   register-c-dylan-object(pcap);
   while(#t)
