@@ -1,0 +1,4 @@
+library: pcap-wrapper
+files: library
+	pcap
+c-libraries: -lpcap
