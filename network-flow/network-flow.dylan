@@ -94,6 +94,30 @@ define method push-data-aux (input :: <push-input>,
 end;
 
 define class <frame-filter> (<filter>)
+  slot frame-filter :: <filter-expression>,
+    required-init-keyword: frame-filter:;
+end;
+
+define method make (class == <frame-filter>,
+                    #rest rest,
+                    #key frame-filter,
+                    #all-keys) => (res :: <frame-filter>)
+  if (instance?(frame-filter, <string>))
+    apply(next-method, class, frame-filter: parse-filter(frame-filter), rest);
+  else
+    apply(next-method, class, rest);
+  end if;
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <frame-filter>,
+                             frame :: <frame>)
+  if (matches?(frame, node.frame-filter))
+    push-data(node.the-output, frame)
+  end;
+end;
+
+define class <frame-filter> (<filter>)
   slot frame-filter-expression :: <filter-expression>,
     required-init-keyword: filter-expression:;
 end;
