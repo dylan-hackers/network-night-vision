@@ -25,5 +25,6 @@ define module pcap-wrapper
   use flow;
   use network-flow, import: { <verbose-printer>, <summary-printer>, <fan-out> };
   use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
+  export <pcap-interface>;
 end;
 

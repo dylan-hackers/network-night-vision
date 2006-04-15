@@ -74,12 +74,46 @@ define method initialize
   => ()
   next-method();
   let errbuf = make(<byte-vector>);
-  interface.pcap-t :=
-    pcap-open-live(interface.device-name,
-                   $ethernet-buffer-size,
-                   $promisc,
-                   $timeout,
-                   buffer-offset(errbuf, 0));
+  block(ret)
+    local method open-interface (name)
+            let res = pcap-open-live(name,
+                                     $ethernet-buffer-size,
+                                     $promisc,
+                                     $timeout,
+                                     buffer-offset(errbuf, 0));
+            if (res ~= null-pointer(<C-void*>))
+              interface.pcap-t := res;
+              ret();
+            end;
+          end;
+    open-interface(interface.device-name);
+
+    let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
+    for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
+      if (subsequence-position(device.description, interface.device-name))
+        open-interface(device.name);
+      end;
+    end;
+    error("Device %s not found", interface.device-name);
+  end;
+end;
+ 
+define C-struct <pcap-if>
+  slot next :: <pcap-if*>;
+  slot name :: <C-string>;
+  slot description :: <C-string>;
+  slot addresses :: <C-void*>;
+  slot flags :: <C-unsigned-int>;
+  pointer-type-name: <pcap-if*>;
+  c-name: "pcap_if";
+end;
+
+define C-pointer-type <pcap-if**> => <pcap-if*>;
+define C-function pcap-find-all-devices
+  output parameter pcap-if-list :: <pcap-if**>;
+  parameter errbuf :: <C-buffer-offset>;
+  result errcode :: <C-int>;
+  c-name: "pcap_findalldevs";
 end;
 
 define function buffer-offset
@@ -96,7 +130,7 @@ define C-function pcap-inject
   parameter buffer :: <C-buffer-offset>;
   parameter size :: <C-int>;
   result error :: <C-int>;
-  c-name: "pcap_inject";
+  c-name: "pcap_sendpacket";
 end;
 
 define method push-data-aux (input :: <push-input>,
@@ -106,14 +140,10 @@ define method push-data-aux (input :: <push-input>,
   let res = pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;
 
-begin
-  let pcap = make(<pcap-interface>);
-  let fan-out = make(<fan-out>);
-  connect(pcap, fan-out);
-  connect(fan-out, make(<summary-printer>, stream: *standard-output*));
-  connect(fan-out, pcap);
-  register-c-dylan-object(pcap);
+define method toplevel (interface :: <pcap-interface>)
+  register-c-dylan-object(interface);
   while(#t)
-    pcap-dispatch(pcap.pcap-t, 1, receive-callback, export-c-dylan-object(pcap));
+    pcap-dispatch(interface.pcap-t, 1, receive-callback, export-c-dylan-object(interface));
   end;
 end;
+

@@ -22,6 +22,7 @@ define module packetizer
     operation, source-address, destination-address,
     type-code, <arp-frame>,
     target-ip-address, source-ip-address, source-mac-address,
+    mac-address, ipv4-address, 
     <decoded-arp-frame>, <decoded-ethernet-frame>,
     <fixed-size-byte-vector-frame>, data,
     total-length, concrete-frame-fields,
@@ -78,7 +79,8 @@ define module packetizer
     decoded-class,
     cache-class,
     field-count,
-    fixup!;
+    fixup!,
+    parent;
 
   export <header-frame>,
     <header-frame-cache>,

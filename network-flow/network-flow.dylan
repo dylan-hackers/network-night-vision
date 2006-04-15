@@ -39,6 +39,26 @@ define class <demultiplexer> (<single-push-input-node>)
   slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
+define class <fan-in> (<single-push-output-node>)
+  slot inputs :: <stretchy-vector> = make(<stretchy-vector>);
+end;
+
+define method create-input
+  (fan-in :: <fan-in>)
+  let res = make(<push-input>, node: fan-in);
+  add!(fan-in.inputs, res);
+  res;
+end;
+
+define method connect (output :: <object>, fan-in :: <fan-in>)
+  connect(output, create-input(fan-in));
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <fan-in>,
+                             frame :: <frame>)
+  push-data(node.the-output, frame);
+end;
 define class <fan-out> (<single-push-input-node>)
   slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;

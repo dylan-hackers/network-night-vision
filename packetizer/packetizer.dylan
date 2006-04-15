@@ -712,6 +712,15 @@ define inline method field-size (type == <unsigned-byte>)
   8
 end;
 
+define method read-frame (type == <unsigned-byte>,
+                          string :: <string>)
+ => (res)
+  let res = string-to-integer(string);
+  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+    signal(make(<out-of-range-error>))
+  end;
+  res;
+end;
 define inline method high-level-type (low-level-type == <unsigned-byte>)
  => (res == <byte>)
   <byte>;

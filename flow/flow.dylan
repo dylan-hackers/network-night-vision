@@ -11,6 +11,7 @@ define class <node> (<object>)
   slot graph :: <graph> = *global-flow*, init-keyword: graph:;
 end;
 
+define open generic toplevel (node :: <node>);
 define thread variable *global-flow* = make(<graph>);
 
 define method initialize(node :: <node>, #rest rest, #key, #all-keys)
