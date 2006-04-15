@@ -137,30 +137,6 @@ define method push-data-aux (input :: <push-input>,
   end;
 end;
 
-define class <frame-filter> (<filter>)
-  slot frame-filter-expression :: <filter-expression>,
-    required-init-keyword: filter-expression:;
-end;
-
-define method make (class == <frame-filter>,
-                    #rest rest,
-                    #key filter-expression,
-                    #all-keys) => (res :: <frame-filter>)
-  if (instance?(filter-expression, <string>))
-    apply(next-method, class, filter-expression: parse-filter(filter-expression), rest);
-  else
-    apply(next-method, class, rest);
-  end if;
-end;
-
-define method push-data-aux (input :: <push-input>,
-                             node :: <frame-filter>,
-                             frame :: <frame>)
-  if (matches?(frame, node.frame-filter-expression))
-    push-data(node.the-output, frame)
-  end;
-end;
-
 define class <pcap-file-reader> (<single-push-output-node>)
   slot file-stream :: <stream>, required-init-keyword: stream:;
 end;
