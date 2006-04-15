@@ -274,7 +274,7 @@ define method parse-frame-field-aux
   frame :: <unparsed-container-frame>,
   start :: <integer>,
   packet :: <byte-sequence>)
- maybe-parse-frame(field.type, packet, start, frame);
+ parse-frame(field.type, packet, start: start, parent: frame);
 end;
 define method parse-frame-field-aux
   (field :: <variably-typed-field>,
@@ -282,9 +282,10 @@ define method parse-frame-field-aux
    start :: <integer>,
    packet :: <byte-sequence>)
   let type = field.type-function(frame);
-  maybe-parse-frame(type, packet, start, frame);
+  parse-frame(type, packet, start: start, parent: frame);
 end;
 
+//XXX: refactor here. parse more lazy; use <frame-field> infrastructure
 define method parse-frame-field-aux
   (field :: <self-delimited-repeated-field>,
    frame :: <unparsed-container-frame>,
@@ -295,10 +296,10 @@ define method parse-frame-field-aux
   let start = start;
   if (packet.size > 0)
     let (value, offset)
-      = maybe-parse-frame(field.type,
-                          subsequence(packet, start: byte-offset(start)),
-                          bit-offset(start),
-                          frame);
+      = parse-frame(field.type,
+                    subsequence(packet, start: byte-offset(start)),
+                    start: bit-offset(start),
+                    parent: frame);
     unless (offset)
       offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
     end;
@@ -311,10 +312,10 @@ define method parse-frame-field-aux
     start := byte-offset(start) * 8 + offset;
     while ((~ field.reached-end?(frames.last)) & (byte-offset(start) < packet.size))
       let (value, offset)
-        = maybe-parse-frame(field.type,
+        = parse-frame(field.type,
                             subsequence(packet, start: byte-offset(start)),
-                            bit-offset(start),
-                            frame);
+                            start: bit-offset(start),
+                            parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
       end;
@@ -340,11 +341,11 @@ define method parse-frame-field-aux
   if (packet.size > 0)
     for (i from 0 below field.count(frame))
       let (value, offset)
-        = maybe-parse-frame(field.type,
-                            subsequence(packet,
-                                        start: byte-offset(start)),
-                            bit-offset(start),
-                            frame);
+        = parse-frame(field.type,
+                      subsequence(packet,
+                                  start: byte-offset(start)),
+                      start: bit-offset(start),
+                      parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
       end;
@@ -358,13 +359,6 @@ define method parse-frame-field-aux
     end;
   end;
   values(frames, start);
-end;
-
-define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
-                                        packet :: <byte-vector>,
-                                        start :: <integer>,
-                                        parent :: false-or(<container-frame>))
-  maybe-parse-frame(frame-type, subsequence(packet), start, parent);
 end;
 
 define method parse-frame (frame-type :: subclass(<container-frame>),
@@ -382,13 +376,6 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
     values(frame, length)
   end;
 end;
-define inline method maybe-parse-frame (frame-type :: subclass(<frame>),
-                                        packet :: <byte-sequence>,
-                                        start :: <integer>,
-                                        parent :: false-or(<container-frame>))
-  parse-frame(frame-type, packet, start: start, parent: parent);
-end;
-
 
 define macro frame-field-generator
     { frame-field-generator(?type:name; ?count:expression; field ?field-name:name ?foo:*  ; ?rest:*) }
