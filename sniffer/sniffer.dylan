@@ -47,7 +47,7 @@ define function main()
   let fan-out = make(<fan-out>);
 
   if (parser.filter)
-    let frame-filter = make(<frame-filter>, filter-expression: parser.filter);
+    let frame-filter = make(<frame-filter>, frame-filter: parser.filter);
     connect(source, frame-filter);
     connect(frame-filter, fan-out);
   else
