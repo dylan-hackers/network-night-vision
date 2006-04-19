@@ -52,6 +52,7 @@ define method push-data-aux (input :: <push-input>,
                         source-address: node.network-interface.ethernet-address,
                         type-code: #x800,
                         payload: response*);
+  format-out("sending icmp response to %=\n", as(<string>, frame.parent.source-address));
   push-data(node.the-output, response**);
 end;
 begin
