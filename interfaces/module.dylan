@@ -17,6 +17,8 @@ define module interfaces
   use dylan-direct-c-ffi;
   use machine-words;
   use big-integers;
+  use flow;
+  use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
 
-  export <interface>, receive, send;
+  export <ethernet-interface>, interface-name;
 end module interfaces;

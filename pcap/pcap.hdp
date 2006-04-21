@@ -1,4 +1,4 @@
-library: pcap-wrapper
+library: interfaces
 files: library
 	pcap
 c-libraries: -lpcap

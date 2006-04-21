@@ -9,6 +9,8 @@ define library interfaces
   use C-FFI;
   use io;
   use collection-extensions;
+  use flow;
+  use packetizer;
 
   export interfaces;
 end library interfaces;

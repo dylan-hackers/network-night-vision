@@ -12,9 +12,6 @@ define module network-flow
   use flow;
   use packetizer;
   use packet-filter;
-  use interfaces;
-
-  // Add binding exports here.
 
   export <summary-printer>, <verbose-printer>,
     <decapsulator>, <demultiplexer>,
@@ -22,6 +19,5 @@ define module network-flow
     <frame-filter>,
     <pcap-file-reader>,
     <pcap-file-writer>,
-    <ethernet-interface>,
     <fan-out>, <fan-in>;
 end module network-flow;

@@ -172,40 +172,6 @@ define method push-data-aux (input :: <push-input>,
   force-output(node.file-stream);
 end;
 
-define class <ethernet-interface> (<filter>)
-  slot unix-interface :: <interface>;
-  slot interface-name :: <string>, required-init-keyword: name:;
-end;
-
-define method initialize (node :: <ethernet-interface>,
-                          #rest rest, #key, #all-keys)
-  next-method();
-  node.unix-interface := make(<interface>, name: node.interface-name);
-end;
-
-define method push-data-aux (input :: <push-input>,
-                             node :: <ethernet-interface>,
-                             frame :: <frame>)
-  send(node.unix-interface, assemble-frame(frame));
-end;
-
-define method toplevel (node :: <ethernet-interface>)
-  while(#t)
-    let packet = receive(node.unix-interface);
-    block()
-      let frame = make(unparsed-class(<ethernet-frame>), packet: packet);
-      push-data(node.the-output, frame);
-    exception (error :: <condition>)
-      let frame = parse-frame(<ethernet-frame>, packet);
-      format(*standard-output*,
-             "%= handling packet\n%s\n",
-             error,
-             as(<string>, frame));
-      hexdump(*standard-output*, packet);
-      force-output(*standard-output*);
-    end block;
-  end while;
-end;
 
 /*
 begin

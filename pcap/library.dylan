@@ -1,19 +1,20 @@
 module: dylan-user
+author: Andreas Bogk, Hannes Mehnert
+copyright: (c) 2006, All rights reserved. Free for non-commercial user
 
-define library pcap-wrapper
+define library interfaces
   use common-dylan;
   use c-ffi;
   use io;
   use collection-extensions;
   use functional-dylan;
   use flow;
-  use network-flow;
   use packetizer;
 
-  export pcap-wrapper;
+  export interfaces;
 end;
 
-define module pcap-wrapper
+define module interfaces
   use common-dylan;
   use c-ffi;
   use format-out;
@@ -23,8 +24,7 @@ define module pcap-wrapper
   use machine-words;
   use byte-vector;
   use flow;
-  use network-flow, import: { <verbose-printer>, <summary-printer>, <fan-out> };
   use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
-  export <pcap-interface>;
+  export <ethernet-interface>, interface-name;
 end;
 

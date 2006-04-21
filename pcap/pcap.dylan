@@ -1,4 +1,4 @@
-module: pcap-wrapper
+module: interfaces
 author: Andreas Bogk, Hannes Mehnert
 copyright: (c) 2006, All rights reserved. Free for non-commercial user
 
@@ -32,12 +32,13 @@ define C-function pcap-dispatch
   c-name: "pcap_dispatch";
 end;
 
-define open generic device-name (object :: <pcap-interface>) => (res :: <string>);
-define open generic pcap-t (object :: <pcap-interface>) => (res :: <object>);
-define open generic pcap-t-setter (value :: <object>, object :: <pcap-interface>) => (res :: <object>);
+//XXX needed because c-ffi stuff needs to be compiled in tight mode
+define open generic interface-name (object :: <ethernet-interface>) => (res :: <string>);
+define open generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
+define open generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
 
-define open class <pcap-interface> (<filter>)
-  constant slot device-name :: <string> = "ath0", init-keyword: name:;
+define open class <ethernet-interface> (<filter>)
+  constant slot interface-name :: <string> = "ath0", init-keyword: name:;
   slot pcap-t;
 end;
 
@@ -70,7 +71,7 @@ define constant $promisc = 1;
 define constant $timeout = 100;
 
 define method initialize
-    (interface :: <pcap-interface>, #next next-method, #key, #all-keys)
+    (interface :: <ethernet-interface>, #next next-method, #key, #all-keys)
   => ()
   next-method();
   let errbuf = make(<byte-vector>);
@@ -86,15 +87,15 @@ define method initialize
               ret();
             end;
           end;
-    open-interface(interface.device-name);
+    open-interface(interface.interface-name);
 
     let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
     for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
-      if (subsequence-position(device.description, interface.device-name))
+      if (subsequence-position(device.description, interface.interface-name))
         open-interface(device.name);
       end;
     end;
-    error("Device %s not found", interface.device-name);
+    error("Device %s not found", interface.interface-name);
   end;
 end;
  
@@ -134,16 +135,19 @@ define C-function pcap-inject
 end;
 
 define method push-data-aux (input :: <push-input>,
-                             node :: <pcap-interface>,
+                             node :: <ethernet-interface>,
                              frame :: <frame>)
   let buffer = assemble-frame(frame);
   let res = pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;
 
-define method toplevel (interface :: <pcap-interface>)
+define method toplevel (interface :: <ethernet-interface>)
   register-c-dylan-object(interface);
   while(#t)
-    pcap-dispatch(interface.pcap-t, 1, receive-callback, export-c-dylan-object(interface));
+    pcap-dispatch(interface.pcap-t,
+                  1,
+                  receive-callback,
+                  export-c-dylan-object(interface));
   end;
 end;
 

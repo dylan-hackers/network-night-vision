@@ -9,6 +9,7 @@ define library sniffer
   use flow;
   use network-flow;
   use system;
+  use interfaces;
 end;
 
 define module sniffer
@@ -20,4 +21,5 @@ define module sniffer
   use flow;
   use network-flow;
   use parse-arguments;
+  use interfaces;
 end;
