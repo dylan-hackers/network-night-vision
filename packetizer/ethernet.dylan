@@ -35,6 +35,7 @@ define method as (class == <string>, frame :: <mac-address>) => (string :: <stri
                  rcurry(integer-to-string, base: 16, size: 2),
                  frame.data))
 end;
+
 define protocol ethernet-frame (header-frame)
   summary "ETH %= -> %=/%s",
     source-address, destination-address, compose(summary, payload);

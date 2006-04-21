@@ -150,7 +150,7 @@ define method toplevel (reader :: <pcap-file-reader>)
               make(unparsed-class(<ethernet-frame>),
                    packet: assemble-frame(frame.payload)))
   end
-end;                    
+end;
 
 define class <pcap-file-writer> (<single-push-input-node>)
   slot file-stream :: <stream>, required-init-keyword: stream:;
