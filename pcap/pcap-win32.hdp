@@ -1,0 +1,4 @@
+library: interfaces
+files: library
+	pcap
+c-libraries: wpcap.lib

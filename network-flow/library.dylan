@@ -9,7 +9,6 @@ define library network-flow
   use packetizer;
   use io;
   use system;
-  use interfaces;
 
   // Add any more module exports here.
   export network-flow;
