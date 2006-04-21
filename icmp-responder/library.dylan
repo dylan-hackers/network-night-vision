@@ -9,7 +9,7 @@ define library icmp-responder
   use network-flow;
   use flow;
   use packetizer;
-  use pcap-wrapper;
+  use interfaces;
 
   // Add any more module exports here.
   export icmp-responder;

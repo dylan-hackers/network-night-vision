@@ -13,7 +13,7 @@ define module icmp-responder
   use network-flow;
   use flow;
   use packetizer;
-  use pcap-wrapper;
+  use interfaces;
 
   // Add binding exports here.
 

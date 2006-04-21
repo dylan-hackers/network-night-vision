@@ -61,7 +61,7 @@ begin
                        ipv4-address: ipv4-address("23.23.23.5"));
   let demux = make(<demultiplexer>);
   let decap = make(<decapsulator>);
-  let source = make(<pcap-interface>, name: "Intel");
+  let source = make(<ethernet-interface>, name: "Intel");
   let printer = make(<summary-printer>, stream: *standard-output*);
   connect(source, decap);
   connect(decap, demux);
