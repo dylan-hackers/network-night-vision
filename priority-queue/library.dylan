@@ -9,5 +9,5 @@ end library;
 define module priority-queue
   use common-dylan;
 
-  export <priority-queue>;
+  export <priority-queue>, <priority-queueable-mixin>;
 end module priority-queue;

@@ -16,5 +16,5 @@ define module timer
   use date;
   use threads;
 
-  export foo;
+  export <timer>, cancel;
 end module;
