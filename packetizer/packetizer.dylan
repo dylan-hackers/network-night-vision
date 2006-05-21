@@ -407,7 +407,7 @@ define method assemble-frame-into (frame :: <container-frame>,
                                    start :: <integer>)
   for (field in fields(frame),
        offset = start then offset + get-field-size-aux(frame, field))
-    if (field.getter(frame) = #f)
+    unless (field.getter(frame))
       if (field.fixup-function)
         field.setter(field.fixup-function(frame), frame);
       else

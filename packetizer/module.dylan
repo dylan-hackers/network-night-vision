@@ -88,6 +88,10 @@ define module packetizer
     <decoded-header-frame>,
     payload;
 
+  export frame-size,
+    byte-offset,
+    bit-offset;
+
   export protocol-definer;
   //XXX: we shouldn't need to export those
   export real-class-definer, cache-class-definer, decoded-class-definer, gen-classes,
