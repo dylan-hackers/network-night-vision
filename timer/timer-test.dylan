@@ -18,5 +18,5 @@ define method print-date ()
 end;
 
 begin
-  main();
+ //main();
 end;

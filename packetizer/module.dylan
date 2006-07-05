@@ -20,7 +20,7 @@ define module packetizer
   export <ethernet-frame>, <ipv4-frame>,
     <ipv4-address>, <mac-address>,
     operation, source-address, destination-address,
-    type-code, <arp-frame>,
+    type-code, <arp-frame>, target-mac-address,
     target-ip-address, source-ip-address, source-mac-address,
     mac-address, ipv4-address, 
     <decoded-arp-frame>, <decoded-ethernet-frame>,
@@ -55,6 +55,8 @@ define module packetizer
     field-name,
     field-size,
     getter,
+    setter,
+    fixup-function,
     type;
 
   export <frame>,
