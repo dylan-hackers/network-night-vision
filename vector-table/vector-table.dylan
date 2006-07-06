@@ -1,5 +1,5 @@
-module: sniffer
-Author:    Andreas Bogk, Hannes Mehnert
+module: vector-table
+Author: Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define sealed class <vector-table> (<table>)
