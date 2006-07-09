@@ -7,6 +7,7 @@ define library simple-sniffer
   use io;
   use flow;
   use network-flow;
+  use interfaces;
 end;
 
 
@@ -15,4 +16,5 @@ define module simple-sniffer
   use standard-io;
   use flow;
   use network-flow;
+  use interfaces;
 end;  
