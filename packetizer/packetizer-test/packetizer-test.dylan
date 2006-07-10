@@ -282,6 +282,38 @@ define test inheritance-dynamic-length()
   frame-field-checker(2, aframe, 16, 24, 40);
 end;
 
+define protocol b-sub-sub (container-frame)
+  field a :: <unsigned-byte>;
+  field a* :: <raw-frame>,
+    length: frame.a * 8;
+  field b :: <unsigned-byte>;
+end;
+
+define test dyn-length ()
+  let aframe = make(unparsed-class(<b-sub-sub>),
+                    packet: as(<byte-vector>, #(#x3, #x0, #x0, #x0, #x42, #x42)));
+  let field-list = fields(aframe);
+  static-checker(field-list[0], 0, 8, 8);
+  static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
+  static-checker(field-list[2], $unknown-at-compile-time, 8, $unknown-at-compile-time);
+  frame-field-checker(0, aframe, 0, 8, 8);
+  frame-field-checker(1, aframe, 8, 24, 32);
+  frame-field-checker(2, aframe, 32, 8, 40);
+end;
+define protocol b-subb (container-frame)
+  //variably-typed-field data,
+  //  type-function: <b-sub-sub>;
+  field data :: <b-sub-sub>;
+end;
+
+define test dynamic-length ()
+  let aframe = make(unparsed-class(<b-subb>),
+                    packet: as(<byte-vector>, #(#x3, #x0, #x0, #x0, #x42, #x42)));
+  let field-list = fields(aframe);
+  static-checker(field-list[0], 0, $unknown-at-compile-time, $unknown-at-compile-time);
+  frame-field-checker(0, aframe, 0, 40, 40);
+end;
+
 define test inheritance-dynamic-length-assemble ()
   let frame = make(<b-sub>, type-code: #x42, data: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x23, #x42))));
   let byte-vector = assemble-frame(frame);
@@ -300,6 +332,8 @@ define suite packetizer-suite ()
   test label-test;
   test inheritance-test;
   test inheritance-dynamic-length;
+  test dyn-length;
+  test dynamic-length;
 end;
 
 define suite packetizer-assemble-suite ()

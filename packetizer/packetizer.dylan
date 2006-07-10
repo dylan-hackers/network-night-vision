@@ -593,7 +593,10 @@ end;
 define inline method length (frame-field :: <frame-field>) => (res :: <integer>)
   unless (frame-field.%length)
     unless (compute-field-length(frame-field))
-      value(frame-field); // this has side effects ;)
+      value(frame-field); //XXX: b0rk3n
+      unless (frame-field.%length)
+        frame-field.%length := get-field-size-aux(frame-field.frame, frame-field.field);
+      end;
     end;
   end;
   frame-field.%length;

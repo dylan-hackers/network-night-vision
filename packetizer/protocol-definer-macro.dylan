@@ -200,8 +200,10 @@ define macro unparsed-frame-field-generator
           let frame-field = get-frame-field(?field-index, mframe);
           let (value, parsed-end) = parse-frame-field(frame-field);
           mframe.cache.?name := value;
-          frame-field.%end-offset := parsed-end;
-          frame-field.%length := parsed-end - frame-field.start-offset;
+          if (parsed-end)
+            frame-field.%end-offset := parsed-end;
+            frame-field.%length := parsed-end - frame-field.start-offset;
+          end;
           mframe.cache.?name
         end;
       end;
@@ -260,11 +262,8 @@ define method parse-frame-field
               frame-field.field.field-name, start, end-of-field, end-of-field - start, length - bit-offset(start));
       end;
     end;
-  elseif ((~ length) & (frame-field.field.index + 1 ~= field-count(frame-field.frame.object-class)))
-    end-of-field := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
   else
-    //last field in frame
-    end-of-field := full-frame-size
+    end-of-field := #f
   end;
   values(value, end-of-field);
 end;
