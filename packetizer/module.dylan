@@ -18,7 +18,12 @@ define module packetizer
 
   // Add binding exports here.
   export <ethernet-frame>, <ipv4-frame>,
-    <ipv4-address>, <mac-address>,
+    <ipv4-address>, <mac-address>, <ieee80211-frame>, <prism2-frame>,
+    <logical-link-control>, <link-control>,
+    <ieee80211-information-field>,
+    <ieee80211-data-frame>,
+    <ieee80211-management-frame>,
+    <ieee80211-control-frame>,
     operation, source-address, destination-address,
     type-code, <arp-frame>, target-mac-address,
     target-ip-address, source-ip-address, source-mac-address,
@@ -28,7 +33,8 @@ define module packetizer
     total-length, concrete-frame-fields,
     <repeated-field>;
 
-  export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets;
+  export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
+    $DLT-EN10MB, $DLT-PRISM-HEADER;
 
   export <icmp-frame>, code, type, checksum;
 

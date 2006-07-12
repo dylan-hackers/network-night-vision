@@ -8,10 +8,13 @@ files:	library
 	protocol-definer-macro
 	filter
 	filter-parser
+	logical-link
 	ethernet
 	ipv4
 	pcap
 	dns
+	ieee80211
+	prism2
 base-address:	0x63FE0000
 debug-arguments:	c:\foo.pcap
 linker-options:	$(guilflags)

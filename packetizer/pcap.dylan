@@ -2,6 +2,10 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+// from pcap-bpf.h
+define constant $DLT-EN10MB = 1;
+define constant $DLT-PRISM-HEADER = 119;
+
 //FIXME
 define n-byte-vector(little-endian-unsigned-integer-4byte, 4) end;
 
@@ -48,7 +52,8 @@ define protocol pcap-packet (header-frame)
   field last-packet-length :: <unsigned-byte> = 0;
   variably-typed-field payload,
     type-function: select (frame.parent.header.linktype)
-                     1 => <ethernet-frame>;
+                     $DLT-EN10MB => <ethernet-frame>;
+                     $DLT-PRISM-HEADER => <prism2-frame>;
                      otherwise => <raw-frame>;
                    end,
     length: frame.capture-length * 8;
