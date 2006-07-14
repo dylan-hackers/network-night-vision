@@ -14,6 +14,7 @@ define module layer
   use flow;
   use interfaces;
   use vector-table;
+  use date, import: {<date>, current-date };
 
   // Add binding exports here.
 

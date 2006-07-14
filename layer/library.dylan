@@ -11,6 +11,7 @@ define library layer
   use timer;
   use interfaces;
   use vector-table;
+  use system, import: { date };
 
   // Add any more module exports here.
   export layer;

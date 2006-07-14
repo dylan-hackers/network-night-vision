@@ -41,5 +41,12 @@ define protocol ethernet-frame (header-frame)
     source-address, destination-address, compose(summary, payload);
   field destination-address :: <mac-address>;
   field source-address :: <mac-address>;
-  field payload :: <logical-link-control>;
+  field type-code :: <2byte-big-endian-unsigned-integer>;
+  variably-typed-field payload,
+    type-function:
+      select (frame.type-code)
+        #x800 => <ipv4-frame>;
+        #x806 => <arp-frame>;
+          otherwise <raw-frame>;
+      end;  
 end;
