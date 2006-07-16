@@ -32,10 +32,10 @@ define C-function pcap-dispatch
   c-name: "pcap_dispatch";
 end;
 
-//XXX needed because c-ffi stuff needs to be compiled in tight mode
-define open generic interface-name (object :: <ethernet-interface>) => (res :: <string>);
-define open generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
-define open generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
+//XXX needed because bug #7192 c-ffi stuff needs to be compiled in tight mode
+define generic interface-name (object :: <ethernet-interface>) => (res :: <string>);
+define generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
+define generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
 
 define open class <ethernet-interface> (<filter>)
   constant slot interface-name :: <string> = "ath0", init-keyword: name:;
@@ -77,6 +77,7 @@ define method initialize
   let errbuf = make(<byte-vector>);
   block(ret)
     local method open-interface (name)
+            format-out("trying interface %s\n", name);
             let res = pcap-open-live(name,
                                      $ethernet-buffer-size,
                                      $promisc,
@@ -84,13 +85,17 @@ define method initialize
                                      buffer-offset(errbuf, 0));
             if (res ~= null-pointer(<C-void*>))
               interface.pcap-t := res;
+              format-out("Opened Interface %s\n", name);
               ret();
             end;
           end;
-    open-interface(interface.interface-name);
+    //open-interface(interface.interface-name);
 
+    format-out("trying pcap-find-alldevices\n");
     let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
+    format-out("errcode %=\n", errorcode);
     for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
+      format-out("device %s %s\n", device.name, device.description);
       if (subsequence-position(device.description, interface.interface-name))
         open-interface(device.name);
       end;

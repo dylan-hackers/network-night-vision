@@ -39,7 +39,7 @@ define class <demultiplexer> (<single-push-input-node>)
   slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
-define class <fan-in> (<single-push-output-node>)
+define open class <fan-in> (<single-push-output-node>)
   slot inputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 

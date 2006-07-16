@@ -119,7 +119,7 @@ define protocol ipv4-frame (header-frame)
   field type-of-service :: <unsigned-byte> = 0;
   field total-length :: <2byte-big-endian-unsigned-integer>,
     fixup: frame.header-length * 4 + byte-offset(frame-size(frame.payload));
-  field identification :: <2byte-big-endian-unsigned-integer>;
+  field identification :: <2byte-big-endian-unsigned-integer> = 23;
   field evil :: <1bit-unsigned-integer> = 0;
   field dont-fragment :: <1bit-unsigned-integer> = 0;
   field more-fragments :: <1bit-unsigned-integer> = 0;
@@ -129,7 +129,7 @@ define protocol ipv4-frame (header-frame)
   field header-checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
-  repeated field options :: <ip-option-frame>,
+  repeated field options :: <ip-option-frame> = make(<stretchy-vector>),
     reached-end?: method(value :: <ip-option-frame>)
                       instance?(value, <end-of-option-ip-option>)
                   end;
