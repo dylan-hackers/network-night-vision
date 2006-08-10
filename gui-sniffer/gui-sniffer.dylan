@@ -31,6 +31,11 @@ define method frame-children-generator (a-frame :: <container-frame>)
   sorted-frame-fields(a-frame)
 end;
 
+define method frame-children-generator (a-frame :: <header-frame>)
+  let ffs = sorted-frame-fields(a-frame);
+  copy-sequence(ffs, end: ffs.size - 1);
+end;
+
 define method frame-children-generator (frame-field :: <frame-field>)
   if (instance?(frame-field.field, <repeated-field>))
     frame-field.value
@@ -41,6 +46,13 @@ define method frame-children-generator (frame-field :: <frame-field>)
   end
 end;
 
+define method frame-root-generator (frame :: <header-frame>)
+  add!(frame-root-generator(payload(frame)), frame);
+end;
+
+define method frame-root-generator (frame :: <frame>)
+  list(frame);
+end;
 define method frame-print-label (frame-field :: <frame-field>)
   if (~ frame-children-predicate(frame-field))
     format-to-string("%s: %=", frame-field.field.field-name, frame-field.value)
@@ -65,22 +77,6 @@ end;
 
 define method frame-print-label (frame :: <leaf-frame>)
   format-to-string("%=", frame);
-end;
-
-define method frame-viewer(frame :: <frame>)
-  make(<tree-control>, 
-       roots: vector(frame),
-       label-key: frame-print-label,
-       children-generator: frame-children-generator,
-       children-predicate: frame-children-predicate)
-end;
-
-define method frame-viewer(frames :: <collection>)
-  make(<tree-control>, 
-       roots: frames,
-       label-key: frame-print-label,
-       children-generator: frame-children-generator,
-       children-predicate: frame-children-predicate)
 end;
 
 define method print-source (frame :: <ethernet-frame>)
@@ -117,22 +113,24 @@ define method show-packet (frame :: <gui-sniffer-frame>)
   show-packet-tree(frame, packet);
   show-packet-hex-dump(frame, packet);
 end;
-
 define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
   frame.packet-tree-view.tree-control-roots
     := if (packet)
-         frame-children-generator(packet);
+         frame-root-generator(packet);
        else
          #[]
        end;
 end;
 
 define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet)
+  //XXX: this should be easier!
   frame.packet-hex-dump.gadget-value
     := if (network-packet)
          let out = make(<string-stream>, direction: #"output");
          block()
-           hexdump(out, network-packet.packet);
+           hexdump(out, network-packet.packet); //XXX: once assemble-frame
+                                                //on unparsed-container-frame works,
+                                                //we can use assemble-frame here
            stream-contents(out);
          cleanup
            close(out)
@@ -147,6 +145,7 @@ define method counter (frame :: <object>)
   *count* := *count* + 1;
   *count*;
 end;
+
 define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   slot network-frames = make(<stretchy-vector>);
   slot filter-expression = #f;

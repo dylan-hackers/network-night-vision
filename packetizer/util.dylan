@@ -13,7 +13,7 @@ define method hexdump (stream :: <stream>, sequence :: <sequence>) => ()
   end;
   for (byte keyed-by index in sequence)
     if(sequence.size > 16 & modulo(index, 16) == 0)
-      format(stream, "%s  ", hex(index, size: 8))
+      format(stream, "%s  ", hex(index, size: 4))
     end;
     format(stream, "%s", hex(byte, size: 2));
     if(modulo(index, 16) == 15 
