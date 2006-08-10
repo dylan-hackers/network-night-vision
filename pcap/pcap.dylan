@@ -11,6 +11,7 @@ define method pcap-receive-callback
     (interface, packet :: <pcap-packet-header*>, bytes)
   let real-interface = import-c-dylan-object(interface);
   let res = make(<byte-vector>, size: packet.caplen);
+  //XXX: performance!
   for (i from 0 below packet.caplen)
     res[i] := bytes[i];
   end;
@@ -34,11 +35,13 @@ end;
 
 //XXX needed because bug #7192 c-ffi stuff needs to be compiled in tight mode
 define generic interface-name (object :: <ethernet-interface>) => (res :: <string>);
+define generic promiscious? (object :: <ethernet-interface>) => (res :: <boolean>);
 define generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
 define generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
 
 define open class <ethernet-interface> (<filter>)
   constant slot interface-name :: <string> = "ath0", init-keyword: name:;
+  constant slot promiscious? :: <boolean> = #t, init-keyword: promiscious?:;
   slot pcap-t;
 end;
 
@@ -67,7 +70,6 @@ define C-struct <pcap-packet-header>
 end;
 
 define constant $ethernet-buffer-size = 1600;
-define constant $promisc = 1;
 define constant $timeout = 100;
 
 define method initialize
@@ -80,7 +82,7 @@ define method initialize
             format-out("trying interface %s\n", name);
             let res = pcap-open-live(name,
                                      $ethernet-buffer-size,
-                                     $promisc,
+                                     if (interface.promiscious?) 1 else 0 end,
                                      $timeout,
                                      buffer-offset(errbuf, 0));
             if (res ~= null-pointer(<C-void*>))
