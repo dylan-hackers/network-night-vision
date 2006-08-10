@@ -88,7 +88,8 @@ define module packetizer
     cache-class,
     field-count,
     fixup!,
-    parent;
+    parent,
+    packet;
 
   export <header-frame>,
     <header-frame-cache>,

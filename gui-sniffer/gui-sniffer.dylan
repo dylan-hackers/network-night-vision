@@ -112,8 +112,13 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
   end;
 end;
 
-define method show-packet-tree (frame :: <gui-sniffer-frame>)
+define method show-packet (frame :: <gui-sniffer-frame>)
   let packet = frame.packet-table.gadget-value;
+  show-packet-tree(frame, packet);
+  show-packet-hex-dump(frame, packet);
+end;
+
+define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
   frame.packet-tree-view.tree-control-roots
     := if (packet)
          frame-children-generator(packet);
@@ -121,6 +126,22 @@ define method show-packet-tree (frame :: <gui-sniffer-frame>)
          #[]
        end;
 end;
+
+define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet)
+  frame.packet-hex-dump.gadget-value
+    := if (network-packet)
+         let out = make(<string-stream>, direction: #"output");
+         block()
+           hexdump(out, network-packet.packet);
+           stream-contents(out);
+         cleanup
+           close(out)
+         end
+       else
+         ""
+       end;
+end;
+
 define variable *count* :: <integer> = 0;
 define method counter (frame :: <object>)
   *count* := *count* + 1;
@@ -130,6 +151,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   slot network-frames = make(<stretchy-vector>);
   slot filter-expression = #f;
   slot ethernet-interface = #f;
+
   pane filter-field (frame)
     make(<text-field>,
          label: "Filter expression",
@@ -146,7 +168,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
          headings: #("No", "Source", "Destination", "Protocol", "Info"),
          generators: list(counter, print-source, print-destination, print-protocol, print-info),
          items: #[],
-         value-changed-callback: method(x) show-packet-tree(frame) end);
+         value-changed-callback: method(x) show-packet(frame) end);
 
   pane packet-tree-view (frame)
     make(<tree-control>,
@@ -154,13 +176,28 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
          children-generator: frame-children-generator,
          children-predicate: frame-children-predicate);
 
+  pane packet-hex-dump (frame)
+    make(<text-editor>,
+         read-only?: #t,
+         tab-stop?: #t,
+         lines: 20,
+         columns: 100,
+         scroll-bars: #"vertical",
+         text-style: make(<text-style>, family: #"fix"));
+
+
+  pane sniffer-status-bar (frame)
+    make(<status-bar>, label: "GUI Sniffer");
+
   layout (frame) vertically()
                    frame.filter-pane;
                    frame.packet-table;
                    frame.packet-tree-view;
+                   frame.packet-hex-dump;
                  end;
 
   command-table (frame) *gui-sniffer-command-table*;
+  status-bar (frame) frame.sniffer-status-bar;
   keyword title: = "GUI Sniffer"
 end;
 
@@ -183,10 +220,12 @@ define method open-pcap-file (frame :: <gui-sniffer-frame>)
   let file = choose-file(frame: frame, direction: #"input");
   if (file)
     frame.network-frames := make(<stretchy-vector>);
+    refresh-packet-table(frame);
     let file-stream = make(<file-stream>, locator: file, direction: #"input");
     let pcap-reader = make(<pcap-file-reader>, stream: file-stream);
     connect(pcap-reader, frame);
     toplevel(pcap-reader);
+    gadget-label(frame.sniffer-status-bar) := concatenate("Opened ", file);
     close(file-stream);
     refresh-packet-table(frame);
   end;
@@ -203,25 +242,29 @@ define method save-pcap-file (frame :: <gui-sniffer-frame>)
     connect(frame, pcap-writer);
     do(curry(push-data, frame.the-output), frame.network-frames);
     //XXX: disconnect in flow graph, but disconnect is NYI
+    gadget-label(frame.sniffer-status-bar) := concatenate("Wrote ", file);
     close(file-stream);
   end;
 end;
 
 define method open-interface (frame :: <gui-sniffer-frame>)
-  let (interface, promiscious?) = prompt-for-interface(owner: frame);
-  if (interface)
+  let (interface-name, promiscious?) = prompt-for-interface(owner: frame);
+  if (interface-name)
     let interface = make(<ethernet-interface>,
-                         name: interface,
+                         name: interface-name,
                          promiscious?: promiscious?);
     connect(interface, frame);
     frame.network-frames := make(<stretchy-vector>);
+    refresh-packet-table(frame);
     make(<thread>, function: curry(toplevel, interface));
     frame.ethernet-interface := interface;
+    gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
   end;
 end;
 
 define method close-interface (frame :: <gui-sniffer-frame>)
   frame.ethernet-interface.running? := #f;
+  gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
   //XXX: disconnect in flow graph, but disconnect is NYI
 end;
 
@@ -236,7 +279,7 @@ define method prompt-for-interface
     = make(<dialog-frame>,
            title: title,
            owner: owner,
-           layout: vertically()
+           layout: horizontally()
                      interface-text;
                      promiscious?
                    end,
@@ -258,7 +301,7 @@ define method refresh-packet-table (frame :: <gui-sniffer-frame>)
     update-gadget(frame.packet-table)
   else
     gadget-items(frame.packet-table) := shown-packets;
-    show-packet-tree(frame);
+    show-packet(frame);
   end;
 end;
 
@@ -266,7 +309,9 @@ define method push-data-aux (input :: <push-input>,
                              node :: <gui-sniffer-frame>,
                              frame :: <frame>)
   add!(node.network-frames, frame);
-  refresh-packet-table(node);
+  if (~ node.filter-expression | matches?(frame, node.filter-expression))
+    add-item(node.packet-table, make-item(node.packet-table, frame))
+  end;
 end;
 begin
   let gui-sniffer = make(<gui-sniffer-frame>);
