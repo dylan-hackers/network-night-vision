@@ -38,10 +38,13 @@ define generic interface-name (object :: <ethernet-interface>) => (res :: <strin
 define generic promiscious? (object :: <ethernet-interface>) => (res :: <boolean>);
 define generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
 define generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
+define generic running? (object :: <ethernet-interface>) => (res :: <boolean>);
+define generic running?-setter (value :: <boolean>, object :: <ethernet-interface>) => (res :: <boolean>);
 
 define open class <ethernet-interface> (<filter>)
   constant slot interface-name :: <string> = "ath0", init-keyword: name:;
   constant slot promiscious? :: <boolean> = #t, init-keyword: promiscious?:;
+  slot running? :: <boolean> = #t;
   slot pcap-t;
 end;
 
@@ -150,7 +153,7 @@ end;
 
 define method toplevel (interface :: <ethernet-interface>)
   register-c-dylan-object(interface);
-  while(#t)
+  while(interface.running?)
     pcap-dispatch(interface.pcap-t,
                   1,
                   receive-callback,
