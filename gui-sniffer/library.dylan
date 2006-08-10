@@ -8,4 +8,7 @@ define library gui-sniffer
   use io;
   use system;
   use packetizer;
+  use flow;
+  use network-flow;
+  use interfaces;
 end library gui-sniffer;

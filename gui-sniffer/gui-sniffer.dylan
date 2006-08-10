@@ -126,9 +126,10 @@ define method counter (frame :: <object>)
   *count* := *count* + 1;
   *count*;
 end;
-define frame <gui-sniffer-frame> (<simple-frame>)
+define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   slot network-frames = make(<stretchy-vector>);
   slot filter-expression = #f;
+  slot ethernet-interface = #f;
   pane filter-field (frame)
     make(<text-field>,
          label: "Filter expression",
@@ -165,22 +166,83 @@ end;
 
 define command-table *file-command-table* (*global-command-table*)
   menu-item "Open pcap file" = open-pcap-file;
+  menu-item "Save to pcap file" = save-pcap-file;
+end;
+
+define command-table *interface-command-table* (*global-command-table*)
+  menu-item "Open ethernet interface" = open-interface;
+  menu-item "Stop capturing" = close-interface;
 end;
 
 define command-table *gui-sniffer-command-table* (*global-command-table*)
   menu-item "File" = *file-command-table*;
+  menu-item "Interface" = *interface-command-table*;
 end;
 
 define method open-pcap-file (frame :: <gui-sniffer-frame>)
   let file = choose-file(frame: frame, direction: #"input");
   if (file)
-    let packets = load-pcap-file(file);
-    if (packets)
-      frame.network-frames := packets;
-      refresh-packet-table(frame);
-    else
-      notify-user(format-to-string("Failed to open file %s", file), owner: frame)
-    end;
+    frame.network-frames := make(<stretchy-vector>);
+    let file-stream = make(<file-stream>, locator: file, direction: #"input");
+    let pcap-reader = make(<pcap-file-reader>, stream: file-stream);
+    connect(pcap-reader, frame);
+    toplevel(pcap-reader);
+    close(file-stream);
+    refresh-packet-table(frame);
+  end;
+end;
+
+define method save-pcap-file (frame :: <gui-sniffer-frame>)
+  let file = choose-file(frame: frame, direction: #"output");
+  if (file)
+    let file-stream = make(<file-stream>,
+                           locator: file,
+                           direction: #"output",
+                           if-exists: #"replace");
+    let pcap-writer = make(<pcap-file-writer>, stream: file-stream);
+    connect(frame, pcap-writer);
+    do(curry(push-data, frame.the-output), frame.network-frames);
+    //XXX: disconnect in flow graph, but disconnect is NYI
+    close(file-stream);
+  end;
+end;
+
+define method open-interface (frame :: <gui-sniffer-frame>)
+  let (interface, promiscious?) = prompt-for-interface(owner: frame);
+  if (interface)
+    let interface = make(<ethernet-interface>,
+                         name: interface,
+                         promiscious?: promiscious?);
+    connect(interface, frame);
+    frame.network-frames := make(<stretchy-vector>);
+    make(<thread>, function: curry(toplevel, interface));
+    frame.ethernet-interface := interface;
+  end;
+end;
+
+define method close-interface (frame :: <gui-sniffer-frame>)
+  frame.ethernet-interface.running? := #f;
+  //XXX: disconnect in flow graph, but disconnect is NYI
+end;
+
+define method prompt-for-interface
+  (#key title = "Please specify interface", owner)
+ => (interface-name :: false-or(<string>), promiscious? :: <boolean>)
+  let interface-text = make(<text-field>,
+                            label: "Interface:",
+                            activate-callback: exit-dialog);
+  let promiscious? = make(<check-box>, items: #("promiscious"), selection: #[0]);
+  let interface-selection-dialog
+    = make(<dialog-frame>,
+           title: title,
+           owner: owner,
+           layout: vertically()
+                     interface-text;
+                     promiscious?
+                   end,
+           input-focus: interface-text);
+  if (start-dialog(interface-selection-dialog))
+    values(gadget-value(interface-text), size(gadget-value(promiscious?)) > 0)
   end;
 end;
 
@@ -196,24 +258,19 @@ define method refresh-packet-table (frame :: <gui-sniffer-frame>)
     update-gadget(frame.packet-table)
   else
     gadget-items(frame.packet-table) := shown-packets;
+    show-packet-tree(frame);
   end;
-  show-packet-tree(frame);
 end;
-define method load-pcap-file (file :: <string>) => (res :: false-or(<collection>))
-  let file-content
-    = as(<byte-vector>, 
-         with-open-file (stream = file,
-                         direction: #"input")
-           stream-contents(stream);
-         end);
-  let pcap-file = make(unparsed-class(<pcap-file>),
-                       packet: file-content);
-  //now check for real pcap-header... and return worst case #f
-  map(payload, packets(pcap-file));
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <gui-sniffer-frame>,
+                             frame :: <frame>)
+  add!(node.network-frames, frame);
+  refresh-packet-table(node);
 end;
 begin
-  let gui-sniffer-frame = make(<gui-sniffer-frame>);
-  start-frame(gui-sniffer-frame); 
+  let gui-sniffer = make(<gui-sniffer-frame>);
+  start-frame(gui-sniffer);
 end;
 
 
