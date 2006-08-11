@@ -150,13 +150,15 @@ define method toplevel (reader :: <pcap-file-reader>)
                      method (r, f)
                        push-data(r.the-output,
                                  make(unparsed-class(<ethernet-frame>),
-                                      packet: assemble-frame(f.payload)));
+                                      packet: assemble-frame(f.payload),
+                                      parent: f));
                      end method;
                    $DLT-PRISM-HEADER =>
                      method (r, f)
                        push-data(r.the-output,
                                  make(unparsed-class(<prism2-frame>),
-                                      packet: assemble-frame(f.payload)));
+                                      packet: assemble-frame(f.payload),
+                                      parent: f));
                      end method;
                  end select;
   for(frame in pcap-file.packets)

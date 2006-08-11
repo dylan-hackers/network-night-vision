@@ -32,31 +32,74 @@ end;
 
 define function int-to-byte-vector (int :: <integer>) => (res :: <byte-vector>)
   let res = make(<byte-vector>, size: 4);
-  for (ele in res,
-       i from 0)
+  for (i from 0 below 4)
     res[i] := logand(#xff, ash(int, - i * 8));
   end;
   res;
 end;
 
+define function float-to-byte-vector (float :: <float>) => (res :: <byte-vector>)
+  let res = make(<byte-vector>, size: 4, fill: 0);
+  let r = float;
+  for (i from 0 below 4)
+    let (this, remainder) = floor/(r, 256);
+    r := this;
+    res[i] := floor(remainder);
+  end;
+  res;
+end;
+
 define protocol unix-time-value (container-frame)
-  field seconds :: <little-endian-unsigned-integer-4byte>
-   = little-endian-unsigned-integer-4byte(get-seconds());
-  field microseconds :: <little-endian-unsigned-integer-4byte>
-   = little-endian-unsigned-integer-4byte(#(#x00, #x00, #x00, #x00));
+  field seconds :: <little-endian-unsigned-integer-4byte>;
+  field microseconds :: <little-endian-unsigned-integer-4byte>;
+end;
+
+define function byte-vector-to-float (bv :: <byte-vector>) => (res :: <float>)
+  let res = 0.0d0;
+  for (ele in reverse(bv))
+    res := ele + 256 * res;
+  end;
+  res;
+end;
+
+define function byte-vector-to-int (bv :: <byte-vector>) => (res :: <integer>)
+  let res = 0;
+  let first? = #t;
+  for (ele in reverse(bv))
+    if (first?)
+      first? := #f
+    else
+      res := ele + 256 * res;
+    end;
+  end;
+  res;
+end;
+
+define method decode-unix-time (unix-time :: <unix-time-value>)
+ => (res :: <date>)
+ let secs = byte-vector-to-float(unix-time.seconds.data);
+ format-out("Seconds %=\n", secs);
+ let (days, rem0) = floor/(secs, 86400);
+ let (hours, rem1) = floor/(rem0, 3600);
+ let (minutes, seconds) = floor/(rem1, 60);
+ format-out("microseconds %=\n", unix-time.microseconds);
+ encode-day/time-duration(days, hours, minutes, round(seconds),
+                          byte-vector-to-int(unix-time.microseconds.data))
+  + make(<date>, year: 1970, month: 1, day: 1)
 end;
 
 define method make-unix-time (dur :: <day/time-duration>)
   => (res :: <unix-time-value>)
   let (days, hours, minutes, seconds, microseconds) = decode-duration(dur);
-  let secs = (((days * 24 + hours) * 60) + minutes) * 60 + seconds;
+  let secs = ((as(<double-float>, days) * 24 + hours) * 60 + minutes) * 60 + seconds;
   make(<unix-time-value>,
-       seconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(secs)),
+       seconds: little-endian-unsigned-integer-4byte(float-to-byte-vector(secs)),
        microseconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(microseconds)));
 end;
 
 define protocol pcap-packet (header-frame)
-  field timestamp :: <unix-time-value> = make(<unix-time-value>);
+  field timestamp :: <unix-time-value>
+    = make-unix-time(current-date() - make(<date>, year: 1970, month: 1, day: 1));
   field capture-length :: <3byte-little-endian-unsigned-integer>,
    fixup: byte-offset(frame-size(frame.payload));
   field last-capture-length :: <unsigned-byte> = 0;

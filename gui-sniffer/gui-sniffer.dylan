@@ -100,9 +100,10 @@ define method print-number (frame :: <frame-with-metadata>)
   frame.number;
 end;
 
-define method print-time (frame :: <frame-with-metadata>)
+define method print-time (gui :: <gui-sniffer-frame>, frame :: <frame-with-metadata>)
+  let diff = frame.receive-time - gui.first-packet-arrived;
   let (days, hours, minutes, seconds, microseconds)
-    = decode-duration(frame.receive-time);
+    = decode-duration(diff);
   let secs = (((days * 24 + hours) * 60) + minutes) * 60 + seconds;
   secs + as(<float>, microseconds) / 1000000
 end;
@@ -179,7 +180,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   slot network-frames :: <stretchy-vector> = make(<stretchy-vector>);
   slot filter-expression = #f;
   slot ethernet-interface = #f;
-  slot started-capturing-at :: <date> = current-date();
+  slot first-packet-arrived :: false-or(<date>) = #f;
 
   pane filter-field (frame)
     make(<text-field>,
@@ -196,7 +197,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
     make(<table-control>,
          headings: #("No", "Time", "Source", "Destination", "Protocol", "Info"),
          generators: list(print-number,
-                          print-time,
+                          curry(print-time, frame),
                           print-source,
                           print-destination,
                           print-protocol,
@@ -274,11 +275,9 @@ define method save-pcap-file (frame :: <gui-sniffer-frame>)
     connect(frame, pcap-writer);
     do(curry(push-data, frame.the-output),
        map(method(x)
+             let time-diff = x.receive-time - make(<date>, year: 1970, month: 1, day: 1);
              make(<pcap-packet>,
-                  timestamp: make-unix-time(x.receive-time),
-                  //XXX: should be absolute time since 1.1.1970, but
-                  //getting integer overflows, so use relative time since
-                  //packet capturing for now
+                  timestamp: make-unix-time(time-diff),
                   payload: x.real-frame)
            end, frame.network-frames));
     //XXX: disconnect in flow graph, but disconnect is NYI
@@ -297,7 +296,6 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     reinit-gui(frame);
     make(<thread>, function: curry(toplevel, interface));
     frame.ethernet-interface := interface;
-    frame.started-capturing-at := current-date();
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
   end;
 end;
@@ -330,6 +328,7 @@ define method prompt-for-interface
 end;
 
 define method reinit-gui (frame :: <gui-sniffer-frame>)
+  frame.first-packet-arrived := #f;
   *count* := 0;
   frame.network-frames := make(<stretchy-vector>);
   gadget-items(frame.packet-table) := frame.network-frames;
@@ -339,14 +338,23 @@ end;
 define class <frame-with-metadata> (<object>)
   constant slot real-frame :: <ethernet-frame>, required-init-keyword: frame:;
   constant slot number :: <integer> = counter();
-  slot receive-time :: <day/time-duration>, required-init-keyword: receive-time:;
+  constant slot receive-time :: <date> = current-date(), init-keyword: receive-time:;
 end;
 
 define method push-data-aux (input :: <push-input>,
                              node :: <gui-sniffer-frame>,
                              frame :: <frame>)
-  let duration = current-date() - node.started-capturing-at;
-  let frame-with-meta = make(<frame-with-metadata>, frame: frame, receive-time: duration);
+  let frame-with-meta =
+    if (frame.parent & instance?(frame.parent, <pcap-packet>))
+      make(<frame-with-metadata>,
+           frame: frame,
+           receive-time: decode-unix-time(frame.parent.timestamp))
+    else
+      make(<frame-with-metadata>, frame: frame);
+    end;
+  unless (node.first-packet-arrived)
+    node.first-packet-arrived := frame-with-meta.receive-time;
+  end;
   add!(node.network-frames, frame-with-meta);
   if (~ node.filter-expression | matches?(frame, node.filter-expression))
     add-item(node.packet-table, make-item(node.packet-table, frame-with-meta))
