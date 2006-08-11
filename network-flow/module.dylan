@@ -16,6 +16,7 @@ define module network-flow
   export <summary-printer>, <verbose-printer>,
     <decapsulator>, <demultiplexer>,
     create-output-for-filter,
+    <completer>,
     <frame-filter>,
     <pcap-file-reader>,
     <pcap-file-writer>,

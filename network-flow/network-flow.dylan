@@ -184,6 +184,35 @@ define method push-data-aux (input :: <push-input>,
   force-output(node.file-stream);
 end;
 
+define method push-data-aux (input :: <push-input>,
+                             node :: <pcap-file-writer>,
+                             frame :: <pcap-packet>)
+  write(node.file-stream,
+        assemble-frame(frame));
+  force-output(node.file-stream);
+end;
+
+define class <completer> (<filter>)
+  constant slot template-frame :: <frame>, required-init-keyword: template-frame:;
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <completer>,
+                             frame :: <container-frame>);
+  for (field in node.template-frame.fields)
+    unless (field.getter(frame))
+      let default-field-value = field.getter(node.template-frame);
+      if (default-field-value)
+        field.setter(default-field-value, frame);
+      elseif (~ field.fixup-function)
+        format-out("Field %=\n", field.field-name);
+        signal(make(<undefined-field-error>));
+      end;
+    end;
+  end;
+  push-data(node.the-output, frame);
+end;
+
 
 /*
 begin
