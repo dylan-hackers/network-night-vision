@@ -78,11 +78,9 @@ end;
 define method decode-unix-time (unix-time :: <unix-time-value>)
  => (res :: <date>)
  let secs = byte-vector-to-float(unix-time.seconds.data);
- format-out("Seconds %=\n", secs);
  let (days, rem0) = floor/(secs, 86400);
  let (hours, rem1) = floor/(rem0, 3600);
  let (minutes, seconds) = floor/(rem1, 60);
- format-out("microseconds %=\n", unix-time.microseconds);
  encode-day/time-duration(days, hours, minutes, round(seconds),
                           byte-vector-to-int(unix-time.microseconds.data))
   + make(<date>, year: 1970, month: 1, day: 1)
