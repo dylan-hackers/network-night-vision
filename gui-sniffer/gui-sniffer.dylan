@@ -53,6 +53,7 @@ end;
 define method frame-root-generator (frame :: <frame>)
   list(frame);
 end;
+
 define method frame-print-label (frame-field :: <frame-field>)
   if (~ frame-children-predicate(frame-field))
     format-to-string("%s: %=", frame-field.field.field-name, frame-field.value)
@@ -79,20 +80,31 @@ define method frame-print-label (frame :: <leaf-frame>)
   format-to-string("%=", frame);
 end;
 
-define method print-source (frame :: <ethernet-frame>)
-  as(<string>, frame.source-address)
+define method print-source (frame :: <frame-with-metadata>)
+  as(<string>, frame.real-frame.source-address)
 end;
 
-define method print-destination (frame :: <ethernet-frame>)
-  as(<string>, frame.destination-address)
+define method print-destination (frame :: <frame-with-metadata>)
+  as(<string>, frame.real-frame.destination-address)
 end;
 
-define method print-protocol (frame :: <ethernet-frame>)
-  frame.type-code
+define method print-protocol (frame :: <frame-with-metadata>)
+  frame.real-frame.type-code
 end;
 
-define method print-info (frame :: <ethernet-frame>)
-  summary(frame.payload)
+define method print-info (frame :: <frame-with-metadata>)
+  summary(frame.real-frame.payload)
+end;
+
+define method print-number (frame :: <frame-with-metadata>)
+  frame.number;
+end;
+
+define method print-time (frame :: <frame-with-metadata>)
+  let (days, hours, minutes, seconds, microseconds)
+    = decode-duration(frame.receive-time);
+  let secs = (((days * 24 + hours) * 60) + minutes) * 60 + seconds;
+  secs + as(<float>, microseconds) / 1000000
 end;
 
 define method apply-filter (frame :: <gui-sniffer-frame>)
@@ -104,15 +116,32 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
     frame.filter-expression := #f
   end;
   if (old ~= frame.filter-expression)
-    refresh-packet-table(frame);
+    filter-packet-table(frame);
+  end;
+end;
+
+define method filter-packet-table (frame :: <gui-sniffer-frame>)
+  let shown-packets
+    = if (frame.filter-expression)
+        choose-by(rcurry(matches?, frame.filter-expression),
+                  map(real-frame, frame.network-frames),
+                  frame.network-frames)
+      else
+        frame.network-frames
+      end;
+  unless (shown-packets = gadget-items(frame.packet-table))
+    gadget-items(frame.packet-table) := shown-packets;
+    show-packet(frame);
   end;
 end;
 
 define method show-packet (frame :: <gui-sniffer-frame>)
   let packet = frame.packet-table.gadget-value;
+  if (packet) packet := real-frame(packet) end;
   show-packet-tree(frame, packet);
   show-packet-hex-dump(frame, packet);
 end;
+
 define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
   frame.packet-tree-view.tree-control-roots
     := if (packet)
@@ -141,15 +170,16 @@ define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet
 end;
 
 define variable *count* :: <integer> = 0;
-define method counter (frame :: <object>)
+define method counter ()
   *count* := *count* + 1;
   *count*;
 end;
 
 define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
-  slot network-frames = make(<stretchy-vector>);
+  slot network-frames :: <stretchy-vector> = make(<stretchy-vector>);
   slot filter-expression = #f;
   slot ethernet-interface = #f;
+  slot started-capturing-at :: <date> = current-date();
 
   pane filter-field (frame)
     make(<text-field>,
@@ -164,8 +194,13 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
 
   pane packet-table (frame)
     make(<table-control>,
-         headings: #("No", "Source", "Destination", "Protocol", "Info"),
-         generators: list(counter, print-source, print-destination, print-protocol, print-info),
+         headings: #("No", "Time", "Source", "Destination", "Protocol", "Info"),
+         generators: list(print-number,
+                          print-time,
+                          print-source,
+                          print-destination,
+                          print-protocol,
+                          print-info),
          items: #[],
          value-changed-callback: method(x) show-packet(frame) end);
 
@@ -218,15 +253,13 @@ end;
 define method open-pcap-file (frame :: <gui-sniffer-frame>)
   let file = choose-file(frame: frame, direction: #"input");
   if (file)
-    frame.network-frames := make(<stretchy-vector>);
-    refresh-packet-table(frame);
+    reinit-gui(frame);
     let file-stream = make(<file-stream>, locator: file, direction: #"input");
     let pcap-reader = make(<pcap-file-reader>, stream: file-stream);
     connect(pcap-reader, frame);
     toplevel(pcap-reader);
     gadget-label(frame.sniffer-status-bar) := concatenate("Opened ", file);
     close(file-stream);
-    refresh-packet-table(frame);
   end;
 end;
 
@@ -239,7 +272,15 @@ define method save-pcap-file (frame :: <gui-sniffer-frame>)
                            if-exists: #"replace");
     let pcap-writer = make(<pcap-file-writer>, stream: file-stream);
     connect(frame, pcap-writer);
-    do(curry(push-data, frame.the-output), frame.network-frames);
+    do(curry(push-data, frame.the-output),
+       map(method(x)
+             make(<pcap-packet>,
+                  timestamp: make-unix-time(x.receive-time),
+                  //XXX: should be absolute time since 1.1.1970, but
+                  //getting integer overflows, so use relative time since
+                  //packet capturing for now
+                  payload: x.real-frame)
+           end, frame.network-frames));
     //XXX: disconnect in flow graph, but disconnect is NYI
     gadget-label(frame.sniffer-status-bar) := concatenate("Wrote ", file);
     close(file-stream);
@@ -253,10 +294,10 @@ define method open-interface (frame :: <gui-sniffer-frame>)
                          name: interface-name,
                          promiscious?: promiscious?);
     connect(interface, frame);
-    frame.network-frames := make(<stretchy-vector>);
-    refresh-packet-table(frame);
+    reinit-gui(frame);
     make(<thread>, function: curry(toplevel, interface));
     frame.ethernet-interface := interface;
+    frame.started-capturing-at := current-date();
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
   end;
 end;
@@ -288,30 +329,30 @@ define method prompt-for-interface
   end;
 end;
 
-define method refresh-packet-table (frame :: <gui-sniffer-frame>)
-  let shown-packets = if (frame.filter-expression)
-                        choose(rcurry(matches?, frame.filter-expression),
-                               frame.network-frames)
-                      else
-                        frame.network-frames
-                      end;
+define method reinit-gui (frame :: <gui-sniffer-frame>)
   *count* := 0;
-  if (shown-packets = gadget-items(frame.packet-table))
-    update-gadget(frame.packet-table)
-  else
-    gadget-items(frame.packet-table) := shown-packets;
-    show-packet(frame);
-  end;
+  frame.network-frames := make(<stretchy-vector>);
+  gadget-items(frame.packet-table) := frame.network-frames;
+  show-packet(frame);
+end;
+
+define class <frame-with-metadata> (<object>)
+  constant slot real-frame :: <ethernet-frame>, required-init-keyword: frame:;
+  constant slot number :: <integer> = counter();
+  slot receive-time :: <day/time-duration>, required-init-keyword: receive-time:;
 end;
 
 define method push-data-aux (input :: <push-input>,
                              node :: <gui-sniffer-frame>,
                              frame :: <frame>)
-  add!(node.network-frames, frame);
+  let duration = current-date() - node.started-capturing-at;
+  let frame-with-meta = make(<frame-with-metadata>, frame: frame, receive-time: duration);
+  add!(node.network-frames, frame-with-meta);
   if (~ node.filter-expression | matches?(frame, node.filter-expression))
-    add-item(node.packet-table, make-item(node.packet-table, frame))
+    add-item(node.packet-table, make-item(node.packet-table, frame-with-meta))
   end;
 end;
+
 begin
   let gui-sniffer = make(<gui-sniffer-frame>);
   start-frame(gui-sniffer);

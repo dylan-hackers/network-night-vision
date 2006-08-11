@@ -34,7 +34,7 @@ define module packetizer
     <repeated-field>;
 
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
-    $DLT-EN10MB, $DLT-PRISM-HEADER;
+    $DLT-EN10MB, $DLT-PRISM-HEADER, make-unix-time;
 
   export <icmp-frame>, code, type, checksum;
 

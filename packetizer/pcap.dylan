@@ -27,10 +27,14 @@ end;
 define function get-seconds () => (seconds :: <collection>)
   let (year, month, day, hours, minutes, seconds,
        day-of-week, time-zone-offset) = decode-date(current-date());
+  int-to-byte-vector(seconds);
+end;
+
+define function int-to-byte-vector (int :: <integer>) => (res :: <byte-vector>)
   let res = make(<byte-vector>, size: 4);
   for (ele in res,
        i from 0)
-    res[i] := logand(#xff, ash(seconds, - i * 8));
+    res[i] := logand(#xff, ash(int, - i * 8));
   end;
   res;
 end;
@@ -40,6 +44,15 @@ define protocol unix-time-value (container-frame)
    = little-endian-unsigned-integer-4byte(get-seconds());
   field microseconds :: <little-endian-unsigned-integer-4byte>
    = little-endian-unsigned-integer-4byte(#(#x00, #x00, #x00, #x00));
+end;
+
+define method make-unix-time (dur :: <day/time-duration>)
+  => (res :: <unix-time-value>)
+  let (days, hours, minutes, seconds, microseconds) = decode-duration(dur);
+  let secs = (((days * 24 + hours) * 60) + minutes) * 60 + seconds;
+  make(<unix-time-value>,
+       seconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(secs)),
+       microseconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(microseconds)));
 end;
 
 define protocol pcap-packet (header-frame)
