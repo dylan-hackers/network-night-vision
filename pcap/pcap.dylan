@@ -108,6 +108,22 @@ define method initialize
     error("Device %s not found", interface.interface-name);
   end;
 end;
+
+define method find-all-devices () => (res :: <collection>)
+  let res = make(<stretchy-vector>);
+  let errbuf = make(<byte-vector>);
+  let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
+  for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
+    let str = make(<string>, size: device.description.size);
+    //XXX: isn't there a convinience function for converting <C-string> to <string>
+    //XXX: generate a real object, and also return device-name
+    for (ele in device.description, i from 0)
+      str[i] := ele;
+    end;
+    add!(res, str)
+  end;
+  res;
+end;
  
 define C-struct <pcap-if>
   slot next :: <pcap-if*>;
@@ -144,11 +160,17 @@ define C-function pcap-inject
   c-name: "pcap_sendpacket";
 end;
 
+define C-function pcap-close
+  parameter pcap-t :: <C-void*>;
+  //result error :: <C-void>;
+  c-name: "pcap_close";
+end;
+
 define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
                              frame :: <frame>)
   let buffer = assemble-frame(frame);
-  let res = pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
+  pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;
 
 define method toplevel (interface :: <ethernet-interface>)
@@ -159,5 +181,6 @@ define method toplevel (interface :: <ethernet-interface>)
                   receive-callback,
                   export-c-dylan-object(interface));
   end;
+  pcap-close(interface.pcap-t);
 end;
 

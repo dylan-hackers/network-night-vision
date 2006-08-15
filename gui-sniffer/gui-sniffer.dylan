@@ -112,7 +112,11 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
   let filter-string = gadget-value(frame.filter-field);
   let old = frame.filter-expression;
   if (filter-string.size > 0)
-    frame.filter-expression := parse-filter(filter-string)
+    frame.filter-expression := parse-filter(filter-string);
+    if (old ~= frame.filter-expression & every?(curry(\~=, filter-string), frame.filter-history))
+      frame.filter-history := add!(frame.filter-history, filter-string);
+      gadget-items(frame.filter-field) := frame.filter-history;
+    end;
   else
     frame.filter-expression := #f
   end;
@@ -170,6 +174,43 @@ define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet
        end;
 end;
 
+define method compute-absolute-offset (frame :: <ethernet-frame>)
+ => (res :: <integer>)
+  sorted-frame-fields(frame).last.start-offset
+end;
+
+define method compute-absolute-offset (frame :: <header-frame>)
+ => (res :: <integer>)
+  if (frame.parent)
+    compute-absolute-offset(frame.parent) + sorted-frame-fields(frame).last.start-offset
+  else
+    0
+  end;
+end;
+
+define method compute-absolute-offset (frame :: <frame-field>)
+ => (res :: <integer>)
+  if (instance?(frame-field.frame, <ethernet-frame>))
+    0
+  else
+    compute-absolute-offset(frame-field.frame.parent)
+  end;
+end;
+
+define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
+  let packet = mframe.packet-table.gadget-value;
+  let tree = mframe.packet-tree-view;
+  let frame-field = tree.gadget-items[tree.gadget-selection[0]];
+  let off = compute-absolute-offset(frame-field);
+
+  let start-highlight = off + frame-field.start-offset;
+  let end-highlight = off + frame-field.end-offset;
+
+  format-out("start %d end %d\n",
+             start-highlight,
+             end-highlight);
+end;
+
 define variable *count* :: <integer> = 0;
 define method counter ()
   *count* := *count* + 1;
@@ -181,11 +222,14 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   slot filter-expression = #f;
   slot ethernet-interface = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
+  slot filter-history :: <list> = make(<list>);
 
   pane filter-field (frame)
-    make(<text-field>,
+    make(<combo-box>,
          label: "Filter expression",
-         activate-callback: method(x) apply-filter(frame) end);
+         value-changed-callback: method(x) apply-filter(frame) end,
+         activate-callback: method(x) apply-filter(frame) end,
+         items: frame.filter-history);
 
   pane filter-pane (frame)
     horizontally()
@@ -309,21 +353,19 @@ end;
 define method prompt-for-interface
   (#key title = "Please specify interface", owner)
  => (interface-name :: false-or(<string>), promiscious? :: <boolean>)
-  let interface-text = make(<text-field>,
-                            label: "Interface:",
-                            activate-callback: exit-dialog);
+  let devices = find-all-devices();
+  let interfaces = make(<list-box>, items: devices);
   let promiscious? = make(<check-box>, items: #("promiscious"), selection: #[0]);
   let interface-selection-dialog
     = make(<dialog-frame>,
            title: title,
            owner: owner,
            layout: horizontally()
-                     interface-text;
+                     interfaces;
                      promiscious?
-                   end,
-           input-focus: interface-text);
+                   end);
   if (start-dialog(interface-selection-dialog))
-    values(gadget-value(interface-text), size(gadget-value(promiscious?)) > 0)
+    values(gadget-value(interfaces), size(gadget-value(promiscious?)) > 0)
   end;
 end;
 
