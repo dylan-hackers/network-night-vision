@@ -19,8 +19,7 @@ define method frame-children-predicate (object :: <object>)
 end;
 
 define method frame-children-predicate (frame-field :: <frame-field>)
-  instance?(frame-field.value, <container-frame>)
-    | (instance?(frame-field.field, <repeated-field>) & frame-field.value.size > 0)
+  frame-children-predicate(frame-field.value);
 end;
 
 define method frame-children-generator (collection :: <collection>)
@@ -37,39 +36,30 @@ define method frame-children-generator (a-frame :: <header-frame>)
 end;
 
 define method frame-children-generator (frame-field :: <frame-field>)
-  if (instance?(frame-field.field, <repeated-field>))
-    frame-field.value
-  elseif (instance?(frame-field.value, <container-frame>))
-    sorted-frame-fields(frame-field.value)
-  else
-    error("huh?")
-  end
+  frame-children-generator(frame-field.value);
 end;
 
+define method frame-root-generator (frame :: <ethernet-frame>)
+  add!(next-method(), frame);
+end;
 define method frame-root-generator (frame :: <header-frame>)
-  add!(frame-root-generator(payload(frame)), frame);
+  add!(frame-root-generator(payload(frame)), get-frame-field(#"payload", frame));
 end;
 
 define method frame-root-generator (frame :: <frame>)
-  list(frame);
+  #();
 end;
 
 define method frame-print-label (frame-field :: <frame-field>)
-  if (~ frame-children-predicate(frame-field))
-    format-to-string("%s: %=", frame-field.field.field-name, frame-field.value)
-  elseif (instance?(frame-field.value, <container-frame>))
-    format-to-string("%s: %s %s",
-                     frame-field.field.field-name, 
-                     frame-field.value.frame-name,
-                     frame-field.value.summary)
-  elseif (instance?(frame-field.field, <repeated-field>))
-    format-to-string("%s: %= %s",
-                     frame-field.field.field-name,
-                     frame-field.value.size,
-                     frame-field.field.type)
+  if (frame-field.field.field-name = #"payload")
+    format-to-string("%s", frame-print-label(frame-field.value))
   else
-    format-to-string("%s", frame-field.field.field-name)
-  end
+    format-to-string("%s: %s", frame-field.field.field-name, frame-print-label(frame-field.value))
+  end;
+end;
+
+define method frame-print-label (frame :: <collection>)
+  format-to-string("(%d elements)", frame.size)
 end;
 
 define method frame-print-label (frame :: <container-frame>)
@@ -80,18 +70,85 @@ define method frame-print-label (frame :: <leaf-frame>)
   format-to-string("%=", frame);
 end;
 
+define method frame-print-label (frame :: <object>)
+  as(<string>, frame);
+end;
+
 define method print-source (frame :: <frame-with-metadata>)
-  as(<string>, frame.real-frame.source-address)
+  print-source(frame.real-frame) | "Unknown"
+end;
+
+define method print-source (frame :: <header-frame>)
+  print-source(frame.payload);
+end;
+
+define method print-source (frame :: <frame>)
+  #f;
+end;
+
+define method print-source (frame :: <ethernet-frame>)
+  next-method() | as(<string>, frame.source-address)
+end;
+
+define method print-source (frame :: <ipv4-frame>)
+  next-method() | as(<string>, frame.source-address)
+end;
+
+/*define method print-source (frame :: <arp-frame>)
+  as(<string>, frame.source-ip-address)
+end;*/
+
+define method print-source (frame :: <ieee80211-management-frame>)
+  next-method() | as(<string>, frame.source-address)
 end;
 
 define method print-destination (frame :: <frame-with-metadata>)
-  as(<string>, frame.real-frame.destination-address)
+  print-destination(frame.real-frame) | "Unknown"
 end;
+
+define method print-destination (frame :: <header-frame>)
+  print-destination(frame.payload);
+end;
+
+define method print-destination (frame :: <frame>)
+  #f;
+end;
+
+define method print-destination (frame :: <ethernet-frame>)
+  next-method() | as(<string>, frame.destination-address)
+end;
+
+define method print-destination (frame :: <ipv4-frame>)
+  next-method() | as(<string>, frame.destination-address)
+end;
+
+define method print-destination (frame :: <ieee80211-management-frame>)
+  next-method() | as(<string>, frame.destination-address)
+end;
+
+/*define method print-destination (frame :: <arp-frame>)
+  if (frame.target-mac-address ~= mac-address("00:00:00:00:00:00"))
+    as(<string>, frame.target-ip-address)
+  else
+    "Broadcast"
+  end;
+end;*/
 
 define method print-protocol (frame :: <frame-with-metadata>)
-  frame.real-frame.type-code
+  print-protocol(frame.real-frame) | "Unknown"
 end;
 
+define method print-protocol (frame :: <ethernet-frame>)
+  next-method | frame.type-code
+end;
+
+define method print-protocol (frame :: <header-frame>)
+  print-protocol(frame.payload);
+end;
+
+define method print-protocol (frame :: <frame>)
+  #f
+end;
 define method print-info (frame :: <frame-with-metadata>)
   summary(frame.real-frame.payload)
 end;
@@ -176,35 +233,57 @@ end;
 
 define method compute-absolute-offset (frame :: <ethernet-frame>)
  => (res :: <integer>)
-  sorted-frame-fields(frame).last.start-offset
+  0
 end;
 
-define method compute-absolute-offset (frame :: <header-frame>)
+define method compute-absolute-offset (frame :: <container-frame>)
  => (res :: <integer>)
+  format-out("START <container-frame> %s ", frame.frame-name);
   if (frame.parent)
-    compute-absolute-offset(frame.parent) + sorted-frame-fields(frame).last.start-offset
+    format-out("%d\n", sorted-frame-fields(frame.parent).last.start-offset);
+    compute-absolute-offset(frame.parent) +
+     if (instance?(frame.parent, <header-frame>))
+       sorted-frame-fields(frame.parent).last.start-offset;
+     else
+       0
+     end;
   else
+    format-out("0\n");
     0
   end;
 end;
 
-define method compute-absolute-offset (frame :: <frame-field>)
+define method compute-absolute-offset (frame-field :: <frame-field>)
  => (res :: <integer>)
-  if (instance?(frame-field.frame, <ethernet-frame>))
-    0
+ format-out("START <frame-field> %s %d\n", frame-field.field.field-name, start-offset(frame-field));
+  start-offset(frame-field) + compute-absolute-offset(frame-field.frame)
+end;
+
+define method compute-length (frame :: <header-frame>) => (res :: <integer>)
+  start-offset(sorted-frame-fields(frame).last)
+end;
+
+define method compute-length (frame :: <frame>) => (res :: <integer>)
+  frame-size(frame)
+end;
+
+define method compute-length (frame-field :: <frame-field>) => (res :: <integer>)
+  if (frame-field.field.field-name = #"payload")
+    compute-length(frame-field.value)
   else
-    compute-absolute-offset(frame-field.frame.parent)
-  end;
+    frame-field.length;
+  end
 end;
 
 define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
-  let frame-field = tree.gadget-items[tree.gadget-selection[0]];
-  let off = compute-absolute-offset(frame-field);
+  let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
+  
+  let off = compute-absolute-offset(selected-packet);
 
-  let start-highlight = off + frame-field.start-offset;
-  let end-highlight = off + frame-field.end-offset;
+  let start-highlight = off;
+  let end-highlight = off + compute-length(selected-packet);
 
   format-out("start %d end %d\n",
              start-highlight,
@@ -378,7 +457,7 @@ define method reinit-gui (frame :: <gui-sniffer-frame>)
 end;
 
 define class <frame-with-metadata> (<object>)
-  constant slot real-frame :: <ethernet-frame>, required-init-keyword: frame:;
+  constant slot real-frame :: <container-frame>, required-init-keyword: frame:;
   constant slot number :: <integer> = counter();
   constant slot receive-time :: <date> = current-date(), init-keyword: receive-time:;
 end;
