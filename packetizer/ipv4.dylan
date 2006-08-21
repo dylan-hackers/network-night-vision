@@ -27,6 +27,7 @@ define method parse-frame (frame-type == <ip-option-frame>,
                9 => <strict-source-and-record-route-ip-option>;
                7 => <record-route-ip-option>;
                8 => <stream-id-ip-option>;
+               20 => <router-alert-ip-option>;
                otherwise => signal(make(<malformed-packet-error>))
              end;
         1 => select (ip-option-type.class)
@@ -41,6 +42,11 @@ define method parse-frame (frame-type == <ip-option-frame>,
         otherwise => signal(make(<malformed-packet-error>))
       end;
    parse-frame(option-frame-type, packet, start: start);
+end;
+
+define protocol router-alert-ip-option (ip-option-frame)
+  field length :: <unsigned-byte> = 4;
+  field value :: <2byte-big-endian-unsigned-integer>;
 end;
 
 define protocol end-of-option-ip-option (ip-option-frame)
