@@ -144,25 +144,8 @@ end;
 define method toplevel (reader :: <pcap-file-reader>)
   let file = as(<byte-vector>, stream-contents(reader.file-stream));
   let pcap-file = make(unparsed-class(<pcap-file>), packet: file);
-  //  push-data(reader.the-output, pcap-file.header);
-  let push-out = select (get-frame-field(#"linktype", pcap-file.header).value)
-                   $DLT-EN10MB =>
-                     method (r, f)
-                       push-data(r.the-output,
-                                 make(unparsed-class(<ethernet-frame>),
-                                      packet: assemble-frame(f.payload),
-                                      parent: f));
-                     end method;
-                   $DLT-PRISM-HEADER =>
-                     method (r, f)
-                       push-data(r.the-output,
-                                 make(unparsed-class(<prism2-frame>),
-                                      packet: assemble-frame(f.payload),
-                                      parent: f));
-                     end method;
-                 end select;
   for(frame in pcap-file.packets)
-    push-out(reader, frame);
+    push-data(reader.the-output, payload(frame));
   end;
 end;
 
