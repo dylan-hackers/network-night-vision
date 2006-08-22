@@ -196,9 +196,11 @@ end;
 
 define method fixup!(frame :: <header-frame>,
                      packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
-  fixup!(frame.payload,
-         subsequence(packet,
-                     start: byte-offset(start-offset(get-frame-field(#"payload", frame)))));
+  unless (instance?(frame.payload, <unparsed-container-frame>))
+    fixup!(frame.payload,
+           subsequence(packet,
+                       start: byte-offset(start-offset(get-frame-field(#"payload", frame)))));
+  end;
 end;
 
 define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
@@ -375,6 +377,9 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
+define method frame-size (frame :: <unparsed-container-frame>) => (size :: <integer>)
+  frame.packet.size * 8
+end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <byte-vector>);
   let result = make(<byte-vector>, size: byte-offset(frame-size(frame)), fill: 0);
@@ -418,6 +423,12 @@ define method assemble-frame-into (frame :: <container-frame>,
   end;
 end;
 
+define method assemble-frame-into (frame :: <unparsed-container-frame>,
+                                   to-packet :: <byte-vector>,
+                                   start :: <integer>)
+  byte-aligned(start);
+  copy-bytes(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
+end;
 define method assemble-field-into(field :: <single-field>,
                                   frame :: <container-frame>,
                                   packet :: <byte-vector>,

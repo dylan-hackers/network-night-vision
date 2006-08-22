@@ -139,7 +139,7 @@ define method print-protocol (frame :: <frame-with-metadata>)
 end;
 
 define method print-protocol (frame :: <ethernet-frame>)
-  next-method | frame.type-code
+  next-method() | frame.type-code
 end;
 
 define method print-protocol (frame :: <header-frame>)
@@ -382,6 +382,7 @@ define method open-pcap-file (frame :: <gui-sniffer-frame>)
     let pcap-reader = make(<pcap-file-reader>, stream: file-stream);
     connect(pcap-reader, frame);
     toplevel(pcap-reader);
+    disconnect(pcap-reader, frame);
     gadget-label(frame.sniffer-status-bar) := concatenate("Opened ", file);
     close(file-stream);
   end;
@@ -403,7 +404,7 @@ define method save-pcap-file (frame :: <gui-sniffer-frame>)
                   timestamp: make-unix-time(time-diff),
                   payload: x.real-frame)
            end, frame.network-frames));
-    //XXX: disconnect in flow graph, but disconnect is NYI
+    disconnect(frame, pcap-writer);
     gadget-label(frame.sniffer-status-bar) := concatenate("Wrote ", file);
     close(file-stream);
   end;
@@ -426,7 +427,7 @@ end;
 define method close-interface (frame :: <gui-sniffer-frame>)
   frame.ethernet-interface.running? := #f;
   gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
-  //XXX: disconnect in flow graph, but disconnect is NYI
+  disconnect(frame.ethernet-interface, frame);
 end;
 
 define method prompt-for-interface
@@ -452,7 +453,7 @@ define method reinit-gui (frame :: <gui-sniffer-frame>)
   frame.first-packet-arrived := #f;
   *count* := 0;
   frame.network-frames := make(<stretchy-vector>);
-  gadget-items(frame.packet-table) := frame.network-frames;
+  gadget-items(frame.packet-table) := #();
   show-packet(frame);
 end;
 

@@ -46,7 +46,11 @@ define module packetizer
 
   export <integer-or-unknown>, $unknown-at-compile-time;
 
+  export <malformed-packet-error>;
+
   export <frame-field>,
+    <repeated-frame-field>,
+    frame-field-list,
     start-offset,
     length,
     end-offset,

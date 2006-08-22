@@ -54,6 +54,12 @@ define method connect (output :: <object>, fan-in :: <fan-in>)
   connect(output, create-input(fan-in));
 end;
 
+define method disconnect (output :: <object>, fan-in :: <fan-in>)
+  let in = output.connected-input;
+  disconnect(output, in);
+  remove!(fan-in.inputs, in);
+end;
+
 define method push-data-aux (input :: <push-input>,
                              node :: <fan-in>,
                              frame :: <frame>)
@@ -74,6 +80,11 @@ define method connect (fan-out :: <fan-out>, input :: <object>)
   connect(create-output(fan-out), input);
 end;
 
+define method disconnect (fan-out :: <fan-out>, input :: <object>)
+  let out = input.connected-output;
+  disconnect(out, input);
+  remove!(fan-out.outputs, out);
+end;
 define method push-data-aux (input :: <push-input>,
                              node :: <fan-out>,
                              frame :: <frame>)
@@ -175,6 +186,35 @@ define method push-data-aux (input :: <push-input>,
   write(node.file-stream,
         assemble-frame(frame));
   force-output(node.file-stream);
+end;
+
+define class <malformed-packet-writer> (<filter>)
+  slot file-stream, required-init-keyword: file:;
+  slot pcap-writer :: false-or(<pcap-file-writer>) = #f;
+end;
+
+define method make (class == <malformed-packet-writer>,
+                    #rest rest, #key file, #all-keys) => (res :: <malformed-packet-writer>)
+  if (instance?(file, <string>))
+    let fs = make(<file-stream>, locator: file, direction: #"output", if-exists: #"replace");
+    make(class, file: fs);
+  else
+    next-method();
+  end;
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <malformed-packet-writer>,
+                             frame :: <frame>)
+  block()
+    push-data(node.the-output, frame);
+  exception (e :: <malformed-packet-error>)
+    unless (node.pcap-writer)
+      node.pcap-writer := make(<pcap-file-writer>, stream: node.file-stream);
+    end;
+    //uh, we should somehow be connected to the pcap-writer
+    push-data-aux(node.pcap-writer.the-input, frame)
+  end;
 end;
 
 define class <completer> (<filter>)

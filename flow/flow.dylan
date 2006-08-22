@@ -49,14 +49,26 @@ define generic get-outputs (node :: <node>) => (outputs);
 
 define open generic connect (output, input);
 
+define open generic disconnect (output, input);
+
 define method connect (output :: <push-output>, input :: <push-input>)
   output.connected-input := input;
   input.connected-output := output;
 end;
 
+define method disconnect (output :: <push-output>, input :: <push-input>)
+  output.connected-input := #f;
+  input.connected-output := #f;
+end;
+
 define method connect (output :: <pull-output>, input :: <pull-input>)
   output.connected-input := input;
   input.connected-output := output;
+end;
+
+define method disconnect (output :: <pull-output>, input :: <pull-input>)
+  output.connected-input := #f;
+  input.connected-output := #f;
 end;
 
 define open generic pull-data-aux (output :: <pull-output>, node :: <node>);
@@ -125,12 +137,24 @@ define method connect (node :: <single-output-node>, input :: <input>)
   connect(node.the-output, input)
 end;
 
+define method disconnect (node :: <single-output-node>, input :: <input>)
+  disconnect(node.the-output, input);
+end;
+
 define method connect (output :: <output>, node :: <single-input-node>)
   connect(output, node.the-input)
 end;
 
+define method disconnect (output :: <output>, node :: <single-input-node>)
+  disconnect(output, node.the-input);
+end;
+
 define method connect (output :: <single-output-node>, input :: <single-input-node>)
   connect(output.the-output, input.the-input)
+end;
+
+define method disconnect (output :: <single-output-node>, input :: <single-input-node>)
+  disconnect(output.the-output, input.the-input);
 end;
 
 define open abstract class <filter> (<single-push-input-node>, <single-push-output-node>)

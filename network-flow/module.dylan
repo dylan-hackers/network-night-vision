@@ -12,6 +12,7 @@ define module network-flow
   use flow;
   use packetizer;
   use packet-filter;
+  use file-system;
 
   export <summary-printer>, <verbose-printer>,
     <decapsulator>, <demultiplexer>,
@@ -20,5 +21,6 @@ define module network-flow
     <frame-filter>,
     <pcap-file-reader>,
     <pcap-file-writer>,
+    <malformed-packet-writer>,
     <fan-out>, <fan-in>;
 end module network-flow;
