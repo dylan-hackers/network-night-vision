@@ -377,9 +377,9 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
-define method frame-size (frame :: <unparsed-container-frame>) => (size :: <integer>)
-  frame.packet.size * 8
-end;
+//define method frame-size (frame :: <unparsed-container-frame>) => (size :: <integer>)
+//  frame.packet.size * 8
+//end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <byte-vector>);
   let result = make(<byte-vector>, size: byte-offset(frame-size(frame)), fill: 0);
