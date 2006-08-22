@@ -31,7 +31,7 @@ define module packetizer
     <decoded-arp-frame>, <decoded-ethernet-frame>,
     <fixed-size-byte-vector-frame>, data,
     total-length, concrete-frame-fields,
-    <repeated-field>;
+    <repeated-field>, <malformed-packet-error>;
 
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
     $DLT-EN10MB, $DLT-PRISM-HEADER, make-unix-time, decode-unix-time, timestamp;
@@ -42,7 +42,9 @@ define module packetizer
 
   export $broken-ipv4, hexdump;
 
-  export <unsigned-byte>;
+  export <unsigned-byte>, <3byte-big-endian-unsigned-integer>,
+    <3byte-little-endian-unsigned-integer>,
+    <externally-delimited-string>;
 
   export <integer-or-unknown>, $unknown-at-compile-time;
 

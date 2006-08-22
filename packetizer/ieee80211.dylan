@@ -70,38 +70,42 @@ end;
 // ieee80211 information fields
 define protocol ieee80211-information-field (container-frame)
   field length :: <unsigned-byte>,
-    fixup: byte-offset(frame-size(frame.information));
-  // the fields also contain binary data
-  field data :: <externally-delimited-string>,
+    fixup: byte-offset(frame-size(frame.data));
+end;
+
+define protocol ieee80211-raw-information-field (ieee80211-information-field)
+  field data :: <raw-frame>,
     length: frame.length * 8;
 end;
 
 define protocol ieee80211-ssid (ieee80211-information-field)
   summary "SSID: %=", data;
+  field data :: <externally-delimited-string>,
+    length: frame.length * 8;
 end;
 
-define protocol ieee80211-fh-set (ieee80211-information-field)
+define protocol ieee80211-fh-set (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-ds-set (ieee80211-information-field)
+define protocol ieee80211-ds-set (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-cf-set (ieee80211-information-field)
+define protocol ieee80211-cf-set (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-tim (ieee80211-information-field)
+define protocol ieee80211-tim (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-ibss (ieee80211-information-field)
+define protocol ieee80211-ibss (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-challenge-text (ieee80211-information-field)
+define protocol ieee80211-challenge-text (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-supported-rates (ieee80211-information-field)
+define protocol ieee80211-supported-rates (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-reserved-field (ieee80211-information-field)
+define protocol ieee80211-reserved-field (ieee80211-raw-information-field)
 end;
 
 // ieee80211 information elements (information field header)
@@ -126,6 +130,8 @@ end;
 
 // management frames
 define protocol ieee80211-management-frame (container-frame)
+  summary "DST %=, SRC %=, BSSID %=", destination-address,
+    source-address, bssid;
   field duration :: <2byte-little-endian-unsigned-integer>;
   field destination-address :: <mac-address>;
   field source-address :: <mac-address>;
@@ -134,11 +140,12 @@ define protocol ieee80211-management-frame (container-frame)
 end;
 
 define protocol ieee80211-disassociation (ieee80211-management-frame)
+  summary "DISASSOC %=", method (x) next-method() end;
   field reason-code :: <2byte-little-endian-unsigned-integer>;
 end;
 
 define protocol ieee80211-association-request (ieee80211-management-frame)
-  summary "%s", compose(summary, ssid);
+  summary "ASSOC-REQ %= %s", method (x) next-method() end, compose(summary, ssid);
   field capability-information :: <ieee80211-capability-information>;
   field listen-interval :: <2byte-little-endian-unsigned-integer>;
   field ssid :: <ieee80211-information-element>;
@@ -153,7 +160,7 @@ define protocol ieee80211-association-response (ieee80211-management-frame)
 end;
 
 define protocol ieee80211-reassociation-request (ieee80211-management-frame)
-  summary "%s", compose(summary, ssid);
+  summary "REASSOC %s", compose(summary, ssid);
   field capabilty-information :: <ieee80211-capability-information>;
   field listen-intervall :: <2byte-little-endian-unsigned-integer>;
   field current-ap-address :: <mac-address>;
@@ -169,32 +176,29 @@ define protocol ieee80211-reassociation-response (ieee80211-management-frame)
 end;
 
 define protocol ieee80211-probe-request (ieee80211-management-frame)
-  summary "%s", compose(summary, ssid);
+  summary "PROBE-REQ %= %s", method(x) next-method() end, compose(summary, ssid);
   field ssid :: <ieee80211-information-element>;
   field supported-rates :: <ieee80211-information-element>;
 end;
 
 define protocol ieee80211-probe-response (ieee80211-management-frame)
-  summary "%s", compose(summary, ssid);
+  summary "PROBE-RESP %= %s", method (x) next-method() end, compose(summary, ssid);
   field timestamp :: <timestamp>;
   field beacon-intervall :: <2byte-little-endian-unsigned-integer>;
   field capability-information :: <ieee80211-capability-information>;
   field ssid :: <ieee80211-information-element>;
   field supported-rates :: <ieee80211-information-element>;
-  field raw-data :: <raw-frame>;
-  // the following fields may or may not be present
-  //  field fh-parameter-set :: <ieee80211-information-element>;
-  //  field ds-parameter-set :: <ieee80211-information-element>;
-  //  field cf-parameter-set :: <ieee80211-information-element>;
-  //  field ibbs :: <ieee80211-information-element>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: method (x) #f end;
 end;
 
 define protocol ieee80211-authentication (ieee80211-management-frame)
+  summary "AUTH %=", method (x) next-method() end;
   field algorithm-number :: <2byte-little-endian-unsigned-integer>;
   field transaction-sequence-number :: <2byte-little-endian-unsigned-integer>;
   field status-code :: <2byte-little-endian-unsigned-integer>;
-  field raw-data :: <raw-frame>;
-  //  field challenge-text :: <ieee80211-information-element>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: method (x) #f end;
 end;
 
 define protocol ieee80211-deauthentication (ieee80211-management-frame)
@@ -205,19 +209,14 @@ define protocol ieee80211-atim (ieee80211-management-frame)
 end;
 
 define protocol ieee80211-beacon (ieee80211-management-frame)
-  summary "%s", compose(summary, ssid);
+  summary "BEACON %= %s", method (x) next-method() end, compose(summary, ssid);
   field timestamp :: <timestamp>;
   field beacon-interval :: <2byte-little-endian-unsigned-integer>;
   field capability-information :: <2byte-little-endian-unsigned-integer>;
   field ssid :: <ieee80211-information-element>;
   field supported-rates :: <ieee80211-information-element>;
-  field raw-data :: <raw-frame>;
-  // the following fields may or may not be present
-  //  field fh-parameter-set :: <ieee80211-information-element>;
-  //  field ds-parameter-set :: <ieee80211-information-element>;
-  //  field cf-parameter-set :: <ieee80211-information-element>;
-  //  field ibbs :: <ieee80211-information-element>;
-  //  field tim :: <ieee80211-information-element>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: method (x) #f end;
 end;
 
 // ieee80211 data frames
@@ -230,6 +229,7 @@ define protocol ieee80211-data-frame (header-frame)
 end;
 
 define protocol ieee80211-null-function (ieee80211-data-frame)
+  summary "NULL-FUNCTION %=", method (x) next-method() end;
   field payload :: <raw-frame>; // there should be no data
 end;
 
