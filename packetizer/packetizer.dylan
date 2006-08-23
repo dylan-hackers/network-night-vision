@@ -283,8 +283,13 @@ end;
 define open abstract class <container-frame> (<variable-size-untranslated-frame>)
   virtual constant slot frame-name :: <string>;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
-  constant slot concrete-frame-fields :: <table> = make(<table>),
-    init-keyword: frame-fields:;
+  slot concrete-frame-fields :: <vector>;
+end;
+
+define method initialize (frame :: <container-frame>,
+                          #rest rest, #key, #all-keys)
+  next-method();
+  frame.concrete-frame-fields := make(<vector>, size: field-count(frame.object-class), fill: #f);
 end;
 
 define open generic frame-name (frame :: <container-frame>) => (res :: <string>);
@@ -332,7 +337,7 @@ end;
 
 define method get-frame-field (field-index :: <integer>, frame :: <container-frame>)
  => (res :: <frame-field>)
-  let res = element(frame.concrete-frame-fields, field-index, default: #f);
+  let res = frame.concrete-frame-fields[field-index];
   if (res)
     res;
   else
@@ -540,12 +545,31 @@ end;
 
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
-define class <frame-field> (<object>)
-  constant slot field :: <field>, init-keyword: field:;
-  constant slot frame :: <container-frame>, init-keyword: frame:;
+
+define class <position-mixin> (<object>)
   slot %start-offset :: false-or(<integer>) = #f, init-keyword: start:;
   slot %end-offset :: false-or(<integer>) = #f, init-keyword: end:;
   slot %length :: false-or(<integer>) = #f, init-keyword: length:;
+end;
+
+define class <rep-frame-field> (<position-mixin>)
+  constant slot parent-frame-field :: <frame-field>, required-init-keyword: parent:;
+  constant slot frame :: <frame>, required-init-keyword: frame:;
+end;
+
+define method start-offset (ff :: <position-mixin>)
+  ff.%start-offset;
+end;
+define method end-offset (ff :: <position-mixin>)
+  ff.%end-offset;
+end;
+define method length (ff :: <position-mixin>)
+  ff.%length;
+end;
+
+define class <frame-field> (<position-mixin>)
+  constant slot field :: <field>, init-keyword: field:;
+  constant slot frame :: <container-frame>, init-keyword: frame:;
 end;
 
 define class <repeated-frame-field> (<frame-field>)

@@ -22,6 +22,14 @@ define method frame-children-predicate (frame-field :: <frame-field>)
   frame-children-predicate(frame-field.value);
 end;
 
+define method frame-children-predicate (frame-field :: <repeated-frame-field>)
+  frame-field.frame-field-list.size > 0
+end;
+
+define method frame-children-predicate (ff :: <rep-frame-field>)
+  frame-children-predicate(ff.frame)
+end;
+
 define method frame-children-generator (collection :: <collection>)
   collection
 end;
@@ -37,6 +45,14 @@ end;
 
 define method frame-children-generator (frame-field :: <frame-field>)
   frame-children-generator(frame-field.value);
+end;
+
+define method frame-children-generator (frame-field :: <repeated-frame-field>)
+  frame-field.frame-field-list
+end;
+
+define method frame-children-generator (ff :: <rep-frame-field>)
+  frame-children-generator(ff.frame)
 end;
 
 define method frame-root-generator (frame :: <ethernet-frame>)
@@ -58,6 +74,9 @@ define method frame-print-label (frame-field :: <frame-field>)
   end;
 end;
 
+define method frame-print-label (mframe :: <rep-frame-field>)
+  frame-print-label(mframe.frame);
+end;
 define method frame-print-label (frame :: <collection>)
   format-to-string("(%d elements)", frame.size)
 end;
@@ -215,47 +234,62 @@ end;
 
 define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet)
   //XXX: this should be easier!
-  frame.packet-hex-dump.gadget-value
-    := if (network-packet)
-         let out = make(<string-stream>, direction: #"output");
-         block()
-           hexdump(out, network-packet.packet); //XXX: once assemble-frame
-                                                //on unparsed-container-frame works,
-                                                //we can use assemble-frame here
-           stream-contents(out);
-         cleanup
-           close(out)
-         end
-       else
-         ""
-       end;
+  frame.packet-hex-dump.gadget-value := get-hex-dump(network-packet);
 end;
 
+define function get-hex-dump (network-packet) => (string :: <string>)
+  if (network-packet)
+    let out = make(<string-stream>, direction: #"output");
+    block()
+      hexdump(out, network-packet.packet); //XXX: once assemble-frame
+                                           //on unparsed-container-frame works,
+                                           //we can use assemble-frame here
+      stream-contents(out);
+    cleanup
+      close(out)
+    end
+  else
+    ""
+  end;
+end;
 define method compute-absolute-offset (frame :: <ethernet-frame>)
  => (res :: <integer>)
   0
 end;
 
-define method compute-absolute-offset (frame :: <container-frame>)
- => (res :: <integer>)
-  format-out("START <container-frame> %s ", frame.frame-name);
-  if (frame.parent)
-    format-out("%d\n", sorted-frame-fields(frame.parent).last.start-offset);
-    compute-absolute-offset(frame.parent) +
-     if (instance?(frame.parent, <header-frame>))
-       sorted-frame-fields(frame.parent).last.start-offset;
-     else
-       0
-     end;
-  else
-    format-out("0\n");
-    0
+define method find-frame-field (frame :: <container-frame>, search :: <container-frame>)
+ => (res :: false-or(<frame-field>))
+  block(ret)
+    for (ff in sorted-frame-fields(frame))
+      if (ff.value == search)
+        ret(ff)
+      end;
+      if (instance?(ff.value, <collection>))
+        for (ele in ff.value)
+          if (ele == search)
+            ret(ff)
+          end;
+        end;
+      end;
+    end;
+    #f;
   end;
 end;
 
+define method compute-absolute-offset (frame :: <container-frame>)
+  if (frame.parent)
+    let ff = find-frame-field(frame.parent, frame);
+    compute-absolute-offset(frame.parent) + ff.start-offset;
+  else
+    0
+  end;
+end;
+define method compute-absolute-offset (ff :: <rep-frame-field>)
+ => (res :: <integer>)
+  start-offset(ff) + compute-absolute-offset(ff.parent-frame-field);
+end;
 define method compute-absolute-offset (frame-field :: <frame-field>)
  => (res :: <integer>)
- format-out("START <frame-field> %s %d\n", frame-field.field.field-name, start-offset(frame-field));
   start-offset(frame-field) + compute-absolute-offset(frame-field.frame)
 end;
 
@@ -267,6 +301,10 @@ define method compute-length (frame :: <frame>) => (res :: <integer>)
   frame-size(frame)
 end;
 
+define method compute-length (frame-field :: <rep-frame-field>) => (res :: <integer>)
+  frame-field.length
+end;
+
 define method compute-length (frame-field :: <frame-field>) => (res :: <integer>)
   if (frame-field.field.field-name = #"payload")
     compute-length(frame-field.value)
@@ -275,19 +313,64 @@ define method compute-length (frame-field :: <frame-field>) => (res :: <integer>
   end
 end;
 
+define method find-frame-at-offset (frame :: <container-frame>, offset :: <integer>)
+ => (result-frame)
+  block(ret)
+    for (ff in sorted-frame-fields(frame))
+      if ((start-offset(ff) <= offset) & (end-offset(ff) >= offset))
+        format-out("looking in %s, offset %d\n", ff.field.field-name, offset - start-offset(ff));
+        ret(find-frame-at-offset(ff.value, offset - start-offset(ff)));
+      end;
+    end;
+  end;
+end;
+
+define method find-frame-at-offset (frame :: <collection>, offset :: <integer>)
+  let start = 0;
+  block(ret)
+    for (ele in frame, i from 0)
+      if ((start <= offset) & (frame-size(ele) >= offset))
+        format-out("looking in %d, offset %d\n", i, offset - start);
+        ret(find-frame-at-offset(ele, offset - start));
+      end;
+      start := start + frame-size(ele);
+    end;
+  end;
+end;
+
+define method find-frame-at-offset (frame :: <leaf-frame>, offset :: <integer>)
+  frame;
+end;
+
 define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
+
+  let start-highlight = compute-absolute-offset(selected-packet);
+  let end-highlight = start-highlight + compute-length(selected-packet);
+
+  let (start-line, start-rest) = floor/(byte-offset(start-highlight), 16);
+  let (end-line, end-rest) = floor/(byte-offset(end-highlight + 7), 16);
+
+  if (end-rest = 0)
+    end-rest := 16;
+    end-line := end-line - 1
+  end;
+
+  let hex-dump = split(get-hex-dump(packet.real-frame), '\n');
   
-  let off = compute-absolute-offset(selected-packet);
-
-  let start-highlight = off;
-  let end-highlight = off + compute-length(selected-packet);
-
-  format-out("start %d end %d\n",
-             start-highlight,
-             end-highlight);
+  let start-pos = 6 + start-rest * 3 + if (start-rest >= 8) 1 else 0 end;
+  let end-pos = 6 + end-rest * 3 + if (end-rest > 8) 1 else 0 end;
+  
+  hex-dump[start-line + 1][start-pos - 1] := '[';
+  if (end-pos >= hex-dump[end-line + 1].size)
+    hex-dump[end-line + 1] := add!(hex-dump[end-line + 1], ']');
+  else
+    hex-dump[end-line + 1][end-pos - 1] := ']';
+  end;
+  hex-dump := reduce1(method(a,b) concatenate(a, "\n", b) end, hex-dump);
+  mframe.packet-hex-dump.gadget-value := hex-dump;
 end;
 
 define variable *count* :: <integer> = 0;
@@ -332,7 +415,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
     make(<tree-control>,
          label-key: frame-print-label,
          children-generator: frame-children-generator,
-         children-predicate: frame-children-predicate);
+         children-predicate: frame-children-predicate,
+         value-changed-callback: method(x) highlight-hex-dump(frame) end);
 
   pane packet-hex-dump (frame)
     make(<text-editor>,

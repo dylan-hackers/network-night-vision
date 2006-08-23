@@ -52,6 +52,8 @@ define module packetizer
 
   export <frame-field>,
     <repeated-frame-field>,
+    <rep-frame-field>,
+    parent-frame-field,
     frame-field-list,
     start-offset,
     length,
