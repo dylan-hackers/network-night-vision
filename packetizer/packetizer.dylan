@@ -139,7 +139,7 @@ end;
 
 define abstract class <frame> (<object>)
 end;
-define generic parse-frame
+define open generic parse-frame
   (frame-type :: subclass (<frame>),
    packet :: <sequence>,
    #rest rest, #key, #all-keys);
@@ -182,8 +182,8 @@ define method print-frame (frame :: <frame>, stream :: <stream>) => ();
   write(stream, as(<string>, frame))
 end;
 
-define generic high-level-type (low-level-type :: subclass(<frame>)) => (res :: <type>);
-define sealed domain high-level-type (subclass(<frame>));
+define open generic high-level-type (low-level-type :: subclass(<frame>)) => (res :: <type>);
+//define high-level-type (subclass(<frame>));
 
 define inline method high-level-type (object :: subclass(<frame>)) => (res :: <type>)
   object
@@ -264,7 +264,7 @@ define abstract class <variable-size-untranslated-leaf-frame>
     (<leaf-frame>, <variable-size-untranslated-frame>)
 end;
 
-define abstract class <fixed-size-translated-leaf-frame>
+define open abstract class <fixed-size-translated-leaf-frame>
     (<leaf-frame>, <fixed-size-frame>, <translated-frame>)
 end;
 

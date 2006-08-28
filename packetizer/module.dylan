@@ -33,6 +33,8 @@ define module packetizer
     total-length, concrete-frame-fields,
     <repeated-field>, <malformed-packet-error>;
 
+  export byte-aligned, high-level-type;
+
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
     $DLT-EN10MB, $DLT-PRISM-HEADER, make-unix-time, decode-unix-time, timestamp;
 
@@ -42,9 +44,14 @@ define module packetizer
 
   export $broken-ipv4, hexdump;
 
-  export <unsigned-byte>, <3byte-big-endian-unsigned-integer>,
+  export <unsigned-byte>,
+    <3byte-big-endian-unsigned-integer>,
+    <2byte-big-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
-    <externally-delimited-string>;
+    <externally-delimited-string>, <1bit-unsigned-integer>,
+    <4bit-unsigned-integer>;
+
+  export <fixed-size-translated-leaf-frame>, <byte-sequence>;
 
   export <integer-or-unknown>, $unknown-at-compile-time;
 
