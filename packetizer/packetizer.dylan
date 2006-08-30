@@ -102,7 +102,7 @@ end;
 
 define function compute-static-offset(list :: <simple-vector>)
   //input is a list of <field>
-  //set static-start, static-end, static-length for all fields
+  //sets static-start, static-end, static-length for all fields
   let start = 0;
   for (field in list)
     if (start ~= $unknown-at-compile-time)
@@ -183,7 +183,6 @@ define method print-frame (frame :: <frame>, stream :: <stream>) => ();
 end;
 
 define open generic high-level-type (low-level-type :: subclass(<frame>)) => (res :: <type>);
-//define high-level-type (subclass(<frame>));
 
 define inline method high-level-type (object :: subclass(<frame>)) => (res :: <type>)
   object
@@ -511,10 +510,6 @@ define class <variably-typed-field> (<field>)
 end;
 
 define abstract class <repeated-field> (<statically-typed-field>)
-  //only <untranslated-frames> are stored in <repeated-fields>
-
-  //this is only temporary, it should be moved to self-delimited-repeated-field
-  //slot reached-end?, required-init-keyword: reached-end?:;
 end;
 
 define class <self-delimited-repeated-field> (<repeated-field>)
@@ -554,7 +549,7 @@ end;
 
 define class <rep-frame-field> (<position-mixin>)
   constant slot parent-frame-field :: <frame-field>, required-init-keyword: parent:;
-  constant slot frame :: <frame>, required-init-keyword: frame:;
+  constant slot frame, required-init-keyword: frame:;
 end;
 
 define method start-offset (ff :: <position-mixin>)
@@ -584,11 +579,6 @@ define method make (class == <frame-field>, #rest rest, #key field, #all-keys) =
   end;
 end;
 
-/* define inline method find-frame-by-offset (frame :: <container-frame>, offset :: <integer>)
-  block(ret)
-    for (frame-field in sorted-frame-fields(frame))
-      if (frame-field.start-offset = offset
-end; */
 define inline method value (frame-field :: <frame-field>) => (res)
   frame-field.field.getter(frame-field.frame);
 end;

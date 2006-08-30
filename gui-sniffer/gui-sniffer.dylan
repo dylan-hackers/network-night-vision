@@ -233,12 +233,12 @@ define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
 end;
 
 define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet)
-  //XXX: this should be easier!
   frame.packet-hex-dump.gadget-value := get-hex-dump(network-packet);
 end;
 
 define function get-hex-dump (network-packet) => (string :: <string>)
   if (network-packet)
+    //XXX: this should be easier!
     let out = make(<string-stream>, direction: #"output");
     block()
       hexdump(out, network-packet.packet); //XXX: once assemble-frame
@@ -258,16 +258,16 @@ define method compute-absolute-offset (frame :: <ethernet-frame>)
 end;
 
 define method find-frame-field (frame :: <container-frame>, search :: <container-frame>)
- => (res :: false-or(<frame-field>))
+ => (res :: false-or(type-union(<frame-field>, <rep-frame-field>)))
   block(ret)
     for (ff in sorted-frame-fields(frame))
       if (ff.value == search)
         ret(ff)
       end;
       if (instance?(ff.value, <collection>))
-        for (ele in ff.value)
+        for (ele in ff.value, i from 0)
           if (ele == search)
-            ret(ff)
+\            ret(ff.frame-field-list[i])
           end;
         end;
       end;
@@ -279,7 +279,7 @@ end;
 define method compute-absolute-offset (frame :: <container-frame>)
   if (frame.parent)
     let ff = find-frame-field(frame.parent, frame);
-    compute-absolute-offset(frame.parent) + ff.start-offset;
+    compute-absolute-offset(ff);
   else
     0
   end;
@@ -363,11 +363,13 @@ define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let start-pos = 6 + start-rest * 3 + if (start-rest >= 8) 1 else 0 end;
   let end-pos = 6 + end-rest * 3 + if (end-rest > 8) 1 else 0 end;
   
-  hex-dump[start-line + 1][start-pos - 1] := '[';
-  if (end-pos >= hex-dump[end-line + 1].size)
-    hex-dump[end-line + 1] := add!(hex-dump[end-line + 1], ']');
-  else
-    hex-dump[end-line + 1][end-pos - 1] := ']';
+  unless (start-line = end-line & start-pos = end-pos)
+    hex-dump[start-line + 1][start-pos - 1] := '[';
+    if (end-pos >= hex-dump[end-line + 1].size)
+      hex-dump[end-line + 1] := add!(hex-dump[end-line + 1], ']');
+    else
+      hex-dump[end-line + 1][end-pos - 1] := ']';
+    end;
   end;
   hex-dump := reduce1(method(a,b) concatenate(a, "\n", b) end, hex-dump);
   mframe.packet-hex-dump.gadget-value := hex-dump;
