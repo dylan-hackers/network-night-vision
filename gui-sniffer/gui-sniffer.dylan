@@ -267,7 +267,7 @@ define method find-frame-field (frame :: <container-frame>, search :: <container
       if (instance?(ff.value, <collection>))
         for (ele in ff.value, i from 0)
           if (ele == search)
-\            ret(ff.frame-field-list[i])
+            ret(ff.frame-field-list[i])
           end;
         end;
       end;
