@@ -450,18 +450,18 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
 end;
 
 define command-table *file-command-table* (*global-command-table*)
-  menu-item "Open pcap file" = open-pcap-file;
-  menu-item "Save to pcap file" = save-pcap-file;
+  menu-item "Open pcap file..." = open-pcap-file;
+  menu-item "Save to pcap file..." = save-pcap-file;
 end;
 
 define command-table *interface-command-table* (*global-command-table*)
-  menu-item "Open ethernet interface" = open-interface;
-  menu-item "Stop capturing" = close-interface;
+  menu-item "Start..." = open-interface;
+  menu-item "Stop" = close-interface;
 end;
 
 define command-table *gui-sniffer-command-table* (*global-command-table*)
   menu-item "File" = *file-command-table*;
-  menu-item "Interface" = *interface-command-table*;
+  menu-item "Capture" = *interface-command-table*;
 end;
 
 define method open-pcap-file (frame :: <gui-sniffer-frame>)
