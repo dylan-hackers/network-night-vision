@@ -180,7 +180,10 @@ define protocol udp-frame (header-frame)
   field checksum :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
     end: frame.length * 8,
-    type-function: if (frame.source-port = 53 | frame.destination-port = 53)
+    type-function: if (frame.source-port = 53
+                       | frame.destination-port = 53
+                       | frame.source-port = 5353
+                       | frame.destination-port = 5353)
                      <dns-frame>
                    else
                      <raw-frame>
@@ -242,4 +245,5 @@ define method summary (frame :: <arp-frame>) => (res :: <string>)
     format-to-string("ARP (bogus op %=)", frame.operation)
   end
 end;
+
 

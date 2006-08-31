@@ -129,7 +129,7 @@ define method as (class == <string>, frame :: <basic-set-rate>) => (res :: <stri
                 #x16 => "11";
                 otherwise => "Unknown rate";
               end,
-              "Mbit");
+              " Mbit");
 end;
 
 define protocol extended-rate (rate)
@@ -148,7 +148,7 @@ define method as (class == <string>, frame :: <extended-rate>) => (res :: <strin
                 #x6c => "54";
                 otherwise => "Unknown";
               end,
-              "Mbit");
+              " Mbit");
 end;
 
 define method parse-frame (frame == <rate>, packet :: <byte-sequence>, #key start = 0)
@@ -378,5 +378,4 @@ define protocol ieee80211-frame (header-frame)
           otherwise signal(make(<malformed-packet-error>));
       end select;
 end;
-
 
