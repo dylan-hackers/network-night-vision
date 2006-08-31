@@ -94,20 +94,17 @@ define module packetizer
     find-protocol-field;
 
   export <container-frame>,
-    <container-frame-cache>,
     <unparsed-container-frame>,
     <decoded-container-frame>,
     frame-name,
     unparsed-class,
     decoded-class,
-    cache-class,
     field-count,
     fixup!,
     parent,
     packet;
 
   export <header-frame>,
-    <header-frame-cache>,
     <unparsed-header-frame>,
     <decoded-header-frame>,
     payload;
@@ -118,7 +115,7 @@ define module packetizer
 
   export protocol-definer;
   //XXX: we shouldn't need to export those
-  export real-class-definer, cache-class-definer, decoded-class-definer, gen-classes,
+  export real-class-definer, decoded-class-definer, gen-classes,
     frame-field-generator, summary-generator, unparsed-frame-field-generator; 
 end module packetizer;
 

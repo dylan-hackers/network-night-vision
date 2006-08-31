@@ -257,14 +257,6 @@ end;
 
 define open abstract class <container-frame> (<variable-size-untranslated-frame>)
   virtual constant slot frame-name :: <string>;
-  slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
-  slot concrete-frame-fields :: <vector>;
-end;
-
-define method initialize (frame :: <container-frame>,
-                          #rest rest, #key, #all-keys)
-  next-method();
-  frame.concrete-frame-fields := make(<vector>, size: field-count(frame.object-class), fill: #f);
 end;
 
 define open generic frame-name (frame :: <container-frame>) => (res :: <string>);
@@ -303,12 +295,16 @@ define open generic unparsed-class (type :: subclass(<container-frame>))
 define open generic decoded-class (type :: subclass(<container-frame>))
   => (class :: <class>);
 
-define open generic cache-class (type :: subclass(<container-frame>))
-  => (class :: <class>);
+define open abstract class <decoded-container-frame> (<container-frame>)
+  slot concrete-frame-fields :: <vector>;
+  slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
+end;
 
-define open abstract class <container-frame-cache> (<container-frame>) end;
-
-define open abstract class <decoded-container-frame> (<container-frame>) end;
+define method initialize (frame :: <decoded-container-frame>,
+                          #rest rest, #key, #all-keys)
+  next-method();
+  frame.concrete-frame-fields := make(<vector>, size: field-count(frame.object-class), fill: #f);
+end;
 
 define open abstract class <unparsed-container-frame> (<container-frame>)
   slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
@@ -316,6 +312,22 @@ define open abstract class <unparsed-container-frame> (<container-frame>)
   slot cache :: <container-frame>;
 end;
 
+define method initialize (class :: <unparsed-container-frame>,
+                          #rest rest, #key parent, #all-keys)
+  next-method();
+  parent-setter(parent, class.cache);
+end;
+define inline method concrete-frame-fields (frame :: <unparsed-container-frame>) => (res :: <vector>)
+  frame.cache.concrete-frame-fields;
+end;
+
+define inline method parent (frame :: <unparsed-container-frame>) => (res :: false-or(<container-frame>))
+  frame.cache.parent;
+end;
+
+define inline method parent-setter (value :: false-or(<container-frame>), frame :: <unparsed-container-frame>) => (res :: false-or(<container-frame>))
+  frame.cache.parent := value;
+end;
 
 define method get-frame-field (field-index :: <integer>, frame :: <container-frame>)
  => (res :: <frame-field>)
@@ -343,10 +355,6 @@ define function sorted-frame-fields (frame :: <container-frame>)
 end;
 
 define open abstract class <header-frame> (<container-frame>)
-end;
-
-define open abstract class <header-frame-cache>
-  (<header-frame>, <container-frame-cache>)
 end;
 
 define open abstract class <decoded-header-frame>

@@ -36,9 +36,6 @@ end;
 define class <id3v2-string> (<container-frame>)
 end;
 
-define class <id3v2-string-cache> (<id3v2-string>, <container-frame-cache>)
-end;
-
 define class <unparsed-id3v2-string> (<id3v2-string>, <unparsed-container-frame>)
 end;
 

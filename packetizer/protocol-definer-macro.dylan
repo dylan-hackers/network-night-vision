@@ -35,7 +35,7 @@ define macro real-class-definer
         static-end(last("$" ## ?name ## "-fields"));
       end;
       define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
-        let frame = apply(make, cache-class(?name), rest);
+        let frame = apply(make, decoded-class(?name), rest);
         for (field in fields(frame))
           if (field.getter(frame) = #f)
             field.setter(field.init-value, frame);
@@ -129,24 +129,6 @@ define macro real-class-definer
 end;
 
 
-define macro cache-class-definer
-    { cache-class-definer(?:name; ?superclasses:*; ?fields:*) } 
-    => { define class ?name (?superclasses) ?fields end }
-    
-    fields:
-    { } => { }
-    { ?field:*; ... } => { ?field ; ... }
-    
-    field:
-    { field ?:name \:: ?field-type:name ?rest:* }
-      => { slot ?name :: false-or(high-level-type(?field-type)) = #f, init-keyword: ?#"name" }
-    { variably-typed-field ?:name, ?rest:* }
-      => { slot ?name :: false-or(<frame>) = #f, init-keyword: ?#"name" }
-    { repeated field ?:name ?rest:* }
-      => { slot ?name :: false-or(<stretchy-vector>) = #f, init-keyword: ?#"name" }
-    
-end;
-
 define macro decoded-class-definer
     { decoded-class-definer(?:name; ?superclasses:*; ?fields:*) }
       => { define class ?name (?superclasses) ?fields end }
@@ -157,24 +139,19 @@ define macro decoded-class-definer
     
     field:
     { field ?:name \:: ?field-type:name ?rest:* }
-    => { slot ?name :: high-level-type(?field-type),
-      required-init-keyword: ?#"name" }
+    => { slot ?name :: false-or(high-level-type(?field-type)) = #f,
+      init-keyword: ?#"name" }
     { variably-typed-field ?:name, ?rest:* }
-    => { slot ?name :: <frame>,
-      required-init-keyword: ?#"name" }
+    => { slot ?name :: false-or(<frame>) = #f,
+      init-keyword: ?#"name" }
     { repeated field ?:name ?rest:* }
-      => { slot ?name :: <stretchy-vector>,
-      required-init-keyword: ?#"name" }
+      => { slot ?name :: false-or(<stretchy-vector>) = #f,
+      init-keyword: ?#"name" }
 end;
 
 define macro gen-classes
   { gen-classes(?:name; ?superframe:name) }
- => { define inline method cache-class
-       (type :: subclass("<" ## ?name ## ">")) => (class == "<" ## ?name ## "-cache>");
-        "<" ## ?name ## "-cache>"
-      end;
-
-      define inline method unparsed-class
+ => { define inline method unparsed-class
        (type :: subclass("<" ## ?name ## ">")) => (class == "<unparsed-" ## ?name ## ">");
         "<unparsed-" ## ?name ## ">"
       end;
@@ -185,7 +162,7 @@ define macro gen-classes
       end;
 
       define class "<unparsed-" ## ?name ## ">" ("<" ## ?name ## ">", "<unparsed-" ## ?superframe ## ">")
-        inherited slot cache :: "<" ## ?name ## ">" = make("<" ## ?name ## "-cache>");
+        inherited slot cache :: "<" ## ?name ## ">" = make("<decoded-" ## ?name ## ">");
       end; }
 end;
 
@@ -420,9 +397,6 @@ define macro protocol-definer
         ?fields:*
       end } =>
       { real-class-definer("<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
-        cache-class-definer("<" ## ?name ## "-cache>";
-                            "<" ## ?name ## ">", "<" ## ?superprotocol ## "-cache>";
-                            ?fields);
         decoded-class-definer("<decoded-" ## ?name ## ">";
                               "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
                               ?fields);
