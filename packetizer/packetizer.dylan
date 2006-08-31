@@ -782,6 +782,7 @@ define n-bit-unsigned-integer(<3bit-unsigned-integer>; 3) end;
 define n-bit-unsigned-integer(<4bit-unsigned-integer>; 4) end;
 define n-bit-unsigned-integer(<5bit-unsigned-integer>; 5) end;
 define n-bit-unsigned-integer(<6bit-unsigned-integer>; 6) end;
+define n-bit-unsigned-integer(<7bit-unsigned-integer>; 7) end;
 define n-bit-unsigned-integer(<13bit-unsigned-integer>; 13) end;
 define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
 
@@ -1195,4 +1196,5 @@ define method read-frame (type == <raw-frame>,
   make(<raw-frame>,
        data: copy-sequence(string));
 end;
+
 

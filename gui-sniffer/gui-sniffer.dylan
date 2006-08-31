@@ -256,6 +256,10 @@ define method compute-absolute-offset (frame :: <ethernet-frame>)
  => (res :: <integer>)
   0
 end;
+define method compute-absolute-offset (frame :: <prism2-frame>)
+ => (res :: <integer>)
+  0
+end;
 
 define method find-frame-field (frame :: <container-frame>, search :: <container-frame>)
  => (res :: false-or(type-union(<frame-field>, <rep-frame-field>)))
@@ -573,5 +577,6 @@ begin
   let gui-sniffer = make(<gui-sniffer-frame>);
   start-frame(gui-sniffer);
 end;
+
 
 

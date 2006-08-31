@@ -102,7 +102,62 @@ end;
 define protocol ieee80211-challenge-text (ieee80211-raw-information-field)
 end;
 
-define protocol ieee80211-supported-rates (ieee80211-raw-information-field)
+define protocol ieee80211-supported-rates (ieee80211-information-field)
+  repeated field supported-rate :: <rate>,
+    reached-end?: method(x) #f end,
+    length: frame.length * 8;
+end;
+
+define method summary (frame :: <rate>) => (res :: <string>)
+  as(<string>, frame);
+end;
+
+define protocol rate (container-frame)
+  field bss-basic-set? :: <1bit-unsigned-integer>;
+  field real-rate :: <7bit-unsigned-integer>;
+end;
+
+define protocol basic-set-rate (rate)
+end;
+
+define method as (class == <string>, frame :: <basic-set-rate>) => (res :: <string>)
+  concatenate("CCK ",
+              select (frame.real-rate)
+                2 => "1";
+                4 => "2";
+                #xb => "5";
+                #x16 => "11";
+                otherwise => "Unknown rate";
+              end,
+              "Mbit");
+end;
+
+define protocol extended-rate (rate)
+end;
+
+define method as (class == <string>, frame :: <extended-rate>) => (res :: <string>)
+  concatenate("OFDM ",
+              select (frame.real-rate)
+                #xc => "6";
+                #x12 => "9";
+                #x18 => "12";
+                #x24 => "18";
+                #x30 => "24";
+                #x48 => "36";
+                #x60 => "48";
+                #x6c => "54";
+                otherwise => "Unknown";
+              end,
+              "Mbit");
+end;
+
+define method parse-frame (frame == <rate>, packet :: <byte-sequence>, #key start = 0)
+  let f = make(unparsed-class(frame), packet: packet);
+  let type = select (f.bss-basic-set?)
+               0 => <extended-rate>;
+               1 => <basic-set-rate>;
+             end;
+  parse-frame(type, packet, start: start);
 end;
 
 define protocol ieee80211-reserved-field (ieee80211-raw-information-field)
@@ -323,4 +378,5 @@ define protocol ieee80211-frame (header-frame)
           otherwise signal(make(<malformed-packet-error>));
       end select;
 end;
+
 
