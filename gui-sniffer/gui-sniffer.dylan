@@ -285,7 +285,7 @@ define method compute-absolute-offset (frame :: <container-frame>)
     let ff = find-frame-field(frame.parent, frame);
     compute-absolute-offset(ff);
   else
-    0
+    0;
   end;
 end;
 define method compute-absolute-offset (ff :: <rep-frame-field>)
@@ -511,6 +511,9 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     make(<thread>, function: curry(toplevel, interface));
     frame.ethernet-interface := interface;
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
+    command-enabled?(open-pcap-file, frame) := #f;
+    command-enabled?(open-interface, frame) := #f;
+    command-enabled?(close-interface, frame) := #t;
   end;
 end;
 
@@ -518,6 +521,9 @@ define method close-interface (frame :: <gui-sniffer-frame>)
   frame.ethernet-interface.running? := #f;
   gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
   disconnect(frame.ethernet-interface, frame);
+  command-enabled?(open-pcap-file, frame) := #t;
+  command-enabled?(open-interface, frame) := #t;
+  command-enabled?(close-interface, frame) := #f;
 end;
 
 define method prompt-for-interface
@@ -575,6 +581,7 @@ end;
 
 begin
   let gui-sniffer = make(<gui-sniffer-frame>);
+  command-enabled?(close-interface, gui-sniffer) := #f;
   start-frame(gui-sniffer);
 end;
 
