@@ -4,6 +4,7 @@ library:	packetizer
 files:	library
 	module
 	packetizer
+	leaf-frames
 	util
 	protocol-definer-macro
 	filter
