@@ -14,6 +14,10 @@ define method frame-children-predicate (collection :: <collection>)
   collection.size > 0
 end;
 
+define method frame-children-predicate (raw-frame :: <raw-frame>)
+  raw-frame.data.size > 0
+end;
+
 define method frame-children-predicate (object :: <object>)
   #f
 end;
@@ -36,6 +40,34 @@ end;
 
 define method frame-children-generator (a-frame :: <container-frame>)
   sorted-frame-fields(a-frame)
+end;
+
+define class <raw-frame-element> (<position-mixin>)
+  constant slot raw-frame :: <raw-frame>, required-init-keyword: raw-frame:;
+  constant slot hex-dump-row :: <string>, required-init-keyword: value:;
+end;
+
+define method frame-children-generator (raw-frame :: <raw-frame>)
+  let out = make(<string-stream>, direction: #"output");
+  let hex = block()
+              hexdump(out, raw-frame.data);
+              stream-contents(out);
+            cleanup
+              close(out)
+            end;
+  let lines = split(hex, '\n', start: 1, end: hex.size - 1);
+  let start :: <integer> = 0;
+  let length :: <integer> = 16 * 8;
+  map(method(x)
+        let rff = make(<raw-frame-element>,
+                       start: start,
+                       length: length,
+                       end: start + length,
+                       raw-frame: raw-frame,
+                       value: x);
+        start := start + length;
+        rff;
+      end, lines)
 end;
 
 define method frame-children-generator (a-frame :: <header-frame>)
@@ -91,6 +123,14 @@ end;
 
 define method frame-print-label (frame :: <object>)
   as(<string>, frame);
+end;
+
+define method frame-print-label (frame :: <raw-frame>)
+  format-to-string("Additional data: %d bytes", frame.data.size)
+end;
+
+define method frame-print-label (frame :: <raw-frame-element>)
+  frame.hex-dump-row;
 end;
 
 define method print-source (frame :: <frame-with-metadata>)
@@ -261,7 +301,7 @@ define method compute-absolute-offset (frame :: <prism2-frame>)
   0
 end;
 
-define method find-frame-field (frame :: <container-frame>, search :: <container-frame>)
+define method find-frame-field (frame :: <container-frame>, search :: type-union(<container-frame>, <raw-frame>))
  => (res :: false-or(type-union(<frame-field>, <rep-frame-field>)))
   block(ret)
     for (ff in sorted-frame-fields(frame))
@@ -280,7 +320,7 @@ define method find-frame-field (frame :: <container-frame>, search :: <container
   end;
 end;
 
-define method compute-absolute-offset (frame :: <container-frame>)
+define method compute-absolute-offset (frame :: type-union(<container-frame>, <raw-frame>))
   if (frame.parent)
     let ff = find-frame-field(frame.parent, frame);
     compute-absolute-offset(ff);
@@ -297,6 +337,11 @@ define method compute-absolute-offset (frame-field :: <frame-field>)
   start-offset(frame-field) + compute-absolute-offset(frame-field.frame)
 end;
 
+define method compute-absolute-offset (ff :: <raw-frame-element>)
+ => (res :: <integer>)
+  start-offset(ff) + compute-absolute-offset(ff.raw-frame);
+end;
+
 define method compute-length (frame :: <header-frame>) => (res :: <integer>)
   start-offset(sorted-frame-fields(frame).last)
 end;
@@ -305,7 +350,7 @@ define method compute-length (frame :: <frame>) => (res :: <integer>)
   frame-size(frame)
 end;
 
-define method compute-length (frame-field :: <rep-frame-field>) => (res :: <integer>)
+define method compute-length (frame-field :: <position-mixin>) => (res :: <integer>)
   frame-field.length
 end;
 
@@ -363,6 +408,12 @@ define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   end;
 
   let hex-dump = split(get-hex-dump(packet.real-frame), '\n');
+  hex-dump := copy-sequence(hex-dump, end: hex-dump.size - 1);
+
+  if (end-line >= hex-dump.size - 1)
+    end-line := hex-dump.size - 2;
+    end-rest := 16;
+  end;
   
   let start-pos = 6 + start-rest * 3 + if (start-rest >= 8) 1 else 0 end;
   let end-pos = 6 + end-rest * 3 + if (end-rest > 8) 1 else 0 end;
@@ -437,6 +488,31 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "GUI Sniffer");
 
+  pane open-button (frame)
+    make(<push-button>, label: $icons["open"],
+         activate-callback: method(x) open-pcap-file(frame) end);
+  pane save-button (frame)
+    make(<push-button>, label: $icons["save"],
+         activate-callback: method(x) save-pcap-file(frame) end);
+  pane play-button (frame)
+    make(<push-button>, label: $icons["play"],
+         activate-callback: method(x) open-interface(frame) end);
+  pane stop-button (frame)
+    make(<push-button>, label: $icons["stop"],
+         activate-callback: method(x) close-interface(frame) end);
+    
+  pane sniffer-tool-bar (frame)
+    make(<tool-bar>,
+         height: 18,
+         resizable?: #f,
+         child: horizontally ()
+                  frame.open-button;
+                  frame.save-button;
+                  make(<separator>, orientation: #"vertical");
+                  frame.play-button;
+                  frame.stop-button;
+                end);
+
   layout (frame) vertically()
                    frame.filter-pane;
                    frame.packet-table;
@@ -444,6 +520,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
                    frame.packet-hex-dump;
                  end;
 
+  tool-bar (frame) frame.sniffer-tool-bar;
   command-table (frame) *gui-sniffer-command-table*;
   status-bar (frame) frame.sniffer-status-bar;
   keyword title: = "GUI Sniffer"
@@ -512,8 +589,11 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     frame.ethernet-interface := interface;
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
     command-enabled?(open-pcap-file, frame) := #f;
+    gadget-enabled?(frame.open-button) := #f;
     command-enabled?(open-interface, frame) := #f;
+    gadget-enabled?(frame.play-button) := #f;
     command-enabled?(close-interface, frame) := #t;
+    gadget-enabled?(frame.stop-button) := #t;
   end;
 end;
 
@@ -522,8 +602,11 @@ define method close-interface (frame :: <gui-sniffer-frame>)
   gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
   disconnect(frame.ethernet-interface, frame);
   command-enabled?(open-pcap-file, frame) := #t;
+  gadget-enabled?(frame.open-button) := #t;
   command-enabled?(open-interface, frame) := #t;
+  gadget-enabled?(frame.play-button) := #t;
   command-enabled?(close-interface, frame) := #f;
+  gadget-enabled?(frame.stop-button) := #f;
 end;
 
 define method prompt-for-interface
@@ -579,9 +662,24 @@ define method push-data-aux (input :: <push-input>,
   end;
 end;
 
+define constant $icons = make(<string-table>);
+
+define function initialize-icons ()
+  local method doit (name)
+    $icons[as-lowercase(name)]
+      := read-image-as(<win32-icon>, as(<byte-string>, name), #"icon", width: 16, height: 16);
+  end;
+  doit("PLAY");
+  doit("OPEN");
+  doit("SAVE");
+  doit("STOP");
+end;
+
 begin
+  initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
   command-enabled?(close-interface, gui-sniffer) := #f;
+  gadget-enabled?(gui-sniffer.stop-button) := #f;
   start-frame(gui-sniffer);
 end;
 

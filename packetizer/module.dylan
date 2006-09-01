@@ -60,6 +60,7 @@ define module packetizer
   export <frame-field>,
     <repeated-frame-field>,
     <rep-frame-field>,
+    <position-mixin>,
     parent-frame-field,
     frame-field-list,
     start-offset,

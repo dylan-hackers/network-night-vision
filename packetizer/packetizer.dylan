@@ -536,7 +536,7 @@ end;
 define generic assemble-field (frame :: <frame>, field :: <field>)
  => (packet :: <vector>);
 
-define class <position-mixin> (<object>)
+define open abstract class <position-mixin> (<object>)
   slot %start-offset :: false-or(<integer>) = #f, init-keyword: start:;
   slot %end-offset :: false-or(<integer>) = #f, init-keyword: end:;
   slot %length :: false-or(<integer>) = #f, init-keyword: length:;
@@ -550,9 +550,11 @@ end;
 define method start-offset (ff :: <position-mixin>)
   ff.%start-offset;
 end;
+
 define method end-offset (ff :: <position-mixin>)
   ff.%end-offset;
 end;
+
 define method length (ff :: <position-mixin>)
   ff.%length;
 end;

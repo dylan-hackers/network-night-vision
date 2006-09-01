@@ -12,4 +12,9 @@ Linker-Options:   $(guilflags)
 Start-Function:   main
 Compilation-Mode: loose
 Target-Type:      executable
+RC-Files:	bitmaps.rc
+C-Header-Files:	icons/open.ico
+			icons/save.ico
+			icons/play.ico
+			icons/stop.ico
 

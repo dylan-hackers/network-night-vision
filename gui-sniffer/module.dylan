@@ -6,6 +6,7 @@ define module gui-sniffer
   use common-dylan;
   use threads;
   use duim;
+  use win32-duim;
   use format;
   use format-out;
   use standard-io;

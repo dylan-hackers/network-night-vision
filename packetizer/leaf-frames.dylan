@@ -471,6 +471,7 @@ end;
 
 define abstract class <variable-size-byte-vector> (<variable-size-untranslated-leaf-frame>)
   slot data :: <byte-vector>, required-init-keyword: data:;
+  slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
 end;
 
 define method frame-size (frame :: <variable-size-byte-vector>) => (res :: <integer>)
@@ -479,14 +480,16 @@ end;
 
 define method parse-frame (frame-type :: subclass(<variable-size-byte-vector>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key start :: <integer> = 0,
+                           parent)
  => (frame :: <variable-size-byte-vector>, next-unparsed :: <integer>)
  byte-aligned(start);
  if (packet.size < byte-offset(start))
    signal(make(<malformed-packet-error>))
  else
    values(make(frame-type,
-               data: copy-sequence(packet, start: byte-offset(start))),
+               data: copy-sequence(packet, start: byte-offset(start)),
+               parent: parent),
           start + packet.size * 8)
  end
 end;
