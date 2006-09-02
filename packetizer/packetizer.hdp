@@ -5,6 +5,7 @@ files:	library
 	module
 	packetizer
 	leaf-frames
+	fields
 	util
 	protocol-definer-macro
 	filter
