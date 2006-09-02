@@ -294,7 +294,7 @@ define protocol ieee80211-data (ieee80211-data-frame)
 end;
 
 // ieee80211 control frames
-define protocol ieee80211-control-frame(container-frame)
+define protocol ieee80211-control-frame (container-frame)
 end;
 
 define protocol ieee80211-request-to-send (ieee80211-control-frame)

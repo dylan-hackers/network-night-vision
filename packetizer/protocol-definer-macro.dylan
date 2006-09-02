@@ -393,6 +393,13 @@ define macro protocol-definer
       { summary-generator("<" ## ?name ## ">"; ?summary);
         define protocol ?name (?superprotocol) ?fields end; }
 
+    { define protocol ?:name (container-frame) end } =>
+      { define abstract class "<" ## ?name ## ">" (<container-frame>) end;
+        define abstract class "<decoded-" ## ?name ## ">"
+         ("<" ## ?name ## ">", <decoded-container-frame>)
+        end;
+        gen-classes(?name; container-frame); }
+
     { define protocol ?:name (?superprotocol:name)
         ?fields:*
       end } =>

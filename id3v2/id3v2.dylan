@@ -33,13 +33,7 @@ define method parse-frame
   end;
 end;
 
-define class <id3v2-string> (<container-frame>)
-end;
-
-define class <unparsed-id3v2-string> (<id3v2-string>, <unparsed-container-frame>)
-end;
-
-define class <decoded-id3v2-string> (<id3v2-string>, <decoded-container-frame>)
+define protocol id3v2-string (container-frame)
 end;
 
 define protocol id3v2-string-with-type (id3v2-string)
