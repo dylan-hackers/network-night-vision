@@ -583,11 +583,11 @@ define method save-pcap-file (frame :: <gui-sniffer-frame>)
 end;
 
 define method open-interface (frame :: <gui-sniffer-frame>)
-  let (interface-name, promiscious?) = prompt-for-interface(owner: frame);
+  let (interface-name, promiscuous?) = prompt-for-interface(owner: frame);
   if (interface-name)
     let interface = make(<ethernet-interface>,
                          name: interface-name,
-                         promiscious?: promiscious?);
+                         promiscuous?: promiscuous?);
     connect(interface, frame);
     reinit-gui(frame);
     make(<thread>, function: curry(toplevel, interface));
@@ -616,20 +616,20 @@ end;
 
 define method prompt-for-interface
   (#key title = "Please specify interface", owner)
- => (interface-name :: false-or(<string>), promiscious? :: <boolean>)
+ => (interface-name :: false-or(<string>), promiscuous? :: <boolean>)
   let devices = find-all-devices();
   let interfaces = make(<list-box>, items: devices);
-  let promiscious? = make(<check-box>, items: #("promiscious"), selection: #[0]);
+  let promiscuous? = make(<check-box>, items: #("promiscuous"), selection: #[0]);
   let interface-selection-dialog
     = make(<dialog-frame>,
            title: title,
            owner: owner,
            layout: horizontally()
                      interfaces;
-                     promiscious?
+                     promiscuous?
                    end);
   if (start-dialog(interface-selection-dialog))
-    values(gadget-value(interfaces), size(gadget-value(promiscious?)) > 0)
+    values(gadget-value(interfaces), size(gadget-value(promiscuous?)) > 0)
   end;
 end;
 

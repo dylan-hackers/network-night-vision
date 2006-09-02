@@ -35,7 +35,7 @@ end;
 
 //XXX needed because bug #7192 c-ffi stuff needs to be compiled in tight mode
 define generic interface-name (object :: <ethernet-interface>) => (res :: <string>);
-define generic promiscious? (object :: <ethernet-interface>) => (res :: <boolean>);
+define generic promiscuous? (object :: <ethernet-interface>) => (res :: <boolean>);
 define generic pcap-t (object :: <ethernet-interface>) => (res :: <object>);
 define generic pcap-t-setter (value :: <object>, object :: <ethernet-interface>) => (res :: <object>);
 define generic running? (object :: <ethernet-interface>) => (res :: <boolean>);
@@ -43,7 +43,7 @@ define generic running?-setter (value :: <boolean>, object :: <ethernet-interfac
 
 define open class <ethernet-interface> (<filter>)
   constant slot interface-name :: <string> = "ath0", init-keyword: name:;
-  constant slot promiscious? :: <boolean> = #t, init-keyword: promiscious?:;
+  constant slot promiscuous? :: <boolean> = #t, init-keyword: promiscuous?:;
   slot running? :: <boolean> = #t;
   slot pcap-t;
 end;
@@ -85,7 +85,7 @@ define method initialize
             format-out("trying interface %s\n", name);
             let res = pcap-open-live(name,
                                      $ethernet-buffer-size,
-                                     if (interface.promiscious?) 1 else 0 end,
+                                     if (interface.promiscuous?) 1 else 0 end,
                                      $timeout,
                                      buffer-offset(errbuf, 0));
             if (res ~= null-pointer(<C-void*>))
