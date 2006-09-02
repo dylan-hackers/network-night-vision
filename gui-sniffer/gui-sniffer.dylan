@@ -55,7 +55,14 @@ define method frame-children-generator (raw-frame :: <raw-frame>)
             cleanup
               close(out)
             end;
-  let lines = split(hex, '\n', start: 1, end: hex.size - 1);
+  let lines = split(hex, '\n');
+  if (lines[0] = "")
+    lines := copy-sequence(lines, start: 1)
+  end;
+  if (lines[lines.size - 1] = "")
+    lines := copy-sequence(lines, end: lines.size - 1)
+  end;
+
   let start :: <integer> = 0;
   let length :: <integer> = 16 * 8;
   map(method(x)
@@ -515,9 +522,10 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
 
   layout (frame) vertically()
                    frame.filter-pane;
-                   frame.packet-table;
-                   frame.packet-tree-view;
-                   frame.packet-hex-dump;
+                   make(<column-splitter>,
+                        children: vector(frame.packet-table,
+                                         frame.packet-tree-view,
+                                         frame.packet-hex-dump));
                  end;
 
   tool-bar (frame) frame.sniffer-tool-bar;
