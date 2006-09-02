@@ -94,9 +94,6 @@ define method frame-children-generator (ff :: <rep-frame-field>)
   frame-children-generator(ff.frame)
 end;
 
-define method frame-root-generator (frame :: <ethernet-frame>)
-  add!(next-method(), frame);
-end;
 define method frame-root-generator (frame :: <header-frame>)
   add!(frame-root-generator(payload(frame)), get-frame-field(#"payload", frame));
 end;
@@ -273,7 +270,7 @@ end;
 define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
   frame.packet-tree-view.tree-control-roots
     := if (packet)
-         frame-root-generator(packet);
+         add!(frame-root-generator(packet), packet);
        else
          #[]
        end;

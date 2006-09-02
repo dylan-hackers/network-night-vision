@@ -42,7 +42,7 @@ define module packetizer
 
   export <raw-frame>;
 
-  export $broken-ipv4, hexdump;
+  export hexdump;
 
   export <unsigned-byte>,
     <3byte-big-endian-unsigned-integer>,
@@ -97,6 +97,7 @@ define module packetizer
   export <container-frame>,
     <unparsed-container-frame>,
     <decoded-container-frame>,
+    fields-initializer,
     frame-name,
     unparsed-class,
     decoded-class,
@@ -121,7 +122,7 @@ define module packetizer
 end module packetizer;
 
 define module packet-filter
-  use common-dylan;
+  use common-dylan, exclude: { format-to-string };
   use format;
   use format-out;
   use print;

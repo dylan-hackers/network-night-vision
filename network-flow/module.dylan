@@ -4,7 +4,7 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
 define module network-flow
-  use common-dylan;
+  use common-dylan, exclude: { format-to-string };
   use threads;
   use format;
   use streams;

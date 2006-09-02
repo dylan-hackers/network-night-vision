@@ -109,7 +109,7 @@ define method initialize(node :: <single-pull-input-node>, #rest rest, #key, #al
   node.the-input := make(<pull-input>, node: node)
 end;
 
-define open abstract class <single-output-node> (<node>)
+define abstract class <single-output-node> (<node>)
   slot the-output :: <push-output>, init-keyword: output:;
 end;
 

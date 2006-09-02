@@ -150,19 +150,6 @@ define protocol ipv4-frame (header-frame)
                    end;
 end;
 
-define constant $ipv4 = as(<byte-vector>, #(6, 5, 4, 3, 2, 2, 4, 4, 5, 6, 7, 7, 1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 0, 3, 4, 5, 6, 7, 8));
-
-define constant $broken-ipv4
-  = as(<byte-vector>,
-       #[#x00, #x30, #x94, #xCB, #xBA, #x30, #x00, #x90,
-         #x86, #xD6, #x10, #x00, #x08, #x00, #x45, #x00,
-         #x00, #x1D, #x64, #x4F, #x00, #x00, #x7E, #x11,
-         #x45, #x62, #xC1, #x11, #x2B, #xC5, #x3E, #x9F,
-         #x67, #xA9, #x11, #x94, #x11, #x94, #x00, #x09,
-         #x4A, #x94, #xFF, #x00, #x00, #x00, #x00, #x00,
-         #x00, #x00, #x00, #x00, #x00, #x00, #x00, #x00,
-         #x00, #x00, #x00, #x00]);
-
 
 define protocol icmp-frame (header-frame)
   summary "ICMP type %= code %=", type, code;

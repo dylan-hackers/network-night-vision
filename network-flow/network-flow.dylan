@@ -3,6 +3,9 @@ Synopsis:  A brief description of the project.
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
+define class <undefined-field-error> (<error>)
+end;
+
 define class <summary-printer> (<single-push-input-node>)
   slot stream :: <stream>, required-init-keyword: stream:;
 end;
@@ -230,7 +233,6 @@ define method push-data-aux (input :: <push-input>,
       if (default-field-value)
         field.setter(default-field-value, frame);
       elseif (~ field.fixup-function)
-        format-out("Field %=\n", field.field-name);
         signal(make(<undefined-field-error>));
       end;
     end;

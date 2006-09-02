@@ -126,7 +126,7 @@ define protocol dns-resource-record (container-frame)
   field domainname :: <domain-name>;
   field rr-type :: <2byte-big-endian-unsigned-integer>;
   field rr-class :: <2byte-big-endian-unsigned-integer>;
-  field ttl :: <big-endian-unsigned-integer>;
+  field ttl :: <big-endian-unsigned-integer-4byte>;
   field rdlength :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field rdata,
     type-function: select (frame.rr-type)

@@ -24,12 +24,6 @@ define protocol pcap-file-header (container-frame)
   field last-linktype :: <unsigned-byte> = 0;
 end;
 
-define function get-seconds () => (seconds :: <collection>)
-  let (year, month, day, hours, minutes, seconds,
-       day-of-week, time-zone-offset) = decode-date(current-date());
-  int-to-byte-vector(seconds);
-end;
-
 define function int-to-byte-vector (int :: <integer>) => (res :: <byte-vector>)
   let res = make(<byte-vector>, size: 4);
   for (i from 0 below 4)

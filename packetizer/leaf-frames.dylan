@@ -255,55 +255,7 @@ define abstract class <big-endian-unsigned-integer-byte-frame> (<fixed-size-tran
   //slot data :: <integer>, required-init-keyword: data:;
 end;
 
-define class <big-endian-unsigned-integer> (<big-endian-unsigned-integer-byte-frame>)
-  slot data :: <integer>, required-init-keyword: data:;
-end;
-
 define abstract class <little-endian-unsigned-integer-byte-frame> (<fixed-size-translated-leaf-frame>)
-end;
-
-define class <little-endian-unsigned-integer> (<big-endian-unsigned-integer-byte-frame>)
-  slot data :: <integer>, required-init-keyword: data:;
-end;
-
-define inline method high-level-type (low-level-type == <big-endian-unsigned-integer>)
- => (res :: <type>)
-   <integer>
-end;
-
-define inline method high-level-type (low-level-type == <little-endian-unsigned-integer>)
- => (res :: <type>)
-   <integer>
-end;
-
-define inline method field-size (field == <big-endian-unsigned-integer>)
- => (length :: <integer>)
-   4 * 8;
-end;
-
-define inline method field-size (field == <little-endian-unsigned-integer>)
- => (length :: <integer>)
-   4 * 8;
-end;
-
-define method read-frame (type == <big-endian-unsigned-integer>,
-                          string :: <string>)
- => (res)
-  let res = string-to-integer(string);
-  if (res < 0)
-    signal(make(<out-of-range-error>))
-  end;
-  res;
-end;
-
-define method read-frame (type == <little-endian-unsigned-integer>,
-                          string :: <string>)
- => (res)
-  let res = string-to-integer(string);
-  if (res < 0)
-    signal(make(<out-of-range-error>))
-  end;
-  res;
 end;
 
 define macro n-byte-unsigned-integer-definer
