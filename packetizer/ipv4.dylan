@@ -229,7 +229,9 @@ end;
 
 define method summary (frame :: <arp-frame>) => (res :: <string>)
   if(frame.operation = 1)
-    format-to-string("ARP WHO-HAS %=", frame.target-ip-address)
+    format-to-string("ARP WHO-HAS %= tell %=",
+                     frame.target-ip-address,
+                     frame.source-ip-address)
   elseif(frame.operation = 2)
     format-to-string("ARP %= IS-AT %=",
                      frame.source-ip-address,
