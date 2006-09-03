@@ -24,8 +24,7 @@ define module packetizer
     <ieee80211-data-frame>,
     <ieee80211-management-frame>,
     <ieee80211-control-frame>,
-    operation, source-address, destination-address,
-    type-code, <arp-frame>, target-mac-address,
+    operation, type-code, <arp-frame>, target-mac-address,
     target-ip-address, source-ip-address, source-mac-address,
     mac-address, ipv4-address, 
     <decoded-arp-frame>, <decoded-ethernet-frame>,
@@ -104,7 +103,10 @@ define module packetizer
     field-count,
     fixup!,
     parent,
-    packet;
+    packet,
+    source-address,
+    destination-address,
+    payload-type;
 
   export <header-frame>,
     <unparsed-header-frame>,

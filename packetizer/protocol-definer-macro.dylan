@@ -7,7 +7,7 @@ define macro real-class-definer
   { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
       end;
-      define inline method frame-name (frame :: ?name) => (res :: <string>)
+      define inline method frame-name (frame :: subclass(?name)) => (res :: <string>)
         ?"name"
       end;
       define inline method fields (frame :: ?name) => (res :: <simple-vector>)
@@ -170,7 +170,7 @@ define macro unparsed-frame-field-generator
   { unparsed-frame-field-generator(?:name,
                                    ?frame-type:name,
                                    ?field-index:expression) }
- => { define inline method ?name (mframe :: ?frame-type)
+ => { define inline method ?name (mframe :: ?frame-type) => (res)
          if (mframe.cache.?name)
            mframe.cache.?name
          else
@@ -183,8 +183,7 @@ define macro unparsed-frame-field-generator
           end;
           mframe.cache.?name
         end;
-      end;
-      define sealed domain ?name (?frame-type); }
+      end; }
 end;
 
 define method parse-frame-field
@@ -393,6 +392,7 @@ define macro protocol-definer
       { summary-generator("<" ## ?name ## ">"; ?summary);
         define protocol ?name (?superprotocol) ?fields end; }
 
+
     { define protocol ?:name (container-frame) end } =>
       { define abstract class "<" ## ?name ## ">" (<container-frame>) end;
         define abstract class "<decoded-" ## ?name ## ">"
@@ -410,10 +410,44 @@ define macro protocol-definer
         gen-classes(?name; ?superprotocol);
         frame-field-generator("<unparsed-" ## ?name ## ">";
                               field-count("<unparsed-" ## ?superprotocol ## ">");
-                              ?fields);
-      }
+                              ?fields); }
 end;
 
+define macro forward-bonding
+  { forward-bonding(?:name; ?field:expression; ?bondings:*) }
+ => { define inline method payload-type (frame :: ?name) => (res :: <type>)
+        select (frame.?field)
+          ?bondings;
+          otherwise => <raw-frame>;
+        end;
+      end; }
+end;
+
+define macro reverse-bonding
+  { reverse-bonding(?:name; ?field:expression; ?bondings:*) }
+  => { define inline method get-protocol-magic (frame :: ?name, payload :: <frame>)
+         let value =
+           select (payload.object-class)
+             ?bondings;
+             otherwise =>
+               error("Unknown layer bonding tried %= over %=", payload.frame-name, frame.frame-name)
+           end;
+         values(frame.?field, value)
+       end; }
+
+  bondings:
+    { } => { }
+    { ?key:expression => ?value:expression; ... } =>
+      { ?value => ?key; ... }
+end;
+define macro layer-bonding-definer
+  { define layer-bonding ?:name (?field:expression)
+      ?bondings:*
+    end } =>
+    { forward-bonding(?name; ?field; ?bondings);
+      reverse-bonding(?name; ?field; ?bondings); }
+end;
+   
 define macro leaf-frame-constructor-definer
   { define leaf-frame-constructor(?:name) end }
  =>

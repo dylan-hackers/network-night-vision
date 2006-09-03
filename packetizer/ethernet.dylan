@@ -43,10 +43,11 @@ define protocol ethernet-frame (header-frame)
   field source-address :: <mac-address>;
   field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
-    type-function:
-      select (frame.type-code)
-        #x800 => <ipv4-frame>;
-        #x806 => <arp-frame>;
-          otherwise <raw-frame>;
-      end;  
+    type-function: payload-type(frame);
 end;
+
+define layer-bonding <ethernet-frame> (type-code)
+  #x800 => <ipv4-frame>;
+  #x806 => <arp-frame>
+end;
+

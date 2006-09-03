@@ -142,12 +142,13 @@ define protocol ipv4-frame (header-frame)
   variably-typed-field payload,
     start: frame.header-length * 4 * 8,
     end: frame.total-length * 8,
-    type-function: select (frame.protocol)
-                     1 => <icmp-frame>;
-                     6 => <tcp-frame>;
-                     17 => <udp-frame>;
-                     otherwise => <raw-frame>;
-                   end;
+    type-function: payload-type(frame);
+end;
+
+define layer-bonding <ipv4-frame> (protocol)
+  1 => <icmp-frame>;
+  6 => <tcp-frame>;
+  17 => <udp-frame>
 end;
 
 
@@ -167,14 +168,19 @@ define protocol udp-frame (header-frame)
   field checksum :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
     end: frame.length * 8,
-    type-function: if (frame.source-port = 53
-                       | frame.destination-port = 53
-                       | frame.source-port = 5353
-                       | frame.destination-port = 5353)
-                     <dns-frame>
-                   else
-                     <raw-frame>
-                   end;  
+    type-function: payload-type(frame);
+end;
+
+define inline method payload-type (frame :: <udp-frame>) => (res :: <type>)
+  select (frame.source-port)
+    53 => <dns-frame>;
+    5353 => <dns-frame>;
+    otherwise => select (frame.destination-port)
+                   53 => <dns-frame>;
+                   5353 => <dns-frame>;
+                   otherwise => <raw-frame>;
+                 end;
+  end;
 end;
 
 // FIXME: must do for now

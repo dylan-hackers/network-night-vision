@@ -197,11 +197,21 @@ define open abstract class <container-frame> (<variable-size-untranslated-frame>
   virtual constant slot frame-name :: <string>;
 end;
 
-define open generic frame-name (frame :: <container-frame>) => (res :: <string>);
+define open generic frame-name (frame :: type-union(subclass(<container-frame>), <container-frame>)) => (res :: <string>);
 
-define method frame-name(frame :: <container-frame>) => (res :: <string>)
+define inline method frame-name (frame :: <container-frame>) => (res :: <string>)
+  frame-name(frame.object-class);
+end;
+
+define method frame-name(frame :: subclass(<container-frame>)) => (res :: <string>)
   "anonymous"
 end;
+
+define open generic source-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
+
+define open generic destination-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
+
+define open generic payload-type (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
 
 define open generic field-count (frame :: subclass(<container-frame>))
  => (res :: <integer>);

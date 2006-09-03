@@ -138,82 +138,88 @@ define method frame-print-label (frame :: <raw-frame-element>)
 end;
 
 define method print-source (frame :: <frame-with-metadata>)
-  print-source(frame.real-frame) | "Unknown"
+  let source = find-source-address(frame.real-frame);
+  if (source)
+    as(<string>, source)
+  else
+    "Unknown"
+  end;
 end;
 
-define method print-source (frame :: <header-frame>)
-  print-source(frame.payload);
+define method find-source-address (frame :: <header-frame>)
+  find-source-address(frame.payload) | next-method();
 end;
 
-define method print-source (frame :: <frame>)
+define method find-source-address (frame)
+  source-address(frame);
+end;
+
+define method source-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
   #f;
-end;
-
-define method print-source (frame :: <ethernet-frame>)
-  next-method() | as(<string>, frame.source-address)
-end;
-
-define method print-source (frame :: <ipv4-frame>)
-  next-method() | as(<string>, frame.source-address)
-end;
-
-/*define method print-source (frame :: <arp-frame>)
-  as(<string>, frame.source-ip-address)
-end;*/
-
-define method print-source (frame :: <ieee80211-management-frame>)
-  next-method() | as(<string>, frame.source-address)
 end;
 
 define method print-destination (frame :: <frame-with-metadata>)
-  print-destination(frame.real-frame) | "Unknown"
-end;
-
-define method print-destination (frame :: <header-frame>)
-  print-destination(frame.payload);
-end;
-
-define method print-destination (frame :: <frame>)
-  #f;
-end;
-
-define method print-destination (frame :: <ethernet-frame>)
-  next-method() | as(<string>, frame.destination-address)
-end;
-
-define method print-destination (frame :: <ipv4-frame>)
-  next-method() | as(<string>, frame.destination-address)
-end;
-
-define method print-destination (frame :: <ieee80211-management-frame>)
-  next-method() | as(<string>, frame.destination-address)
-end;
-
-/*define method print-destination (frame :: <arp-frame>)
-  if (frame.target-mac-address ~= mac-address("00:00:00:00:00:00"))
-    as(<string>, frame.target-ip-address)
+  let destination = find-destination-address(frame.real-frame);
+  if (destination)
+    as(<string>, destination);
   else
-    "Broadcast"
+    "Unknown"
   end;
-end;*/
-
-define method print-protocol (frame :: <frame-with-metadata>)
-  print-protocol(frame.real-frame) | "Unknown"
 end;
 
-define method print-protocol (frame :: <ethernet-frame>)
-  next-method() | frame.type-code
+define method find-destination-address (frame :: <header-frame>)
+  find-destination-address(frame.payload) | next-method();
 end;
 
-define method print-protocol (frame :: <header-frame>)
-  print-protocol(frame.payload);
+define method find-destination-address (frame)
+ destination-address(frame)
 end;
 
-define method print-protocol (frame :: <frame>)
+define method destination-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
   #f
 end;
+
+define method print-protocol (frame :: <frame-with-metadata>)
+  let proto = find-protocol-name(frame.real-frame);
+  if (proto)
+    proto.frame-name;
+  else
+    "Unknown"
+  end;
+end;
+
+define method find-protocol-name (frame :: <header-frame>)
+  find-protocol-name(frame.payload) | next-method()
+end;
+
+define method find-protocol-name (frame :: type-union(<raw-frame>, <container-frame>))
+  let res = payload-type(frame);
+  if (res = <raw-frame>)
+    #f
+  else
+    res;
+  end;
+end;
+
+define method payload-type (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
+  #f
+end;
+
 define method print-info (frame :: <frame-with-metadata>)
-  summary(frame.real-frame.payload)
+  find-print-info(frame.real-frame)
+end;
+
+define method find-print-info (frame :: <header-frame>) => (res)
+  find-print-info(frame.payload) | next-method()
+end;
+
+define method find-print-info (frame :: type-union(<raw-frame>, <container-frame>))
+  let cur = summary(frame);
+  if (cur = format-to-string("%=", frame.object-class))
+    #f
+  else
+    cur;
+  end;
 end;
 
 define method print-number (frame :: <frame-with-metadata>)
