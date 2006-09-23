@@ -164,8 +164,9 @@ define protocol udp-frame (header-frame)
   summary "UDP port %= -> %=/%s", source-port, destination-port, compose(summary, payload);
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
-  field length :: <2byte-big-endian-unsigned-integer>;
-  field checksum :: <2byte-big-endian-unsigned-integer>;
+  field length :: <2byte-big-endian-unsigned-integer>,
+    fixup: byte-offset(frame-size(frame.payload)) + 8;
+  field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   variably-typed-field payload,
     end: frame.length * 8,
     type-function: payload-type(frame);

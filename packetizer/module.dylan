@@ -17,6 +17,8 @@ define module packetizer
   use date;
 
   // Add binding exports here.
+  export <udp-frame>, source-port, destination-port, length, checksum;
+
   export <ethernet-frame>, <ipv4-frame>,
     <ipv4-address>, <mac-address>, <ieee80211-frame>, <prism2-frame>,
     <logical-link-control>, <link-control>,
