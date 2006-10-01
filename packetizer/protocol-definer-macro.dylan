@@ -3,6 +3,23 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 
+define macro protocol-module-definer
+  { protocol-module-definer (?:name; ?fields:*) }
+ => { define module ?name
+        use dylan;
+        use packetizer;
+        export "<" ## ?name ## ">";
+        export ?fields;
+      end; }
+
+  fields:
+    { } => { }
+    { field ?:name ?rest:* ; ... } => { ?name, ... }
+    { repeated field ?:name ?rest:* ; ... } => { ?name, ... }
+    { variably-typed field ?:name ?rest:* ... } => { ?name, ... }
+
+end;
+
 define macro real-class-definer
   { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
@@ -162,7 +179,8 @@ define macro gen-classes
       end;
 
       define class "<unparsed-" ## ?name ## ">" ("<" ## ?name ## ">", "<unparsed-" ## ?superframe ## ">")
-        inherited slot cache :: "<" ## ?name ## ">" = make("<decoded-" ## ?name ## ">");
+        inherited slot cache :: "<" ## ?name ## ">" = make("<decoded-" ## ?name ## ">"),
+          init-keyword: cache:;
       end; }
 end;
 
@@ -183,7 +201,14 @@ define macro unparsed-frame-field-generator
           end;
           mframe.cache.?name
         end;
-      end; }
+      end;
+      define inline method ?name ## "-setter" (value, mframe :: ?frame-type) => (res)
+        mframe.cache.?name := value;
+        let frame-field = get-frame-field(?field-index, mframe);
+        // blatantly ignores changed length, FIXME!
+        assemble-field-into(frame-field.field, mframe, mframe.packet, frame-field.start-offset);
+      end;
+ }
 end;
 
 define method parse-frame-field
@@ -221,10 +246,10 @@ define method parse-frame-field
   let (value, length)
     = parse-frame-field-aux(frame-field.field,
                             frame-field.frame,
-                            bit-offset(start),
+                            0,
                             subsequence(frame-field.frame.packet,
-                                        start: byte-offset(start),
-                                        end: byte-offset(end-of-field + 7)));
+                                        start: start,
+                                        end: end-of-field));
   if (length)
     let real-end = length - bit-offset(start) + start;
     unless (real-end = end-of-field)
@@ -273,8 +298,8 @@ define method parse-frame-field-aux
   if (packet.size > 0)
     let (value, offset)
       = parse-frame(field.type,
-                    subsequence(packet, start: byte-offset(start)),
-                    start: bit-offset(start),
+                    subsequence(packet, start: start),
+                    start: 0,
                     parent: frame);
     unless (offset)
       offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -291,8 +316,8 @@ define method parse-frame-field-aux
     while ((~ field.reached-end?(frames.last)) & (byte-offset(start) < packet.size))
       let (value, offset)
         = parse-frame(field.type,
-                      subsequence(packet, start: byte-offset(start)),
-                      start: bit-offset(start),
+                      subsequence(packet, start: start),
+                      start: 0,
                       parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -323,9 +348,8 @@ define method parse-frame-field-aux
     for (i from 0 below field.count(frame))
       let (value, offset)
         = parse-frame(field.type,
-                      subsequence(packet,
-                                  start: byte-offset(start)),
-                      start: bit-offset(start),
+                      subsequence(packet, start: start),
+                      start: 0,
                       parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -350,7 +374,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                            parent :: false-or(<container-frame>) = #f)
   byte-aligned(start);
   let frame = make(unparsed-class(frame-type),
-                   packet: subsequence(packet, start: byte-offset(start)),
+                   packet: subsequence(packet, start: start),
                    parent: parent);
   let length = field-size(frame-type);
   if (length = $unknown-at-compile-time)

@@ -4,19 +4,21 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define module packetizer
   use common-dylan, exclude: { format-to-string };
-  use threads;
+  use dylan-extensions, import: { \copy-down-method-definer };
   use format;
   use format-out;
   use standard-io;
   use streams;
-  use bit-vector;
   use print, import: { print-object };
-  use byte-vector;
-  use subseq;
-  use file-system;
   use date;
 
   // Add binding exports here.
+  export <stretchy-vector-subsequence>,
+    <stretchy-byte-vector-subsequence>,
+    subsequence,
+    <out-of-bound-error>,
+    encode-integer;
+
   export <udp-frame>, source-port, destination-port, length, checksum;
 
   export <ethernet-frame>, <ipv4-frame>,
@@ -50,7 +52,7 @@ define module packetizer
     <2byte-big-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
     <externally-delimited-string>, <1bit-unsigned-integer>,
-    <4bit-unsigned-integer>;
+    <4bit-unsigned-integer>, <7bit-unsigned-integer>;
 
   export <fixed-size-translated-leaf-frame>, <byte-sequence>;
 

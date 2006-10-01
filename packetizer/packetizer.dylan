@@ -41,7 +41,10 @@ define method \+ (a :: <unknown-at-compile-time>, b :: <unknown-at-compile-time>
   $unknown-at-compile-time
 end;
 
-define constant <byte-sequence> = <byte-vector-subsequence>;
+define constant <byte-sequence> = <stretchy-vector-subsequence>;
+define constant <byte-vector-subsequence> = <stretchy-vector-subsequence>;
+
+define constant <bit-vector> = <stretchy-bit-vector-subsequence>;
 
 define constant $protocols = make(<table>);
 
@@ -98,27 +101,28 @@ define method parse-frame
    #rest rest,
    #key, #all-keys)
  => (value :: <object>, next-unparsed :: false-or(<integer>));
- let packet-subseq = subsequence(packet);
+ let packet-subseq = subsequence(as(<stretchy-byte-vector-subsequence>, packet));
  apply(parse-frame, frame-type, packet-subseq, rest);
 end;
 
+
 define generic assemble-frame-into (frame :: <frame>,
-                                    packet :: <byte-vector>,
-                                    start :: <integer>);
+                                    packet :: <stretchy-vector-subsequence>,
+                                    start :: <integer>) => (length :: <integer>);
 
 define generic assemble-frame
-  (frame :: <frame>) => (packet :: <vector>);
+  (frame :: <frame>) => (packet /* :: <vector> */);
 
 define method assemble-frame
-  (frame :: <unparsed-container-frame>) => (packet :: <vector>)
-  frame.packet;
+  (frame :: <unparsed-container-frame>) => (packet :: <unparsed-container-frame>)
+  frame;
 end;
 
 define generic assemble-frame-as
-    (frame-type :: subclass(<frame>), data :: <object>) => (packet :: <vector>);
+    (frame-type :: subclass(<frame>), data :: <object>) => (packet /* :: <vector> */);
 
 define method assemble-frame-as
-    (frame-type :: subclass(<frame>), data :: <object>) => (packet :: <byte-vector>);
+    (frame-type :: subclass(<frame>), data :: <object>) => (packet /* :: <byte-vector> */);
   if (instance?(data, frame-type))
     assemble-frame(data)
   else
@@ -139,18 +143,18 @@ define inline method high-level-type (object :: subclass(<frame>)) => (res :: <t
 end;
 
 define open generic fixup! (frame :: type-union(<container-frame>, <raw-frame>),
-                            packet :: type-union(<byte-vector>, <byte-vector-subsequence>));
+                            packet :: <byte-vector-subsequence>);
 
 define method fixup!(frame :: type-union(<container-frame>, <raw-frame>),
-                     packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
+                     packet :: <byte-vector-subsequence>)
 end;
 
 define method fixup!(frame :: <header-frame>,
-                     packet :: type-union(<byte-vector>, <byte-vector-subsequence>))
+                     packet :: <byte-vector-subsequence>)
   unless (instance?(frame.payload, <unparsed-container-frame>))
     fixup!(frame.payload,
            subsequence(packet,
-                       start: byte-offset(start-offset(get-frame-field(#"payload", frame)))));
+                       start: start-offset(get-frame-field(#"payload", frame))));
   end;
 end;
 
@@ -255,11 +259,19 @@ define method initialize (frame :: <decoded-container-frame>,
 end;
 
 define open abstract class <unparsed-container-frame> (<container-frame>)
-  slot packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
-    init-keyword: packet:;
-  slot cache :: <container-frame>;
+  slot packet :: <byte-vector-subsequence>, init-keyword: packet:;
+  slot cache :: <container-frame>, init-keyword: cache:;
 end;
 
+define method make (class :: subclass(<unparsed-container-frame>),
+                    #next next-method, #rest rest, #key packet, #all-keys)
+ => (res :: <unparsed-container-frame>)
+  if (instance?(packet, <byte-vector>))
+    let packet = as(<stretchy-byte-vector-subsequence>, packet);
+    replace-arg(rest, #"packet", packet);
+  end;
+  apply(next-method, class, rest);
+end;
 define method initialize (class :: <unparsed-container-frame>,
                           #rest rest, #key parent, #all-keys)
   next-method();
@@ -327,11 +339,11 @@ end;
 //  frame.packet.size * 8
 //end;
 
-define method assemble-frame (frame :: <container-frame>) => (packet :: <byte-vector>);
-  let result = make(<byte-vector>, size: byte-offset(frame-size(frame)), fill: 0);
+define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
+  let result = make(<stretchy-byte-vector-subsequence>, data: make(<stretchy-byte-vector>, capacity: 1548));
   assemble-frame-into(frame, result, 0);
   fixup!(frame, result);
-  result;
+  make(unparsed-class(frame.object-class), cache: frame, packet: result)
 end;
 
 define method as(type == <string>, frame :: <container-frame>) => (string :: <string>);
@@ -354,10 +366,10 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
 end;
 
 define method assemble-frame-into (frame :: <container-frame>,
-                                   packet :: <byte-vector>,
-                                   start :: <integer>)
-  for (field in fields(frame),
-       offset = start then offset + get-field-size-aux(frame, field))
+                                   packet :: <stretchy-vector-subsequence>,
+                                   start :: <integer>) => (res :: <integer>)
+  let offset :: <integer> = start;
+  for (field in fields(frame))
     unless (field.getter(frame))
       if (field.fixup-function)
         field.setter(field.fixup-function(frame), frame);
@@ -365,52 +377,95 @@ define method assemble-frame-into (frame :: <container-frame>,
         error("No value for field %s while assembling", field.field-name);
       end;
     end;
-    assemble-field-into(field, frame, packet, offset)
+    if (field.dynamic-start)
+      let real-frame-start = field.dynamic-start(frame);
+      if (real-frame-start ~= offset)
+        //pad!
+        format-out("Need dynamic padding at start of %s : %d ~= %d\n",
+                   field.field-name, real-frame-start, offset);
+      end;
+      offset := real-frame-start;
+    end;
+    if ((field.static-start ~= $unknown-at-compile-time) & (field.static-start ~= offset))
+      format-out("Need static padding at start of %s : %d ~= %d\n",
+                 field.field-name, field.static-start, offset);
+      offset := field.static-start;
+    end;
+    let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset), 0);
+    if (field.dynamic-end)
+      let real-frame-end = field.dynamic-end(frame);
+      if (real-frame-end ~= length)
+        //pad!
+        format-out("Need dynamic padding at end of %s : %d ~= %d\n",
+                   field.field-name, real-frame-end, length);
+      end;
+      length := real-frame-end;
+    end;
+    if ((field.static-end ~= $unknown-at-compile-time) & (field.static-end ~= length))
+      format-out("Need static padding at end of %s : %d ~= %d\n",
+                 field.field-name, field.static-end, length);
+      offset := field.static-end;
+    end;
+    offset := length;
   end;
+  offset;
 end;
 
 define method assemble-frame-into (frame :: <unparsed-container-frame>,
-                                   to-packet :: <byte-vector>,
-                                   start :: <integer>)
+                                   to-packet :: <stretchy-vector-subsequence>,
+                                   start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
+  copy-bytes-into!(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
 end;
 
 define method assemble-field-into(field :: <single-field>,
                                   frame :: <container-frame>,
-                                  packet :: <byte-vector>,
+                                  packet :: <stretchy-vector-subsequence>,
                                   start :: <integer>)
-  assemble-aux(field.type, field.getter(frame), packet, start);
+  let length = assemble-aux(field.type, field.getter(frame), packet, start);
+  let ff = make(<frame-field>, field: field, frame: frame, start: start, end: length);
+  frame.concrete-frame-fields[field.index] := ff;
+  length;
 end;
 
 define method assemble-field-into(field :: <variably-typed-field>,
                                   frame :: <container-frame>,
-                                  packet :: <byte-vector>,
+                                  packet :: <stretchy-vector-subsequence>,
                                   start :: <integer>)
-  assemble-frame-into(field.getter(frame), packet, start);
+  let length = assemble-frame-into(field.getter(frame), packet, start);
+  let ff = make(<frame-field>, field: field, frame: frame, start: start, end: length);
+  frame.concrete-frame-fields[field.index] := ff;
+  length;
 end;
 
 define method assemble-field-into(field :: <repeated-field>,
                                   frame :: <container-frame>,
-                                  packet :: <byte-vector>,
+                                  packet :: <stretchy-vector-subsequence>,
                                   start :: <integer>)
-  for (ele in field.getter(frame),
-       offset = start then offset + frame-size(ele))
-    assemble-frame-into(ele, packet, offset)
+  let offset :: <integer> = start;
+  let repeated-ff = make(<repeated-frame-field>, field: field, frame: frame, start: start);
+  for (ele in field.getter(frame))
+    let length = assemble-aux(field.type, ele, subsequence(packet, start: offset), 0);
+    let ff = make(<rep-frame-field>, start: offset, parent: repeated-ff, frame: frame, end: length);
+    add!(repeated-ff.frame-field-list, ff);
+    offset := length + offset;
   end;
+  repeated-ff.%end-offset := offset;
+  frame.concrete-frame-fields[field.index] := repeated-ff;
+  offset;
 end;
 
 define method assemble-aux (frame-type :: subclass(<untranslated-frame>),
                             frame :: <frame>,
-                            packet :: <byte-vector>,
-                            start :: <integer>)
+                            packet :: <stretchy-vector-subsequence>,
+                            start :: <integer>) => (res :: <integer>)
   assemble-frame-into(frame, packet, start);
 end;
 
 define method assemble-aux (frame-type :: subclass(<translated-frame>),
                             frame :: <object>,
-                            packet :: <byte-vector>,
-                            start :: <integer>)
+                            packet :: <stretchy-vector-subsequence>,
+                            start :: <integer>) => (res :: <integer>)
   assemble-frame-into-as(frame-type, frame, packet, start);
 end;
 

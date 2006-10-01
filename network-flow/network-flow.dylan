@@ -156,7 +156,7 @@ define class <pcap-file-reader> (<single-push-output-node>)
 end;
 
 define method toplevel (reader :: <pcap-file-reader>)
-  let file = as(<byte-vector>, stream-contents(reader.file-stream));
+  let file = as(<stretchy-byte-vector-subsequence>, stream-contents(reader.file-stream));
   let pcap-file = make(unparsed-class(<pcap-file>), packet: file);
   for(frame in pcap-file.packets)
     push-data(reader.the-output, payload(frame));
@@ -178,8 +178,8 @@ define method push-data-aux (input :: <push-input>,
                              node :: <pcap-file-writer>,
                              frame :: <frame>)
   write(node.file-stream,
-        assemble-frame(make(<pcap-packet>,
-                            payload: frame)));
+        packet(assemble-frame(make(<pcap-packet>,
+                                   payload: frame))));
   force-output(node.file-stream);
 end;
 

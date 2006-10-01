@@ -42,8 +42,16 @@ end;
 define test packetizer-assemble ()
   let frame = make(<test-protocol>, foo: #x23, bar: #x42);
   let byte-vector = assemble-frame(frame);
-  check-equal("Assembled frame is correct", as(<byte-vector>, #(#x23, #x42)), byte-vector);
+  check-equal("Assembled frame is correct", as(<byte-vector>, #(#x23, #x42)), byte-vector.packet);
 end;
+define test packetizer-modify ()
+  let frame = make(unparsed-class(<test-protocol>),
+                   packet: as(<byte-vector>, #(#x23, #x42)));
+  frame.bar := #x69;
+  let byte-vector = assemble-frame(frame);
+  check-equal("Modified frame is correct", as(<byte-vector>, #(#x23, #x69)), byte-vector.packet);
+end;
+
 define protocol dynamic-test (header-frame)
   field foobar :: <unsigned-byte>;
   field payload :: <raw-frame>,
@@ -66,8 +74,8 @@ define test packetizer-dynamic-assemble ()
                    payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x23, #x42))));
   let byte-vector = assemble-frame(frame);
   check-equal("Assembling dynamic frame is correct (including padding)",
-              as(<byte-vector>, #(#x3, #x0, #x0, #x0, #x23, #x42, #x23, #x42)),
-              byte-vector);
+              as(<stretchy-byte-vector-subsequence>, #(#x3, #x0, #x0, #x23, #x42, #x23, #x42)),
+              byte-vector.packet);
 end;
 define protocol static-start (container-frame)
   field a :: <unsigned-byte>;
@@ -89,7 +97,7 @@ define test static-start-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("Assembling static start frame is correct (including padding)",
               as(<byte-vector>, #(#x23, #x0, #x0, #x2, #x3, #x4, #x5)),
-              byte-vector);
+              byte-vector.packet);
 end;
 define protocol repeated-test (container-frame)
   field foo :: <unsigned-byte>;
@@ -118,12 +126,13 @@ define test repeated-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("Assemble frame with repeated field",
               as(<byte-vector>, #(#x23, #x23, #x42, #x23, #x42, #x0, #x44)),
-              byte-vector);
+              byte-vector.packet);
 end;
 
 define protocol repeated-and-dynamic-test (header-frame)
   field header-length :: <unsigned-byte>,
-    fixup: byte-offset(frame-size(frame.header-length) + frame-size(frame.type-code) + frame-size(frame.options));
+// FIXME:    fixup: byte-offset(frame-size(frame.header-length) + frame-size(frame.type-code) + frame-size(frame.options));
+    fixup: frame.options.size + 2;
   field type-code :: <unsigned-byte> = #x23;
   repeated field options :: <unsigned-byte>,
     reached-end?: method(frame) frame = 0 end;
@@ -164,7 +173,7 @@ define test repeated-and-dynamic-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("Repeated and dynamic assemble",
               as(<byte-vector>, #(#x8, #x23, #x23, #x42, #x23, #x42, #x23, #x0, #x0, #x1, #x2, #x3, #x4)),
-              byte-vector);
+              byte-vector.packet);
 end;
 
 define protocol count-repeated-test (container-frame)
@@ -195,7 +204,7 @@ define test count-repeated-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("Count repeated assemble",
               as(<byte-vector>, #(#x7, #x1, #x2, #x3, #x4, #x5, #x6, #x7, #x23)),
-              byte-vector);
+              byte-vector.packet);
 end;
 
 define protocol frag (container-frame)
@@ -232,7 +241,7 @@ define test label-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("label assemble",
               as(<byte-vector>, #(#x23, #x23, #x3, #x1, #x2, #x3, #x23, #x3, #x4, #x5, #x6, #x23, #x4, #x7, #x8, #x9, #x10, #x42)),
-              byte-vector);
+              byte-vector.packet);
 end;
 
 define protocol a-super (container-frame)
@@ -258,7 +267,7 @@ end;
 define test inheritance-assemble ()
   let frame = make(<a-sub>, type-code: #x42, a: #x23);
   let byte-vector = assemble-frame(frame);
-  check-equal("inheritance assemble", as(<byte-vector>, #(#x42, #x23)), byte-vector);
+  check-equal("inheritance assemble", as(<byte-vector>, #(#x42, #x23)), byte-vector.packet);
 end;
 
 define protocol b-sub (a-super)
@@ -319,8 +328,44 @@ define test inheritance-dynamic-length-assemble ()
   let byte-vector = assemble-frame(frame);
   check-equal("Inheritance dynamic length assemble",
               as(<byte-vector>, #(#x42, #x4, #x23, #x42, #x23, #x42)),
-              byte-vector);
+              byte-vector.packet);
 end;
+
+define protocol half-byte-protocol (container-frame)
+  field first-element :: <4bit-unsigned-integer> = #xf;
+  field second-element :: <7bit-unsigned-integer> = #x7f;
+end;
+
+define test half-byte-parsing ()
+  let frame = make(unparsed-class(<half-byte-protocol>),
+                   packet: as(<byte-vector>, #(#x23, #x42)));
+  let field-list = fields(frame);
+  static-checker(field-list[0], 0, 4, 4);
+  static-checker(field-list[1], 4, 7, 11);
+  check-equal("first in half-byte has correct value", #x2, frame.first-element);
+  check-equal("second in half-byte has correct value", #x1a, frame.second-element);
+end;
+
+define test half-byte-assembling ()
+  let frame = make(<half-byte-protocol>,
+                   first-element: #x2,
+                   second-element: #x1a);
+  let ff = assemble-frame(frame);
+  check-equal("first byte is #x23", #x23, ff.packet[0]);
+  check-equal("second byte is #x40", #x40, ff.packet[1]);
+end;
+
+define test half-byte-modify ()
+  let frame = make(<half-byte-protocol>,
+                   first-element: #x2,
+                   second-element: #x1a);
+  let ff = assemble-frame(frame);
+  ff.first-element := #xf;
+  check-equal("first byte is #xf3", #xf3, ff.packet[0]);
+  check-equal("second byte is #x40", #x40, ff.packet[1]);
+end;
+
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -334,10 +379,12 @@ define suite packetizer-suite ()
   test inheritance-dynamic-length;
   test dyn-length;
   test dynamic-length;
+  test half-byte-parsing;
 end;
 
 define suite packetizer-assemble-suite ()
   test packetizer-assemble;
+  test packetizer-modify;
   test packetizer-dynamic-assemble;
   test static-start-assemble;
   test repeated-assemble;
@@ -346,12 +393,12 @@ define suite packetizer-assemble-suite ()
   test label-assemble;
   test inheritance-assemble;
   test inheritance-dynamic-length-assemble;
+  test half-byte-assembling;
+  test half-byte-modify;
 end;
 
 begin
   run-test-application(packetizer-suite, arguments: #("-debug"));
-  run-test-application(packetizer-assemble-suite); //, arguments: #("-debug"));
-  while(#t)
-  end;
+  run-test-application(packetizer-assemble-suite, arguments: #("-debug"));
 end;
 

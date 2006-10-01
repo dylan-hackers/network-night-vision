@@ -48,7 +48,7 @@ define protocol unix-time-value (container-frame)
   field microseconds :: <little-endian-unsigned-integer-4byte>;
 end;
 
-define function byte-vector-to-float (bv :: <byte-vector>) => (res :: <float>)
+define function byte-vector-to-float (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
   let res = 0.0d0;
   for (ele in reverse(bv))
     res := ele + 256 * res;
@@ -56,7 +56,7 @@ define function byte-vector-to-float (bv :: <byte-vector>) => (res :: <float>)
   res;
 end;
 
-define function byte-vector-to-int (bv :: <byte-vector>) => (res :: <integer>)
+define function byte-vector-to-int (bv :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
   let res = 0;
   let first? = #t;
   for (ele in reverse(bv))

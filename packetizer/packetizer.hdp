@@ -3,6 +3,7 @@ format-version:	2
 library:	packetizer
 files:	library
 	module
+	stretchy-byte-vector
 	packetizer
 	leaf-frames
 	fields

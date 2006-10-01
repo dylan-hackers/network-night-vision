@@ -51,9 +51,13 @@ define method parse-frame (frame-type == <unsigned-byte>,
 end;
 
 define method assemble-frame-into-as
-    (frame-type == <unsigned-byte>, data :: <byte>, packet :: <byte-vector>, start :: <integer>)
+    (frame-type == <unsigned-byte>,
+     data :: <byte>,
+     packet :: <stretchy-byte-vector-subsequence>,
+     start :: <integer>) => (end-offset :: <integer>)
   byte-aligned(start);
   packet[byte-offset(start)] := data;
+  start + 8;
 end;
 
 define method as (class == <string>, frame :: <unsigned-byte>)
@@ -121,43 +125,36 @@ define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
     signal(make(<malformed-packet-error>))
   else
     let result = 0;
-    for (i from start below start + result-size)
-      //assumption: msb first
-      result := logand(1, ash(packet[byte-offset(i)],
-                              - (7 - bit-offset(i))))
-                + ash(result, 1);
+    for (i from 0 below size(packet))
+      result := ash(result, 8) + packet[i];
     end;
     values(result, result-size + start);
   end;
 end;
 
 define method assemble-frame (frame :: <unsigned-integer-bit-frame>)
-  => (packet :: <bit-vector>)
+  => (packet :: <stretchy-byte-vector-subsequence>)
   assemble-frame-as(frame.object-class, frame.data)
 end;
 
 define method assemble-frame-as(frame-type :: subclass(<unsigned-integer-bit-frame>),
-                                 data :: <integer>)
- => (packet :: <bit-vector>)
+                                data :: <integer>)
+ => (packet :: <byte-sequence>)
   let result-size = frame-size(frame-type);
-  let result = make(<bit-vector>, size: result-size);
-  for (i from 0 below result-size)
-    result[i] := logand(1, ash(data, i - result-size + 1));
-  end;
+  let result = make(<byte-sequence>, end: byte-offset(result-size + 7));
+  assemble-frame-into-as(frame-type, data, result, 0);
   result;
 end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<unsigned-integer-bit-frame>),
                                       data :: <integer>,
-                                      packet :: <byte-vector>,
+                                      packet :: <stretchy-vector-subsequence>,
                                       start :: <integer>)
- => ()
+ => (res :: <integer>)
   let result-size = frame-size(frame-type);
-  for (i from start below start + result-size)
-    packet[byte-offset(i)] := logior(packet[byte-offset(i)],
-                                     ash(logand(1, ash(data, i - start - result-size + 1)),
-                                         7 - bit-offset(i)));
-  end;
+  let subseq = subsequence(packet, start: start, length: result-size);
+  encode-integer(data, subseq, result-size);
+  start + result-size;
 end;
 
 define method as (class == <string>, frame :: <unsigned-integer-bit-frame>)
@@ -179,7 +176,7 @@ define method read-frame (type :: subclass(<unsigned-integer-bit-frame>),
 end;
 
 define abstract class <fixed-size-byte-vector-frame> (<fixed-size-untranslated-leaf-frame>)
-  slot data :: <byte-vector>, required-init-keyword: data:;
+  slot data :: <byte-sequence>, required-init-keyword: data:;
 end;
 
 define macro n-byte-vector-definer
@@ -208,9 +205,7 @@ define method parse-frame (frame-type :: subclass(<fixed-size-byte-vector-frame>
     signal(make(<malformed-packet-error>))
   else
     values(make(frame-type,
-                data: copy-sequence(packet,
-                                    start: byte-offset(start),
-                                    end: byte-offset(end-of-frame))),
+                data: packet),
            end-of-frame)
   end;
 end;
@@ -220,10 +215,11 @@ define method assemble-frame (frame :: <fixed-size-byte-vector-frame>) => (packe
 end;
 
 define method assemble-frame-into (frame :: <fixed-size-byte-vector-frame>,
-                                   packet :: <byte-vector>,
-                                   start :: <integer>)
+                                   packet :: <stretchy-byte-vector-subsequence>,
+                                   start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes(frame.data, 0, packet, byte-offset(start), byte-offset(frame-size(frame)));
+  copy-bytes-into!(frame.data, 0, packet, byte-offset(start), byte-offset(frame-size(frame)));
+  start + frame-size(frame)
 end;
 
 define method as (class == <string>, frame :: <fixed-size-byte-vector-frame>) => (res :: <string>)
@@ -329,18 +325,19 @@ end;
 define method assemble-frame-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                  data :: <integer>)
   => (packet :: <byte-vector>)
-  let result = make(<byte-vector>, size: byte-offset(frame-size(frame-type)), fill: 0);
+  let result = make(<stretchy-byte-vector-subsequence>, end: frame-size(frame-type));
   assemble-frame-into-as(frame-type, data, result, 0);
 end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: type-union(<byte-vector>, <byte-vector-subsequence>),
-                                      start :: <integer>)
+                                      packet :: <byte-vector-subsequence>,
+                                      start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
   for (i from 0 below frame-size(frame-type) by 8)
     packet[byte-offset(start + i)] := logand(#xff, ash(data, - (frame-size(frame-type) - i - 8)));
   end;
+  start + frame-size(frame-type)
 end;
 
 define method as (class == <string>, frame :: <big-endian-unsigned-integer-byte-frame>)
@@ -395,12 +392,13 @@ end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<little-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: <byte-vector>,
+                                      packet :: <stretchy-byte-vector-subsequence>,
                                       start :: <integer>)
   byte-aligned(start);
   for (i from 0 below frame-size(frame-type) by 8)
     packet[byte-offset(start + i)] := logand(#xff, ash(data, - i));
   end;
+  start + frame-size(frame-type);
 end;
 
 define method as (class == <string>, frame :: <little-endian-unsigned-integer-byte-frame>)
@@ -422,7 +420,7 @@ end;
 
 
 define abstract class <variable-size-byte-vector> (<variable-size-untranslated-leaf-frame>)
-  slot data :: <byte-vector>, required-init-keyword: data:;
+  slot data :: <byte-sequence>, required-init-keyword: data:;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
 end;
 
@@ -440,7 +438,7 @@ define method parse-frame (frame-type :: subclass(<variable-size-byte-vector>),
    signal(make(<malformed-packet-error>))
  else
    values(make(frame-type,
-               data: copy-sequence(packet, start: byte-offset(start)),
+               data: packet,
                parent: parent),
           start + packet.size * 8)
  end
@@ -452,10 +450,11 @@ define method assemble-frame (frame :: <variable-size-byte-vector>)
 end;
 
 define method assemble-frame-into (frame :: <variable-size-byte-vector>,
-                                   packet :: <byte-vector>,
-                                   start :: <integer>)
+                                   packet :: <stretchy-byte-vector-subsequence>,
+                                   start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes(frame.data, 0, packet, byte-offset(start), frame.data.size);
+  copy-bytes-into!(frame.data, 0, packet, byte-offset(start), frame.data.size);
+  start + frame-size(frame)
 end;
 
 define class <raw-frame> (<variable-size-byte-vector>)

@@ -11,7 +11,8 @@ define method hexdump (stream :: <stream>, sequence :: <sequence>) => ()
   if(sequence.size > 16)
     format(stream, "\n");
   end;
-  for (byte keyed-by index in sequence)
+  for (byte in sequence,
+       index from 0)
     if(sequence.size > 16 & modulo(index, 16) == 0)
       format(stream, "%s  ", hex(index, size: 4))
     end;

@@ -7,6 +7,7 @@ Major-Version:    1
 Minor-Version:    0
 Files:            library
 	module
+	stretchy-byte-vector-test
 	packetizer-test
 Start-Function:   main
 Compilation-Mode: loose
