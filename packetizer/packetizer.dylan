@@ -415,7 +415,7 @@ define method assemble-frame-into (frame :: <unparsed-container-frame>,
                                    to-packet :: <stretchy-vector-subsequence>,
                                    start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes-into!(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
+  copy-bytes(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
 end;
 
 define method assemble-field-into(field :: <single-field>,

@@ -24,7 +24,13 @@ define module interfaces
   use machine-words;
   use byte-vector;
   use flow;
-  use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
+  use packetizer,
+    import: { unparsed-class,
+              <ethernet-frame>,
+              <frame>,
+              assemble-frame,
+              packet,
+              <stretchy-byte-vector-subsequence> };
   export <ethernet-interface>, interface-name, running?-setter, running?, find-all-devices;
 end;
 

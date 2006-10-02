@@ -218,7 +218,7 @@ define method assemble-frame-into (frame :: <fixed-size-byte-vector-frame>,
                                    packet :: <stretchy-byte-vector-subsequence>,
                                    start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes-into!(frame.data, 0, packet, byte-offset(start), byte-offset(frame-size(frame)));
+  copy-bytes(frame.data, 0, packet, byte-offset(start), byte-offset(frame-size(frame)));
   start + frame-size(frame)
 end;
 
@@ -453,7 +453,7 @@ define method assemble-frame-into (frame :: <variable-size-byte-vector>,
                                    packet :: <stretchy-byte-vector-subsequence>,
                                    start :: <integer>) => (res :: <integer>)
   byte-aligned(start);
-  copy-bytes-into!(frame.data, 0, packet, byte-offset(start), frame.data.size);
+  copy-bytes(frame.data, 0, packet, byte-offset(start), frame.data.size);
   start + frame-size(frame)
 end;
 

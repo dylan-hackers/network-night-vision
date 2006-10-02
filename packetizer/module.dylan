@@ -11,6 +11,7 @@ define module packetizer
   use streams;
   use print, import: { print-object };
   use date;
+  use byte-vector;
 
   // Add binding exports here.
   export <stretchy-vector-subsequence>,

@@ -8,7 +8,7 @@ end;
 
 define constant <stretchy-byte-vector> = limited(<stretchy-vector>, of: <byte>);
 
-define abstract class <stretchy-vector-subsequence> (<mutable-sequence>)
+define abstract class <stretchy-vector-subsequence> (<vector>)
   constant slot real-data :: <stretchy-byte-vector> = make(<stretchy-byte-vector>),
     init-keyword: data:;
   constant slot start-index :: <integer> = 0, init-keyword: start:;
@@ -53,7 +53,7 @@ define method subsequence (seq :: <stretchy-byte-vector-subsequence>,
   //assumption: start, length, last are in bits!
   let (start, end-offset) = check-values(start, length, last);
   let (start-byte :: <integer>, start-bit :: <integer>) = truncate/(start, 8);
-  if (seq.end-index & ((seq.end-index <= start-byte + seq.start-index)))
+  if (seq.end-index & ((seq.end-index < start-byte + seq.start-index)))
     signal(make(<out-of-bound-error>))
   end;
   let (last-byte :: false-or(<integer>), last-bit :: false-or(<integer>))
@@ -118,14 +118,6 @@ define inline method forward-iteration-protocol (seq :: <stretchy-byte-vector-su
          real-sbv-element-setter, vs-fip-copy-state)
 end;
 
-define method copy-bytes-into!
- (source :: <collection>, src-start :: <integer>,
-  destination :: <stretchy-byte-vector-subsequence>, dest-start :: <integer>,
-  length :: <integer>)
-  for (i from 0 below length)
-    destination[i + dest-start] := source[src-start + i]
-  end;
-end;
 define inline method as (class == <stretchy-byte-vector-subsequence>, data :: <byte-vector>)
  => (res :: <stretchy-byte-vector-subsequence>)
   make(<stretchy-byte-vector-subsequence>, data: as(<stretchy-byte-vector>, data));

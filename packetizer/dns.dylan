@@ -83,7 +83,7 @@ end;
 define method as (class == <string>, frame :: <externally-delimited-string>)
  => (res :: <string>)
   let res = make(<string>, size: byte-offset(frame-size(frame)));
-  copy-bytes-into!(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
+  copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
   res;
 end;
 
