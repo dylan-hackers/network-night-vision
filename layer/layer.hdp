@@ -1,4 +1,5 @@
 Library:          layer
 Files:            library
 	module
+	cidr
 	layer

@@ -133,12 +133,14 @@ define open generic ip-layer (object :: <object>) => (res :: <ip-layer>);
 define open generic ip-layer-setter (value :: <ip-layer>, object :: <object>) => (res :: <ip-layer>);
 define open generic ip-send-socket (object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
 define open generic ip-send-socket-setter (value :: <ethernet-socket>, object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
+define open generic netmask (object :: <ip-over-ethernet-adapter>) => (res :: <integer>);
 
 define class <ip-over-ethernet-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot ethernet-layer :: <ethernet-layer>, required-init-keyword: ethernet:;
   constant slot arp-handler :: <arp-handler>, required-init-keyword: arp:;
   constant slot v4-address :: <ipv4-address>, required-init-keyword: ipv4-address:;
+  constant slot netmask :: <integer>, required-init-keyword: netmask:;
   slot ip-send-socket :: <ethernet-socket>;
 end;
 
@@ -181,7 +183,7 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
   connect(ip-broadcast-socket.decapsulator, ipv4-fan-in);
   connect(ipv4-fan-in, ip-over-ethernet.ip-layer.demultiplexer);
 
-  ip-over-ethernet.ip-layer.send-socket := ip-over-ethernet;
+  register-adapter(ip-over-ethernet.ip-layer, ip-over-ethernet);
   ip-over-ethernet.ip-layer.default-ip-address := ip-over-ethernet.v4-address;
 end; 
 
@@ -190,11 +192,86 @@ define open generic send-socket (object :: <object>) => (res);
 define open generic send-socket-setter (value :: <object>, object :: <object>) => (res);
 define generic default-ip-address (object :: <ip-layer>) => (res :: <ipv4-address>);
 define generic default-ip-address-setter (value :: <ipv4-address>, object :: <ip-layer>) => (res :: <ipv4-address>);
+define open generic adapters (object :: <ip-layer>) => (res);
+define open generic routes (object :: <ip-layer>) => (res);
 
 define class <ip-layer> (<layer>)
   slot send-socket :: type-union(<socket>, <adapter>);
-  //slot routing-table = make(<vector-table>);
+  constant slot adapters = make(<stretchy-vector>);
   slot default-ip-address :: <ipv4-address>;
+  constant slot routes = make(<stretchy-vector>);
+end;
+
+define class <route> (<object>)
+  constant slot cidr :: <cidr>, required-init-keyword: cidr:;
+end;
+
+define generic next-hop (object :: <next-hop-route>) => (res :: <ipv4-address>);
+
+define class <next-hop-route> (<route>)
+  constant slot next-hop :: <ipv4-address>, required-init-keyword: next-hop:;
+end;
+
+define generic adapter (object :: <connected-route>) => (res :: <adapter>);
+define class <connected-route> (<route>)
+  constant slot adapter :: <adapter>, required-init-keyword: adapter:;
+end;
+
+define method register-route (ip :: <ip-layer>, route :: <route>)
+  add!(ip.routes, route);
+  sort!(ip.routes, test: method(x, y) x.cidr.cidr-netmask > y.cidr.cidr-netmask end)
+end;
+
+define method initialize (ip-layer :: <ip-layer>,
+                          #rest rest, #key, #all-keys);
+  let cls = make(<closure-node>,
+                 closure: method(x)
+                            let (adapter, next-hop)
+                              = find-adapter-for-forwarding(ip-layer, x.destination-address);
+                            send(adapter, next-hop, x)
+                          end);
+  connect(ip-layer.fan-in, cls);
+end;
+define method register-adapter (ip :: <ip-layer>,
+                                adapter :: <ip-over-ethernet-adapter>)
+  add!(ip.adapters, adapter);
+  let route = make(<connected-route>,
+                   cidr: make(<cidr>, netmask: adapter.netmask, network-address: adapter.v4-address),
+                   adapter: adapter);
+  register-route(ip, route);
+end;
+
+define method unregister-adapter (ip :: <ip-layer>,
+                                  adapter :: <adapter>)
+  remove!(ip.adapters, adapter);
+end;
+
+define method find-route (forwarding-table, destination :: <ipv4-address>) => (route :: false-or(<route>))
+  block(ret)
+    for (ele in forwarding-table)
+      if (ip-in-cidr?(ele.cidr, destination))
+        ret(ele)
+      end;
+    end;
+  end;
+end;
+
+define method find-adapter-for-forwarding (ip-layer :: <ip-layer>, destination-address :: <ipv4-address>)
+ => (res :: <adapter>, next-hop :: <ipv4-address>);
+  let direct-route = find-route(ip-layer.routes, destination-address);
+  unless (direct-route)
+    error("No route to host")
+  end;
+  if (instance?(direct-route, <connected-route>))
+    values(direct-route.adapter, destination-address);
+  else
+    let route = find-route(ip-layer.routes, direct-route.next-hop);
+    if (instance?(route, <connected-route>))
+      values(route.adapter, direct-route.next-hop)
+    else
+      error("No direct route to next-hop");
+    end;
+  end;
 end;
 
 define open generic ip-protocol (object :: <ip-socket>) => (res :: <integer>);
@@ -231,17 +308,7 @@ define method send (ip-socket :: <ip-socket>, destination :: <ipv4-address>, pay
                    payload: payload);
   push-data-aux(ip-socket.completer.the-input, ip-socket.completer, frame);
 end;
-/*
-define method add-static-route (ip-layer :: <ip-layer>, cidr :: <cidr>, adapter)
-end;
 
-define method find-route (ip-layer :: <ip-layer>, destination-address :: <ipv4-address>)
- => (adapter, next-hop)
-end;
-
-define method delete-static-route (ip-layer :: <ip-layer>, cidr :: <cidr>)
-end;
-*/
 
 define generic ip-socket (object :: <icmp-handler>) => (res :: <ip-socket>);
 define generic ip-socket-setter (value :: <ip-socket>, object :: <icmp-handler>) => (res :: <ip-socket>);
@@ -451,34 +518,37 @@ begin
             mac-address: mac-address("00:de:ad:be:ef:00"),
             ip-address: ipv4-address("192.168.0.23"));
   let ip-layer = make(<ip-layer>);
+  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"), next-hop: ipv4-address("192.168.0.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("192.168.0.24"));
+                              ipv4-address: ipv4-address("192.168.0.24"),
+                              netmask: 24);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,
                           ip-layer: ip-layer,
                           icmp-handler: icmp-handler);
   let thr = make(<thread>, function: curry(toplevel, int));
-  send(ip-layer.send-socket,
-       ipv4-address("192.168.0.1"),
-       make(<ipv4-frame>,
-            identification: 23,
-            protocol: 1,
-            source-address: ipv4-address("192.168.0.24"),
-            destination-address: ipv4-address("192.168.0.1"),
-            options: make(<stretchy-vector>),
-            payload: make(<icmp-frame>,
-                          type: 8,
-                          code: 0,
-                          payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0))))));
+  send(icmp-handler.ip-socket,
+       ipv4-address("213.73.91.29"),
+       make(<icmp-frame>,
+            type: 8,
+            code: 0,
+            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
+  send(icmp-handler.ip-socket,
+       ipv4-address("212.202.174.224"),
+       make(<icmp-frame>,
+            type: 8,
+            code: 0,
+            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
   send(icmp-handler.ip-socket,
        ipv4-address("192.168.0.1"),
        make(<icmp-frame>,
             type: 8,
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
+
   format-out("Mac 192.168.0.1: %=\n", find-mac-address(arp-handler, ipv4-address("192.168.0.1")));
   sleep(1200);
 end;

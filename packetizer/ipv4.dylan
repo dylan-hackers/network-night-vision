@@ -99,7 +99,6 @@ end;
 define method fixup! (frame :: <unparsed-ipv4-frame>,
                       #next next-method)
   frame.header-checksum := calculate-checksum(frame.packet, frame.header-length * 4);
-  break();
   next-method();
 end;
 

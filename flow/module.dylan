@@ -21,7 +21,7 @@ define module flow
   export 
     <single-push-input-node>, <single-pull-input-node>,
     <single-push-output-node>, <single-pull-output-node>,
-    <filter>;
+    <filter>, <closure-node>;
 
   export <queue>, the-input, the-output;
 
