@@ -206,7 +206,8 @@ define macro unparsed-frame-field-generator
         mframe.cache.?name := value;
         let frame-field = get-frame-field(?field-index, mframe);
         // blatantly ignores changed length, FIXME!
-        assemble-field-into(frame-field.field, mframe, mframe.packet, frame-field.start-offset);
+        assemble-field-into(frame-field.field, mframe, subsequence(mframe.packet, start: start-offset(frame-field)));
+        value;
       end;
  }
 end;

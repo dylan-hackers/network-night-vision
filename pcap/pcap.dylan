@@ -169,7 +169,7 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
                              frame :: <frame>)
-  let buffer = assemble-frame(frame).packet;
+  let buffer = as(<byte-vector>, assemble-frame(frame).packet);
   pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;
 

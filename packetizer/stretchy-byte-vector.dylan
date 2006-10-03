@@ -9,8 +9,8 @@ end;
 define constant <stretchy-byte-vector> = limited(<stretchy-vector>, of: <byte>);
 
 define abstract class <stretchy-vector-subsequence> (<vector>)
-  constant slot real-data :: <stretchy-byte-vector> = make(<stretchy-byte-vector>),
-    init-keyword: data:;
+  constant slot real-data :: <stretchy-byte-vector>,
+    required-init-keyword: data:;
   constant slot start-index :: <integer> = 0, init-keyword: start:;
   constant slot end-index :: false-or(<integer>) = #f, init-keyword: end:;
 end;
@@ -31,6 +31,19 @@ define method make (class == <stretchy-vector-subsequence>,
   end;
 end;
 
+define method make (class :: subclass(<stretchy-vector-subsequence>),
+                    #next next-method,
+                    #rest rest,
+                    #key data,
+                    #all-keys) => (res :: <stretchy-vector-subsequence>)
+  let args = rest;
+  unless (data)
+    let data = apply(make, <stretchy-byte-vector>, rest);
+    args := add!(args, #"data");
+    args := add!(args, data);
+  end;
+  apply(next-method, class, args)
+end;
 define inline function check-values (start :: <integer>, length :: false-or(<integer>), last :: false-or(<integer>))
  => (start :: <integer>, last :: false-or(<integer>))
   if (last & length)
@@ -225,13 +238,12 @@ define method make (class == <stretchy-byte-vector-subsequence-with-offset>,
 end;
 
 define inline function replace-arg (list :: <vector>, key :: <symbol>, value :: <object>)
- => (res :: <vector>)
+ => ()
   for (i from 0 below list.size by 2)
     if (list[i] = key)
-      list[i + 1] := value
+      list[i + 1] := value;
     end;
   end;
-  list;
 end;
 define inline method subsequence (seq :: <stretchy-byte-vector-subsequence-with-offset>,
                                   #key start :: <integer> = 0,
@@ -380,29 +392,31 @@ define inline method encode-integer (value :: <integer>, seq :: <stretchy-byte-v
     seq.real-data.size := needed-size
   end;
   let (fullbytes, bits) = truncate/(count - 8 + seq.bit-start-index, 8);
+  let first-byte = seq.start-index;
   if ((fullbytes = 0) & (bits < 0))
     let mask = ash(ash(#xff, - (count - seq.bit-start-index)), seq.bit-start-index);
-    seq.real-data[0] := logior(logand(seq.real-data[0], mask),
-                               ash(value, 8 - (count - seq.bit-start-index)));
+    seq.real-data[first-byte] := logior(logand(seq.real-data[first-byte], mask),
+                                        ash(value, 8 - (count - seq.bit-start-index)));
   else
     if (seq.bit-start-index = 0)
-      seq.real-data[0] := logand(#xff, ash(value, - (count - 8)));
+      seq.real-data[first-byte] := logand(#xff, ash(value, - (count - 8)));
     else
       //write first element
-      seq.real-data[0] := logior(logand(seq.real-data[0],
-                                        lognot(ash(#xff, - seq.bit-start-index))),
-                                 logand(#xff, ash(value, - (count - 8 + seq.bit-start-index))));
+      seq.real-data[first-byte] := logior(logand(seq.real-data[first-byte],
+                                                 lognot(ash(#xff, - seq.bit-start-index))),
+                                          logand(#xff, ash(value, - (count - 8 + seq.bit-start-index))));
     end;
     //loop other elements
     for (i from 1 below fullbytes + 1)
-      seq.real-data[i] := logand(#xff, ash(value, - (count - i * 8 + seq.bit-start-index)));
+      seq.real-data[first-byte + i] := logand(#xff, ash(value, - (count - i * 8 + seq.bit-start-index)));
     end;
     //last element
     if ((bits > 0) & (fullbytes >= 0))
-      seq.real-data[fullbytes + 1] := logior(logand(seq.real-data[fullbytes + 1],
-                                                    ash(#xff, - bits)),
-                                             logand(logand(#xff, lognot(ash(#xff, - bits))),
-                                                    ash(value, 8 - bits)));
+      seq.real-data[first-byte + fullbytes + 1]
+        := logior(logand(seq.real-data[first-byte + fullbytes + 1],
+                         ash(#xff, - bits)),
+                  logand(logand(#xff, lognot(ash(#xff, - bits))),
+                         ash(value, 8 - bits)));
     end;
   end;
 end;

@@ -107,8 +107,7 @@ end;
 
 
 define generic assemble-frame-into (frame :: <frame>,
-                                    packet :: <stretchy-vector-subsequence>,
-                                    start :: <integer>) => (length :: <integer>);
+                                    packet :: <stretchy-vector-subsequence>) => (length :: <integer>);
 
 define generic assemble-frame
   (frame :: <frame>) => (packet /* :: <vector> */);
@@ -142,20 +141,13 @@ define inline method high-level-type (object :: subclass(<frame>)) => (res :: <t
   object
 end;
 
-define open generic fixup! (frame :: type-union(<container-frame>, <raw-frame>),
-                            packet :: <byte-vector-subsequence>);
+define open generic fixup! (frame :: type-union(<container-frame>, <raw-frame>));
 
-define method fixup!(frame :: type-union(<container-frame>, <raw-frame>),
-                     packet :: <byte-vector-subsequence>)
+define method fixup!(frame :: type-union(<container-frame>, <raw-frame>))
 end;
 
-define method fixup!(frame :: <header-frame>,
-                     packet :: <byte-vector-subsequence>)
-  unless (instance?(frame.payload, <unparsed-container-frame>))
-    fixup!(frame.payload,
-           subsequence(packet,
-                       start: start-offset(get-frame-field(#"payload", frame))));
-  end;
+define method fixup!(frame :: <header-frame>)
+  fixup!(frame.payload);
 end;
 
 define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
@@ -341,9 +333,10 @@ end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
   let result = make(<stretchy-byte-vector-subsequence>, data: make(<stretchy-byte-vector>, capacity: 1548));
-  assemble-frame-into(frame, result, 0);
-  fixup!(frame, result);
-  make(unparsed-class(frame.object-class), cache: frame, packet: result)
+  assemble-frame-into(frame, result);
+  let uf = make(unparsed-class(frame.object-class), cache: frame, packet: result);
+  fixup!(uf);
+  uf;
 end;
 
 define method as(type == <string>, frame :: <container-frame>) => (string :: <string>);
@@ -366,9 +359,8 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
 end;
 
 define method assemble-frame-into (frame :: <container-frame>,
-                                   packet :: <stretchy-vector-subsequence>,
-                                   start :: <integer>) => (res :: <integer>)
-  let offset :: <integer> = start;
+                                   packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
+  let offset :: <integer> = 0;
   for (field in fields(frame))
     unless (field.getter(frame))
       if (field.fixup-function)
@@ -391,7 +383,15 @@ define method assemble-frame-into (frame :: <container-frame>,
                  field.field-name, field.static-start, offset);
       offset := field.static-start;
     end;
-    let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset), 0);
+    let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset));
+    frame.concrete-frame-fields[field.index].%start-offset := offset;
+    if (instance?(field.getter(frame), <container-frame>))
+      let unparsed = make(unparsed-class(field.getter(frame).object-class),
+                          cache: field.getter(frame), packet: subsequence(packet,
+                                                                          start: offset,
+                                                                          length: length));
+      field.setter(unparsed, frame);
+    end;
     if (field.dynamic-end)
       let real-frame-end = field.dynamic-end(frame);
       if (real-frame-end ~= length)
@@ -412,61 +412,54 @@ define method assemble-frame-into (frame :: <container-frame>,
 end;
 
 define method assemble-frame-into (frame :: <unparsed-container-frame>,
-                                   to-packet :: <stretchy-vector-subsequence>,
-                                   start :: <integer>) => (res :: <integer>)
-  byte-aligned(start);
-  copy-bytes(frame.packet, 0, to-packet, byte-offset(start), frame.packet.size);
+                                   to-packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
+  copy-bytes(frame.packet, 0, to-packet, 0, frame.packet.size);
 end;
 
 define method assemble-field-into(field :: <single-field>,
                                   frame :: <container-frame>,
-                                  packet :: <stretchy-vector-subsequence>,
-                                  start :: <integer>)
-  let length = assemble-aux(field.type, field.getter(frame), packet, start);
-  let ff = make(<frame-field>, field: field, frame: frame, start: start, end: length);
+                                  packet :: <stretchy-vector-subsequence>)
+  let length = assemble-aux(field.type, field.getter(frame), packet);
+  let ff = make(<frame-field>, field: field, frame: frame, length: length);
   frame.concrete-frame-fields[field.index] := ff;
   length;
 end;
 
 define method assemble-field-into(field :: <variably-typed-field>,
                                   frame :: <container-frame>,
-                                  packet :: <stretchy-vector-subsequence>,
-                                  start :: <integer>)
-  let length = assemble-frame-into(field.getter(frame), packet, start);
-  let ff = make(<frame-field>, field: field, frame: frame, start: start, end: length);
+                                  packet :: <stretchy-vector-subsequence>)
+  let length = assemble-frame-into(field.getter(frame), packet);
+  let ff = make(<frame-field>, field: field, frame: frame, length: length);
   frame.concrete-frame-fields[field.index] := ff;
   length;
 end;
 
 define method assemble-field-into(field :: <repeated-field>,
                                   frame :: <container-frame>,
-                                  packet :: <stretchy-vector-subsequence>,
-                                  start :: <integer>)
-  let offset :: <integer> = start;
-  let repeated-ff = make(<repeated-frame-field>, field: field, frame: frame, start: start);
+                                  packet :: <stretchy-vector-subsequence>)
+  let offset :: <integer> = 0;
+  let repeated-ff = make(<repeated-frame-field>, field: field, frame: frame);
   for (ele in field.getter(frame))
-    let length = assemble-aux(field.type, ele, subsequence(packet, start: offset), 0);
+    let length = assemble-aux(field.type, ele, subsequence(packet, start: offset));
     let ff = make(<rep-frame-field>, start: offset, parent: repeated-ff, frame: frame, end: length);
     add!(repeated-ff.frame-field-list, ff);
     offset := length + offset;
   end;
-  repeated-ff.%end-offset := offset;
+  repeated-ff.%length := offset;
   frame.concrete-frame-fields[field.index] := repeated-ff;
   offset;
 end;
 
 define method assemble-aux (frame-type :: subclass(<untranslated-frame>),
                             frame :: <frame>,
-                            packet :: <stretchy-vector-subsequence>,
-                            start :: <integer>) => (res :: <integer>)
-  assemble-frame-into(frame, packet, start);
+                            packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
+  assemble-frame-into(frame, packet);
 end;
 
 define method assemble-aux (frame-type :: subclass(<translated-frame>),
                             frame :: <object>,
-                            packet :: <stretchy-vector-subsequence>,
-                            start :: <integer>) => (res :: <integer>)
-  assemble-frame-into-as(frame-type, frame, packet, start);
+                            packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
+  assemble-frame-into-as(frame-type, frame, packet);
 end;
 
 define open abstract class <position-mixin> (<object>)

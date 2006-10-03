@@ -2,20 +2,75 @@ Module:    layer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
-define class <undefined-field-error> (<error>)
+//a layer contains a fan-out, demultiplexer and fan-in.
+// it also has a send-socket for sending packets
+//
+//a socket contains one input and one output
+// two types of sockets can be created
+//  raw-socket without any filters: raw-socket(layer)
+//   connects itself to fan-in and fan-out
+//  socket (layer, type-code/port/whatever, source-address: source-address)
+//   creates an output for the filter rule in the demultiplexer,
+//    connects its input to it
+//   adds an completer with template-frame (generated from filter rule),
+//    connects its output to it
+//
+// a socket implements the following methods:
+//  sendto(socket, destination, payload)
+//   which 
+//  receive-callback(socket, method) // method gets one argument: a frame
+//   which is called in push-data-aux(socket-input, socket, frame)
+//
+// an adapter connects layers with sockets and does adapter-specific stuff
+//  it installs a decapsulator and encapsulator
+//  creates a socket in bottom layer (with protocol-specific information in filter rule)
+//  sets socket receive-callback to curry(push-data, upper-layer-input)
+//  sets upper-layer send-socket to itself
+
+//
+//  ethernet-layer
+// fan-in     fan-out
+//           demultiplexer
+//
+//    ethernet-socket
+// completer  demux-output
+//  (#x800)    (#x800)
+//
+//   ip-over-ethernet-adapter
+// encapsulator       decapsulator
+// (dest: find-mac)
+
+define open generic fan-in (object :: <layer>) => (res :: <fan-in>);
+define open generic demultiplexer (object :: <layer>) => (res :: <demultiplexer>);
+define open generic sockets (object :: <layer>) => (res :: <collection>);
+
+define abstract class <layer> (<object>)
+  constant slot fan-in :: <fan-in> = make(<fan-in>);
+  constant slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
+  constant slot sockets :: <collection> = make(<stretchy-vector>);
 end;
 
-define generic ethernet-fan-in (object :: <ethernet-layer>) => (res :: <fan-in>);
-define generic demultiplexer (object :: <object>) => (res :: <demultiplexer>);
+define open generic demultiplexer-output (object :: <socket>) => (res :: <object>);
+define open generic demultiplexer-output-setter (value :: <object>, object :: <socket>) => (res :: <object>);
+define open generic decapsulator (object :: <socket>) => (res :: <decapsulator>);
+define open generic completer (object :: <socket>) => (res :: <completer>);
+define open generic completer-setter (value :: <completer>, object :: <socket>) => (res :: <completer>);
+
+define abstract class <socket> (<object>)
+  constant slot decapsulator :: <decapsulator> = make(<decapsulator>);
+  slot demultiplexer-output;
+  slot completer :: <completer>;
+end;
+
+define abstract class <adapter> (<object>)
+end;
+
 define generic ethernet-interface (object :: <ethernet-layer>) => (res :: <ethernet-interface>);
 define generic ethernet-interface-setter (object :: <ethernet-interface>, object2 :: <ethernet-layer>) => (res :: <ethernet-interface>);
 define generic default-mac-address (object :: <ethernet-layer>) => (res :: <mac-address>);
 define generic default-mac-address-setter (object :: <mac-address>, object2 :: <ethernet-layer>) => (res :: <mac-address>);
 
-define class <ethernet-layer> (<object>)
-  constant slot ethernet-fan-in :: <fan-in> = make(<fan-in>);
-  constant slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
-  //slot sockets :: <collection> = make(<stretchy-vector>);
+define class <ethernet-layer> (<layer>)
   slot ethernet-interface :: <ethernet-interface>,
     required-init-keyword: ethernet-interface:;
   slot default-mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:01"),
@@ -24,61 +79,27 @@ end;
 
 define method initialize (layer :: <ethernet-layer>,
                           #rest rest, #key, #all-keys);
-  connect(layer.ethernet-fan-in, layer.ethernet-interface);
+  connect(layer.fan-in, layer.ethernet-interface);
   connect(layer.ethernet-interface, layer.demultiplexer);
-end;
-
-define generic template-frame (object :: <completer>) => (res :: <frame>);
-define class <completer> (<filter>)
-  constant slot template-frame :: <frame>, required-init-keyword: template-frame:;
-end;
-
-define method push-data-aux (input :: <push-input>,
-                             node :: <completer>,
-                             frame :: <container-frame>);
-  for (field in node.template-frame.fields)
-    unless (field.getter(frame))
-      let default-field-value = field.getter(node.template-frame);
-      if (default-field-value)
-        field.setter(default-field-value, frame);
-      elseif (~ field.fixup-function)
-        format-out("Field %=\n", field.field-name);
-        signal(make(<undefined-field-error>));
-      end;
-    end;
-  end;
-  push-data(node.the-output, frame);
 end;
 
 define open generic ethernet-type-code (object :: <ethernet-socket>) => (res :: <integer>);
 define open generic listen-address (object :: <object>) => (res :: <object>);
-define open generic demultiplexer-output (object :: <object>) => (res :: <object>);
-define open generic demultiplexer-output-setter (value :: <object>, object :: <object>) => (res :: <object>);
-define open generic decapsulator (object :: <object>) => (res :: <decapsulator>);
-define open generic completer (object :: <object>) => (res :: <completer>);
-define open generic completer-setter (value :: <completer>, object :: <object>) => (res :: <completer>);
-define open generic resolve (object :: <object>) => (res :: <object>);
 
-define class <ethernet-socket> (<object>)
+define class <ethernet-socket> (<socket>)
   constant slot ethernet-type-code :: <integer>, init-keyword: type-code:;
   constant slot listen-address :: false-or(<mac-address>) = #f, init-keyword: listen-address:;
-  slot demultiplexer-output;
-  constant slot decapsulator :: <decapsulator> = make(<decapsulator>);
-  slot completer :: <completer>;
-  constant slot resolve, init-keyword: resolve:;
 end;
 
 define method create-socket (layer :: <ethernet-layer>,
                              type-code :: <integer>,
-                             #key mac-address,
-                             resolve)
+                             #key mac-address)
  => (socket :: <ethernet-socket>);
   let source-address = mac-address | layer.default-mac-address;
   let socket = make(<ethernet-socket>,
                     type-code: type-code,
-                    listen-address: source-address,
-                    resolve: resolve);
-  let template-frame = make(cache-class(<ethernet-frame>),
+                    listen-address: source-address);
+  let template-frame = make(<ethernet-frame>,
                             type-code: type-code,
                             source-address: source-address);
   socket.completer := make(<completer>,
@@ -88,25 +109,21 @@ define method create-socket (layer :: <ethernet-layer>,
                                 format-to-string("(ethernet.destination-address = %s) & (ethernet.type-code = %s)",
                                                  source-address, type-code));
   connect(socket.demultiplexer-output, socket.decapsulator);
-  connect(socket.completer, layer.ethernet-fan-in);
+  connect(socket.completer, layer.fan-in);
   socket;
 end;
 
-define method send (socket :: <ethernet-socket>, payload :: <container-frame>, destination :: <mac-address>);
+define method send (socket :: <ethernet-socket>, destination :: <mac-address>, payload :: <container-frame>);
   let ethernet-frame = make(<ethernet-frame>,
                             destination-address: destination,
                             payload: payload);
   push-data-aux(socket.completer.the-input, socket.completer, ethernet-frame);
 end;
 
-define method send (socket :: <ethernet-socket>, payload :: <container-frame>, destination :: <ipv4-address>);
-  let destination-mac = socket.resolve(destination);
-  send(socket, payload, destination-mac);
-end;
 
 define method delete-socket (socket :: <ethernet-socket>, layer :: <ethernet-layer>)
   disconnect(socket.demultiplexer-output, socket.decapsulator);
-  disconnect(socket.completer, layer.ethernet-fan-in);
+  disconnect(socket.completer, layer.fan-in);
 end;
 
 define open generic ethernet-layer (object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-layer>);
@@ -114,99 +131,87 @@ define generic arp-handler (object :: <ip-over-ethernet-adapter>) => (res :: <ar
 define generic v4-address (object :: <ip-over-ethernet-adapter>) => (res :: <ipv4-address>);
 define open generic ip-layer (object :: <object>) => (res :: <ip-layer>);
 define open generic ip-layer-setter (value :: <ip-layer>, object :: <object>) => (res :: <ip-layer>);
+define open generic ip-send-socket (object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
+define open generic ip-send-socket-setter (value :: <ethernet-socket>, object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
 
-define class <ip-over-ethernet-adapter> (<object>)
+define class <ip-over-ethernet-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot ethernet-layer :: <ethernet-layer>, required-init-keyword: ethernet:;
   constant slot arp-handler :: <arp-handler>, required-init-keyword: arp:;
   constant slot v4-address :: <ipv4-address>, required-init-keyword: ipv4-address:;
+  slot ip-send-socket :: <ethernet-socket>;
 end;
+
+define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>, payload :: <container-frame>);
+  let destination-mac = find-mac-address(socket.arp-handler, destination);
+  if (destination-mac)
+    send(socket.ip-send-socket, destination-mac, payload);
+  else
+    format-out("Couldn't find mac-address for %=\n", destination);
+  end;
+end;
+
+define constant $broadcast-ethernet-address = mac-address("ff:ff:ff:ff:ff:ff");
 
 define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
                           #rest rest, #key, #all-keys);
   let arp-socket = create-socket(ip-over-ethernet.ethernet-layer, #x806);
   let arp-broadcast-socket = create-socket(ip-over-ethernet.ethernet-layer,
                                            #x806,
-                                           mac-address: mac-address("ff:ff:ff:ff:ff:ff"));
+                                           mac-address: $broadcast-ethernet-address);
   let arp-fan-in = make(<fan-in>);
   connect(arp-socket.decapsulator, arp-fan-in);
   connect(arp-broadcast-socket.decapsulator, arp-fan-in);
   connect(arp-fan-in, ip-over-ethernet.arp-handler);
 
-  ip-over-ethernet.arp-handler.ethernet-socket := arp-socket;
-  ip-over-ethernet.arp-handler.ip-over-ethernet-adapter := ip-over-ethernet;
+  ip-over-ethernet.arp-handler.send-socket := arp-socket;
   ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
     := make(<advertised-arp-entry>,
             ip-address: ip-over-ethernet.v4-address,
             mac-address: ip-over-ethernet.ethernet-layer.default-mac-address);
 
 
-  let ip-socket = create-socket(ip-over-ethernet.ethernet-layer,
-                                #x800,
-                                resolve: curry(find-mac-address, ip-over-ethernet.arp-handler));
+  let ip-socket = create-socket(ip-over-ethernet.ethernet-layer, #x800);
   let ip-broadcast-socket = create-socket(ip-over-ethernet.ethernet-layer,
                                           #x800,
-                                          mac-address: mac-address("ff:ff:ff:ff:ff:ff"));
+                                          mac-address: $broadcast-ethernet-address);
+  ip-over-ethernet.ip-send-socket := ip-socket;
   let ipv4-fan-in = make(<fan-in>);
   connect(ip-socket.decapsulator, ipv4-fan-in);
   connect(ip-broadcast-socket.decapsulator, ipv4-fan-in);
   connect(ipv4-fan-in, ip-over-ethernet.ip-layer.demultiplexer);
-  connect(ip-over-ethernet.ip-layer.ip-fan-in, ip-socket.completer);
 
-  ip-over-ethernet.ip-layer.ethernet-socket := ip-socket;
+  ip-over-ethernet.ip-layer.send-socket := ip-over-ethernet;
   ip-over-ethernet.ip-layer.default-ip-address := ip-over-ethernet.v4-address;
-end;
+end; 
 
-define class <ip-fan-in> (<fan-in>)
-  slot ip-layer :: <ip-layer>;
-end;
 
-define method push-data-aux (input :: <push-input>,
-                             node :: <ip-fan-in>,
-                             frame :: <frame>)
-  send(node.ip-layer.ethernet-socket, frame, frame.destination-address);
-end;
-
-define open generic ethernet-socket (object :: <object>) => (res :: <ethernet-socket>);
-define open generic ethernet-socket-setter (value :: <ethernet-socket>, object :: <object>) => (res :: <ethernet-socket>);
-define generic ip-fan-in (object :: <ip-layer>) => (res :: <fan-in>);
+define open generic send-socket (object :: <object>) => (res);
+define open generic send-socket-setter (value :: <object>, object :: <object>) => (res);
 define generic default-ip-address (object :: <ip-layer>) => (res :: <ipv4-address>);
 define generic default-ip-address-setter (value :: <ipv4-address>, object :: <ip-layer>) => (res :: <ipv4-address>);
-define generic packet-source-sink (object :: <ip-layer>) => (res :: <filter>);
-define class <ip-layer> (<object>)
-  //constant slot packet-source-sink :: <filter> = make(<filter>);
-  slot ethernet-socket :: <ethernet-socket>;
+
+define class <ip-layer> (<layer>)
+  slot send-socket :: type-union(<socket>, <adapter>);
   //slot routing-table = make(<vector-table>);
-  constant slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
-  constant slot ip-fan-in :: <ip-fan-in> = make(<ip-fan-in>);
   slot default-ip-address :: <ipv4-address>;
 end;
 
-define method initialize (ip :: <ip-layer>,
-                          #rest rest, #key, #all-keys);
-  ip.ip-fan-in.ip-layer := ip;
-end;
 define open generic ip-protocol (object :: <ip-socket>) => (res :: <integer>);
-define class <ip-socket> (<object>)
+define class <ip-socket> (<socket>)
   constant slot ip-protocol :: <integer>, init-keyword: protocol:;
   constant slot listen-address :: false-or(<ipv4-address>) = #f, init-keyword: listen-address:;
-  slot demultiplexer-output;
-  constant slot decapsulator :: <decapsulator> = make(<decapsulator>);
-  slot completer :: <completer>;
-  constant slot resolve, init-keyword: resolve:;
 end;
 
 define method create-socket (ip-layer :: <ip-layer>,
                              protocol :: <integer>,
-                             #key ip-address,
-                             resolve)
+                             #key ip-address)
  => (res :: <ip-socket>)
   let source-address = ip-address | ip-layer.default-ip-address;
   let socket = make(<ip-socket>,
                     protocol: protocol,
-                    listen-address: source-address,
-                    resolve: resolve);
-  let template-frame = make(cache-class(<ipv4-frame>),
+                    listen-address: source-address);
+  let template-frame = make(<ipv4-frame>,
                             protocol: protocol,
                             source-address: source-address);
   socket.completer := make(<completer>,
@@ -216,11 +221,11 @@ define method create-socket (ip-layer :: <ip-layer>,
                                 format-to-string("(ipv4.destination-address = %s) & (ipv4.protocol = %s)",
                                                  source-address, protocol));
   connect(socket.demultiplexer-output, socket.decapsulator);
-  connect(socket.completer, ip-layer.ip-fan-in);
+  connect(socket.completer, ip-layer.fan-in);
   socket;
 end;
 
-define method send (ip-socket :: <ip-socket>, payload :: <container-frame>, destination :: <ipv4-address>)
+define method send (ip-socket :: <ip-socket>, destination :: <ipv4-address>, payload :: <container-frame>)
   let frame = make(<ipv4-frame>,
                    destination-address: destination,
                    payload: payload);
@@ -254,12 +259,12 @@ define method push-data-aux (input :: <push-input>,
                         type: 0,
                         code: 0,
                         payload: frame.payload);
-    make(<thread>, function: curry(send, node.ip-socket, response, frame.parent.source-address));
+    make(<thread>, function: curry(send, node.ip-socket, frame.parent.source-address, response));
   end;
 end;
 define generic icmp-handler (object :: <icmp-over-ip-adapter>) => (res :: <icmp-handler>);
 
-define class <icmp-over-ip-adapter> (<object>)
+define class <icmp-over-ip-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot icmp-handler :: <icmp-handler>, required-init-keyword: icmp-handler:;
 end;
@@ -273,14 +278,11 @@ end;
 
 define generic arp-table (object :: <arp-handler>) => (res :: <vector-table>);
 define generic lock (object :: <arp-handler>) => (res :: <lock>);
-define generic ip-over-ethernet-adapter (object :: <arp-handler>) => (res :: <ip-over-ethernet-adapter>);
-define generic ip-over-ethernet-adapter-setter (value :: <ip-over-ethernet-adapter>, object :: <arp-handler>) => (res :: <ip-over-ethernet-adapter>);
 
 define class <arp-handler> (<filter>)
   constant slot arp-table :: <vector-table> = make(<vector-table>);
   constant slot lock :: <lock> = make(<lock>);
-  slot ip-over-ethernet-adapter :: <ip-over-ethernet-adapter>;
-  slot ethernet-socket :: <ethernet-socket>;
+  slot send-socket :: <socket>;
 end;
 
 define generic original-request (object :: <outstanding-arp-request>) => (res :: <frame>);
@@ -316,9 +318,9 @@ end;
 define class <advertised-arp-entry> (<static-arp-entry>)
 end;
 
-define open generic timestamp (object :: <dynamic-arp-entry>) => (res :: <date>);
+define open generic arp-timestamp (object :: <dynamic-arp-entry>) => (res :: <date>);
 define class <dynamic-arp-entry> (<known-arp-entry>)
-  constant slot timestamp :: <date> = current-date()
+  constant slot arp-timestamp :: <date> = current-date()
 end;
 
 define method try-again (request :: <outstanding-arp-request>, handler :: <arp-handler>)
@@ -326,7 +328,7 @@ define method try-again (request :: <outstanding-arp-request>, handler :: <arp-h
     if (request.counter > 3)
       release-all(request.notification)
     else
-      send(handler.ethernet-socket, request.original-request, request.destination);
+      send(handler.send-socket, request.destination, request.original-request);
       request.timer := make(<timer>, in: 5, event: curry(try-again, request, handler));
       request.counter := request.counter + 1;
     end
@@ -352,7 +354,7 @@ define method push-data-aux (input :: <push-input>,
                               target-ip-address: frame.source-ip-address,
                               source-mac-address: arp-entry.arp-mac-address,
                               source-ip-address: arp-entry.ip-address);
-      send(node.ethernet-socket, arp-response, frame.source-mac-address);
+      send(node.send-socket, frame.source-mac-address, arp-response);
     end;
   elseif (frame.operation = 2)
     with-lock(node.lock)
@@ -405,17 +407,22 @@ define method find-mac-address (arp-handler :: <arp-handler>, ip :: <ipv4-addres
   else
     with-lock(arp-handler.lock)
       unless(arp-entry)
+        let from-addr = arp-handler.send-socket.listen-address;
+        let from-ip = find-key(arp-handler.arp-table,
+                               method(x)
+                                 x.arp-mac-address = from-addr
+                               end);
         let arp-request = make(<arp-frame>,
                                operation: 1,
-                               source-mac-address: arp-handler.ip-over-ethernet-adapter.ethernet-layer.default-mac-address,
-                               source-ip-address: arp-handler.ip-over-ethernet-adapter.v4-address,
+                               source-mac-address: from-addr,
+                               source-ip-address: from-ip,
                                target-ip-address: ip,
                                target-mac-address: mac-address("00:00:00:00:00:00"));
-        send(arp-handler.ethernet-socket, arp-request, mac-address("ff:ff:ff:ff:ff:ff"));
+        send(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
         let outstanding-request = make(<outstanding-arp-request>,
                                        handler: arp-handler,
                                        request: arp-request,
-                                       destination: mac-address("ff:ff:ff:ff:ff:ff"),
+                                       destination: $broadcast-ethernet-address,
                                        ip-address: ip);
         let timer* = make(<timer>, in: 5, event: curry(try-again, outstanding-request, arp-handler));
         outstanding-request.timer := timer*;
@@ -454,7 +461,8 @@ begin
                           ip-layer: ip-layer,
                           icmp-handler: icmp-handler);
   let thr = make(<thread>, function: curry(toplevel, int));
-  send(ip-layer.ethernet-socket,
+  send(ip-layer.send-socket,
+       ipv4-address("192.168.0.1"),
        make(<ipv4-frame>,
             identification: 23,
             protocol: 1,
@@ -464,14 +472,13 @@ begin
             payload: make(<icmp-frame>,
                           type: 8,
                           code: 0,
-                          payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0))))),
-       ipv4-address("192.168.0.1"));
+                          payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0))))));
   send(icmp-handler.ip-socket,
+       ipv4-address("192.168.0.1"),
        make(<icmp-frame>,
             type: 8,
             code: 0,
-            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))),
-       ipv4-address("192.168.0.1"));
+            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
   format-out("Mac 192.168.0.1: %=\n", find-mac-address(arp-handler, ipv4-address("192.168.0.1")));
   sleep(1200);
 end;

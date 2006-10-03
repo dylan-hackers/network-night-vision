@@ -68,7 +68,7 @@ define n-byte-vector(ipv4-address, 4) end;
 define method read-frame (frame-type == <ipv4-address>, string :: <string>)
  => (res)
   make(<ipv4-address>,
-       data: map-as(<byte-vector>, string-to-integer, split(string, '.')));
+       data: map-as(<stretchy-vector-subsequence>, string-to-integer, split(string, '.')));
 end;
 
 define method as (class == <string>, frame :: <ipv4-address>) => (string :: <string>);
@@ -96,23 +96,16 @@ define function calculate-checksum (frame :: type-union(<byte-vector-subsequence
   logand(#xffff, lognot(checksum));
 end;
 
-define method fixup! (frame :: <ipv4-frame>,
-                      packet :: type-union(<byte-vector-subsequence>, <byte-vector>),
+define method fixup! (frame :: <unparsed-ipv4-frame>,
                       #next next-method)
-  assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
-                         calculate-checksum(packet, frame.header-length * 4),
-                         packet,
-                         start-offset(get-frame-field(#"header-checksum", frame)));
+  frame.header-checksum := calculate-checksum(frame.packet, frame.header-length * 4);
+  break();
   next-method();
 end;
 
-define method fixup! (frame :: <icmp-frame>,
-                      packet :: type-union(<byte-vector-subsequence>, <byte-vector>),
+define method fixup! (frame :: <unparsed-icmp-frame>,
                       #next next-method)
-  assemble-frame-into-as(<2byte-big-endian-unsigned-integer>,
-                         calculate-checksum(packet, packet.size),
-                         packet,
-                         start-offset(get-frame-field(#"checksum", frame)));
+  frame.checksum := calculate-checksum(frame.packet, frame.packet.size);
   next-method();
 end;
 

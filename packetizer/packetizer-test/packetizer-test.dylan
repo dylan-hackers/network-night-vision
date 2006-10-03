@@ -364,7 +364,24 @@ define test half-byte-modify ()
   check-equal("first byte is #xf3", #xf3, ff.packet[0]);
   check-equal("second byte is #x40", #x40, ff.packet[1]);
 end;
+define protocol half-bytes (container-frame)
+  field a :: <4bit-unsigned-integer> = #xf;
+  field b :: <4bit-unsigned-integer> = #x0;
+  field c :: <4bit-unsigned-integer> = #x5;
+  field d :: <4bit-unsigned-integer> = #xa;
+end;
 
+define test half-bytes-assembling ()
+  let f = make(<half-bytes>);
+  check-equal("f.a is #xf", #xf, f.a);
+  check-equal("f.b is #x0", #x0, f.b);
+  check-equal("f.c is #x5", #x5, f.c);
+  check-equal("f.d is #xa", #xa, f.d);
+  f.a := #xe;
+  check-equal("f.a is #xe", #xe, f.a);
+  let as = assemble-frame(f);
+  check-equal("assembling is correct", #(#xe0, #x5a), as.packet);
+end;
 
 define suite packetizer-suite ()
   test packetizer-parser;
@@ -395,6 +412,7 @@ define suite packetizer-assemble-suite ()
   test inheritance-dynamic-length-assemble;
   test half-byte-assembling;
   test half-byte-modify;
+  test half-bytes-assembling;
 end;
 
 begin

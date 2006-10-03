@@ -15,7 +15,7 @@ define method read-frame(type == <mac-address>,
       signal(make(<parse-error>))
     end;
     make(<mac-address>,
-         data: map-as(<byte-vector>, rcurry(string-to-integer, base: 16), fields));
+         data: map-as(<stretchy-vector-subsequence>, rcurry(string-to-integer, base: 16), fields));
   else
     //input: 00deadbeef00
     unless (res.size = 12)

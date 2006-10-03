@@ -53,11 +53,9 @@ end;
 define method assemble-frame-into-as
     (frame-type == <unsigned-byte>,
      data :: <byte>,
-     packet :: <stretchy-byte-vector-subsequence>,
-     start :: <integer>) => (end-offset :: <integer>)
-  byte-aligned(start);
-  packet[byte-offset(start)] := data;
-  start + 8;
+     packet :: <stretchy-byte-vector-subsequence>) => (end-offset :: <integer>)
+  packet[0] := data;
+  8;
 end;
 
 define method as (class == <string>, frame :: <unsigned-byte>)
@@ -142,19 +140,18 @@ define method assemble-frame-as(frame-type :: subclass(<unsigned-integer-bit-fra
  => (packet :: <byte-sequence>)
   let result-size = frame-size(frame-type);
   let result = make(<byte-sequence>, end: byte-offset(result-size + 7));
-  assemble-frame-into-as(frame-type, data, result, 0);
+  assemble-frame-into-as(frame-type, data, result);
   result;
 end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<unsigned-integer-bit-frame>),
                                       data :: <integer>,
-                                      packet :: <stretchy-vector-subsequence>,
-                                      start :: <integer>)
+                                      packet :: <stretchy-vector-subsequence>)
  => (res :: <integer>)
   let result-size = frame-size(frame-type);
-  let subseq = subsequence(packet, start: start, length: result-size);
+  let subseq = subsequence(packet, length: result-size);
   encode-integer(data, subseq, result-size);
-  start + result-size;
+  result-size;
 end;
 
 define method as (class == <string>, frame :: <unsigned-integer-bit-frame>)
@@ -215,11 +212,9 @@ define method assemble-frame (frame :: <fixed-size-byte-vector-frame>) => (packe
 end;
 
 define method assemble-frame-into (frame :: <fixed-size-byte-vector-frame>,
-                                   packet :: <stretchy-byte-vector-subsequence>,
-                                   start :: <integer>) => (res :: <integer>)
-  byte-aligned(start);
-  copy-bytes(frame.data, 0, packet, byte-offset(start), byte-offset(frame-size(frame)));
-  start + frame-size(frame)
+                                   packet :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
+  copy-bytes(frame.data, 0, packet, 0, byte-offset(frame-size(frame)));
+  frame-size(frame)
 end;
 
 define method as (class == <string>, frame :: <fixed-size-byte-vector-frame>) => (res :: <string>)
@@ -331,13 +326,11 @@ end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: <byte-vector-subsequence>,
-                                      start :: <integer>) => (res :: <integer>)
-  byte-aligned(start);
-  for (i from 0 below frame-size(frame-type) by 8)
-    packet[byte-offset(start + i)] := logand(#xff, ash(data, - (frame-size(frame-type) - i - 8)));
+                                      packet :: <byte-vector-subsequence>) => (res :: <integer>)
+  for (i from 0 below byte-offset(frame-size(frame-type)))
+    packet[i] := logand(#xff, ash(data, - (frame-size(frame-type) - i * 8 - 8)));
   end;
-  start + frame-size(frame-type)
+  frame-size(frame-type)
 end;
 
 define method as (class == <string>, frame :: <big-endian-unsigned-integer-byte-frame>)
@@ -392,13 +385,11 @@ end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<little-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: <stretchy-byte-vector-subsequence>,
-                                      start :: <integer>)
-  byte-aligned(start);
-  for (i from 0 below frame-size(frame-type) by 8)
-    packet[byte-offset(start + i)] := logand(#xff, ash(data, - i));
+                                      packet :: <stretchy-byte-vector-subsequence>)
+  for (i from 0 below byte-offset(frame-size(frame-type)))
+    packet[i] := logand(#xff, ash(data, - i * 8));
   end;
-  start + frame-size(frame-type);
+  frame-size(frame-type);
 end;
 
 define method as (class == <string>, frame :: <little-endian-unsigned-integer-byte-frame>)
@@ -450,11 +441,9 @@ define method assemble-frame (frame :: <variable-size-byte-vector>)
 end;
 
 define method assemble-frame-into (frame :: <variable-size-byte-vector>,
-                                   packet :: <stretchy-byte-vector-subsequence>,
-                                   start :: <integer>) => (res :: <integer>)
-  byte-aligned(start);
-  copy-bytes(frame.data, 0, packet, byte-offset(start), frame.data.size);
-  start + frame-size(frame)
+                                   packet :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
+  copy-bytes(frame.data, 0, packet, 0, frame.data.size);
+  frame-size(frame)
 end;
 
 define class <raw-frame> (<variable-size-byte-vector>)
