@@ -131,8 +131,8 @@ define generic arp-handler (object :: <ip-over-ethernet-adapter>) => (res :: <ar
 define generic v4-address (object :: <ip-over-ethernet-adapter>) => (res :: <ipv4-address>);
 define open generic ip-layer (object :: <object>) => (res :: <ip-layer>);
 define open generic ip-layer-setter (value :: <ip-layer>, object :: <object>) => (res :: <ip-layer>);
-define open generic ip-send-socket (object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
-define open generic ip-send-socket-setter (value :: <ethernet-socket>, object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-socket>);
+define open generic ip-send-socket (object) => (res :: <ethernet-socket>);
+define open generic ip-send-socket-setter (value :: <ethernet-socket>, object) => (res :: <ethernet-socket>);
 define open generic netmask (object :: <ip-over-ethernet-adapter>) => (res :: <integer>);
 
 define class <ip-over-ethernet-adapter> (<adapter>)
@@ -145,11 +145,39 @@ define class <ip-over-ethernet-adapter> (<adapter>)
 end;
 
 define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>, payload :: <container-frame>);
-  let destination-mac = find-mac-address(socket.arp-handler, destination);
-  if (destination-mac)
-    send(socket.ip-send-socket, destination-mac, payload);
+  let arp-entry = element(socket.arp-handler.arp-table, destination, default: #f);
+  if (instance?(arp-entry, <known-arp-entry>))
+    send(socket.ip-send-socket, arp-entry.arp-mac-address, payload);
   else
-    format-out("Couldn't find mac-address for %=\n", destination);
+    let arp-handler = socket.arp-handler;
+    with-lock(arp-handler.lock)
+      if (arp-entry)
+        arp-entry.outstanding-packets := add!(arp-entry.outstanding-packets, payload);
+      else
+        let from-addr = arp-handler.send-socket.listen-address;
+        let from-ip = find-key(arp-handler.arp-table,
+                               method(x)
+                                 x.arp-mac-address = from-addr
+                               end);
+        let arp-request = make(<arp-frame>,
+                               operation: 1,
+                               source-mac-address: from-addr,
+                               source-ip-address: from-ip,
+                               target-ip-address: destination,
+                               target-mac-address: mac-address("00:00:00:00:00:00"));
+        send(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
+        let outstanding-request = make(<outstanding-arp-request>,
+                                       handler: arp-handler,
+                                       request: arp-request,
+                                       destination: $broadcast-ethernet-address,
+                                       ip-address: destination,
+                                       outstanding-packets: list(payload));
+        let timer* = make(<timer>, in: 5, event: curry(try-again, outstanding-request, arp-handler));
+        outstanding-request.timer := timer*;
+        arp-handler.arp-table[destination] := outstanding-request;
+        arp-entry := outstanding-request;
+      end;
+    end;
   end;
 end;
 
@@ -167,6 +195,7 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
   connect(arp-fan-in, ip-over-ethernet.arp-handler);
 
   ip-over-ethernet.arp-handler.send-socket := arp-socket;
+
   ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
     := make(<advertised-arp-entry>,
             ip-address: ip-over-ethernet.v4-address,
@@ -178,6 +207,7 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
                                           #x800,
                                           mac-address: $broadcast-ethernet-address);
   ip-over-ethernet.ip-send-socket := ip-socket;
+  ip-over-ethernet.arp-handler.ip-send-socket := ip-socket;
   let ipv4-fan-in = make(<fan-in>);
   connect(ip-socket.decapsulator, ipv4-fan-in);
   connect(ip-broadcast-socket.decapsulator, ipv4-fan-in);
@@ -326,7 +356,7 @@ define method push-data-aux (input :: <push-input>,
                         type: 0,
                         code: 0,
                         payload: frame.payload);
-    make(<thread>, function: curry(send, node.ip-socket, frame.parent.source-address, response));
+    send(node.ip-socket, frame.parent.source-address, response)
   end;
 end;
 define generic icmp-handler (object :: <icmp-over-ip-adapter>) => (res :: <icmp-handler>);
@@ -350,17 +380,17 @@ define class <arp-handler> (<filter>)
   constant slot arp-table :: <vector-table> = make(<vector-table>);
   constant slot lock :: <lock> = make(<lock>);
   slot send-socket :: <socket>;
+  slot ip-send-socket :: <ethernet-socket>;
 end;
 
 define generic original-request (object :: <outstanding-arp-request>) => (res :: <frame>);
 define generic destination (object :: <outstanding-arp-request>) => (res :: <mac-address>);
-define open generic notification (object :: <outstanding-arp-request>) => (res :: <notification>);
-define open generic notification-setter (value :: <notification>, object :: <outstanding-arp-request>) => (res :: <notification>);
 define open generic timer (object :: <outstanding-arp-request>) => (res :: <timer>);
 define open generic timer-setter (value :: <timer>, object :: <outstanding-arp-request>) => (res :: <timer>);
 define open generic counter (object :: <outstanding-arp-request>) => (res :: <object>);
 define open generic counter-setter (value :: <object>, object :: <outstanding-arp-request>) => (res :: <object>);
-
+define open generic outstanding-packets (object :: <outstanding-arp-request>) => (res :: <list>);
+define open generic outstanding-packets-setter (value :: <list>, object :: <outstanding-arp-request>) => (res :: <list>);
 define open generic ip-address (object :: <arp-entry>) => (res :: <ipv4-address>);
 define abstract class <arp-entry> (<object>)
   constant slot ip-address :: <ipv4-address>, required-init-keyword: ip-address:;
@@ -369,9 +399,9 @@ end;
 define class <outstanding-arp-request> (<arp-entry>)
   constant slot original-request :: <frame>, required-init-keyword: request:;
   constant slot destination :: <mac-address>, required-init-keyword: destination:;
-  slot notification :: <notification>;
   slot timer :: <timer>;
   slot counter = 0;
+  slot outstanding-packets :: <list>, required-init-keyword: outstanding-packets:;
 end;
 
 define generic arp-mac-address (object :: <known-arp-entry>) => (res :: <mac-address>);
@@ -393,18 +423,13 @@ end;
 define method try-again (request :: <outstanding-arp-request>, handler :: <arp-handler>)
   with-lock(handler.lock)
     if (request.counter > 3)
-      release-all(request.notification)
+      remove-key!(arp-handler.arp-table, request.ip-address);
     else
       send(handler.send-socket, request.destination, request.original-request);
       request.timer := make(<timer>, in: 5, event: curry(try-again, request, handler));
       request.counter := request.counter + 1;
     end
   end
-end;
-
-define method initialize (outstanding-arp-request :: <outstanding-arp-request>,
-                          #rest rest, #key handler :: <arp-handler>, #all-keys)
-  outstanding-arp-request.notification := make(<notification>, lock: handler.lock);
 end;
    
 define method push-data-aux (input :: <push-input>,
@@ -426,7 +451,11 @@ define method push-data-aux (input :: <push-input>,
   elseif (frame.operation = 2)
     with-lock(node.lock)
       let old-entry = element(node.arp-table, frame.source-ip-address, default: #f);
-      maybe-add-response-to-table(old-entry, node, frame)
+      if (instance?(old-entry, <outstanding-arp-request>))
+        cancel(old-entry.timer);
+        do(curry(send, node.ip-send-socket, frame.source-mac-address), old-entry.outstanding-packets);
+      end;
+      maybe-add-response-to-table(old-entry, node, frame);
     end
   end;
 end;
@@ -440,14 +469,11 @@ end;
 
 define method maybe-add-response-to-table
     (old-entry == #f, node :: <arp-handler>, frame :: <arp-frame>)
-  add-response-to-table(node, frame)
 end;
 
 define method maybe-add-response-to-table 
     (old-entry :: <outstanding-arp-request>, node :: <arp-handler>, frame :: <arp-frame>)
-  cancel(old-entry.timer);
   add-response-to-table(node, frame);
-  release-all(old-entry.notification);
 end;
 
 define method maybe-add-response-to-table
@@ -466,47 +492,6 @@ define method maybe-add-response-to-table
   add-response-to-table(node, frame)
 end;
 
-define method find-mac-address (arp-handler :: <arp-handler>, ip :: <ipv4-address>)
- => (res :: false-or(<mac-address>))
-  let arp-entry = element(arp-handler.arp-table, ip, default: #f);
-  if (instance?(arp-entry, <known-arp-entry>))
-    arp-entry.arp-mac-address;
-  else
-    with-lock(arp-handler.lock)
-      unless(arp-entry)
-        let from-addr = arp-handler.send-socket.listen-address;
-        let from-ip = find-key(arp-handler.arp-table,
-                               method(x)
-                                 x.arp-mac-address = from-addr
-                               end);
-        let arp-request = make(<arp-frame>,
-                               operation: 1,
-                               source-mac-address: from-addr,
-                               source-ip-address: from-ip,
-                               target-ip-address: ip,
-                               target-mac-address: mac-address("00:00:00:00:00:00"));
-        send(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
-        let outstanding-request = make(<outstanding-arp-request>,
-                                       handler: arp-handler,
-                                       request: arp-request,
-                                       destination: $broadcast-ethernet-address,
-                                       ip-address: ip);
-        let timer* = make(<timer>, in: 5, event: curry(try-again, outstanding-request, arp-handler));
-        outstanding-request.timer := timer*;
-        arp-handler.arp-table[ip] := outstanding-request;
-        arp-entry := outstanding-request;
-      end;
-      wait-for(arp-entry.notification);
-      let entry = element(arp-handler.arp-table, ip, default: #f);
-      if (entry & instance?(entry, <known-arp-entry>))
-        entry.arp-mac-address;
-      else
-        remove-key!(arp-handler.arp-table, ip);
-        #f
-      end;
-    end;
-  end;
-end;
 
 
 begin
@@ -549,7 +534,7 @@ begin
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
 
-  format-out("Mac 192.168.0.1: %=\n", find-mac-address(arp-handler, ipv4-address("192.168.0.1")));
+  format-out("Mac 192.168.0.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.0.1"), default: #f));
   sleep(1200);
 end;
 
