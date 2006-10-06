@@ -67,7 +67,7 @@ define function find-label (label-offset :: <label-offset>)
   let dns-frame = find-dns-frame(label-offset);
   dns-frame
     & parse-frame(<domain-name>,
-                  assemble-frame(dns-frame),
+                  assemble-frame(dns-frame).packet,
                   start: label-offset.offset * 8,
                   parent: dns-frame);
 end;
