@@ -183,7 +183,6 @@ define method process-data (connection :: <tcp-connection>, packet :: <tcp-frame
       for (i from connection.tcp-sequence-number - connection.send-buffer.size below $transform-from-bv(packet.acknowledgement-number))
         pop(connection.send-buffer);
       end;
-      connection.tcp-acknowledgement-number := connection.tcp-acknowledgement-number + byte-offset(frame-size(packet.payload));
       ack-received(connection);
     elseif (packet.rst = 1)
       rst-received(connection);
@@ -191,7 +190,10 @@ define method process-data (connection :: <tcp-connection>, packet :: <tcp-frame
       format-out("Unknown flag combination\n");
     end;
     if (instance?(connection.state, <established>))
-      do(curry(push-last, connection.receive-buffer), packet.payload.data)
+      do(curry(push-last, connection.receive-buffer), packet.payload.data);
+      connection.tcp-acknowledgement-number
+        := connection.tcp-acknowledgement-number + byte-offset(frame-size(packet.payload));
+      send-via-tcp(connection, ack: #t);
     end;
   end;
 end;
@@ -324,7 +326,7 @@ begin
   while(#t)
     let res = read(s);
     if (res & res.size > 0)
-      format-out("Read %=\n", res)
+      format-out("Read %s\n", map-as(<string>, curry(as, <character>), res))
     end;
   end;
 end;

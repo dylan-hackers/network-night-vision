@@ -495,7 +495,7 @@ end;
 
 
 define function init-ethernet ()
-  let int = make(<ethernet-interface>, name: "Intel");
+  let int = make(<ethernet-interface>, name: "em0");
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
   let arp-handler = make(<arp-handler>);
   arp-handler.arp-table[ipv4-address("192.168.0.23")]
@@ -503,12 +503,12 @@ define function init-ethernet ()
             mac-address: mac-address("00:de:ad:be:ef:00"),
             ip-address: ipv4-address("192.168.0.23"));
   let ip-layer = make(<ip-layer>);
-  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"), next-hop: ipv4-address("192.168.0.1")));
+  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"), next-hop: ipv4-address("23.23.23.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("192.168.0.24"),
+                              ipv4-address: ipv4-address("23.23.23.220"),
                               netmask: 24);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,
