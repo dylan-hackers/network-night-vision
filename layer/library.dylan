@@ -12,6 +12,7 @@ define library layer
   use interfaces;
   use vector-table;
   use system, import: { date };
+  use tcp;
 
   // Add any more module exports here.
   export layer;

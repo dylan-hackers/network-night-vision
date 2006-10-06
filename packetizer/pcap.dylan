@@ -32,7 +32,18 @@ define function int-to-byte-vector (int :: <integer>) => (res :: <byte-vector>)
   res;
 end;
 
-define function float-to-byte-vector (float :: <float>) => (res :: <byte-vector>)
+define function float-to-byte-vector-be (float :: <float>) => (res :: <byte-vector>)
+  let res = make(<byte-vector>, size: 4, fill: 0);
+  let r = float;
+  for (i from 3 to 0 by -1)
+    let (this, remainder) = floor/(r, 256);
+    r := this;
+    res[i] := floor(remainder);
+  end;
+  res;
+end;
+
+define function float-to-byte-vector-le (float :: <float>) => (res :: <byte-vector>)
   let res = make(<byte-vector>, size: 4, fill: 0);
   let r = float;
   for (i from 0 below 4)
@@ -48,9 +59,17 @@ define protocol unix-time-value (container-frame)
   field microseconds :: <little-endian-unsigned-integer-4byte>;
 end;
 
-define function byte-vector-to-float (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
+define function byte-vector-to-float-le (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
   let res = 0.0d0;
   for (ele in reverse(bv))
+    res := ele + 256 * res;
+  end;
+  res;
+end;
+
+define function byte-vector-to-float-be (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
+  let res = 0.0d0;
+  for (ele in bv)
     res := ele + 256 * res;
   end;
   res;
@@ -71,7 +90,7 @@ end;
 
 define method decode-unix-time (unix-time :: <unix-time-value>)
  => (res :: <date>)
- let secs = byte-vector-to-float(unix-time.seconds.data);
+ let secs = byte-vector-to-float-le(unix-time.seconds.data);
  let (days, rem0) = floor/(secs, 86400);
  let (hours, rem1) = floor/(rem0, 3600);
  let (minutes, seconds) = floor/(rem1, 60);
@@ -85,7 +104,7 @@ define method make-unix-time (dur :: <day/time-duration>)
   let (days, hours, minutes, seconds, microseconds) = decode-duration(dur);
   let secs = ((as(<double-float>, days) * 24 + hours) * 60 + minutes) * 60 + seconds;
   make(<unix-time-value>,
-       seconds: little-endian-unsigned-integer-4byte(float-to-byte-vector(secs)),
+       seconds: little-endian-unsigned-integer-4byte(float-to-byte-vector-le(secs)),
        microseconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(microseconds)));
 end;
 

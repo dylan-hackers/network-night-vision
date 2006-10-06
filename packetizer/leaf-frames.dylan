@@ -319,9 +319,10 @@ end;
 
 define method assemble-frame-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                  data :: <integer>)
-  => (packet :: <byte-vector>)
-  let result = make(<stretchy-byte-vector-subsequence>, end: frame-size(frame-type));
-  assemble-frame-into-as(frame-type, data, result, 0);
+  => (packet :: <byte-vector-subsequence>)
+  let result = make(<stretchy-byte-vector-subsequence>, end: byte-offset(frame-size(frame-type)));
+  assemble-frame-into-as(frame-type, data, result);
+  result;
 end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
@@ -378,9 +379,10 @@ end;
 
 define method assemble-frame-as (frame-type :: subclass(<little-endian-unsigned-integer-byte-frame>),
                                  data :: <integer>)
-  => (packet :: <byte-vector>)
-  let result = make(<byte-vector>, size: byte-offset(frame-size(frame-type)), fill: 0);
-  assemble-frame-into-as(frame-type, data, result, 0);
+  => (packet :: <stretchy-byte-vector-subsequence>)
+  let result = make(<stretchy-byte-vector-subsequence>, end: byte-offset(frame-size(frame-type)));
+  assemble-frame-into-as(frame-type, data, result);
+  result;
 end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<little-endian-unsigned-integer-byte-frame>),

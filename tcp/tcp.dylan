@@ -3,7 +3,7 @@ Synopsis:  A brief description of the project.
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
-define class <tcp-dingens> (<object>)
+define open class <tcp-dingens> (<object>)
   slot state :: <tcp-state> = make(<closed>);
 end;
 
@@ -15,6 +15,9 @@ end;
 
 define class <listen> (<tcp-state>)
 end;
+
+
+
 
 define class <syn-sent> (<tcp-state>)
 end;
@@ -43,23 +46,23 @@ end;
 define class <last-ack> (<tcp-state>)
 end;
 
-define generic passive-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic passive-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic active-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic active-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic close (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic close (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic syn-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic syn-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic syn-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic syn-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic rst-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic rst-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic fin-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic fin-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
+define open generic ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
 
-define generic fin-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-type :: <tcp-state>);
+define open generic fin-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-type :: <tcp-state>);
 
 define method passive-open (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
   dingens.state := passive-open(dingens.state)
@@ -231,6 +234,7 @@ define method ack-received (old-state :: <closing>) => (new-state :: <tcp-state>
   make(<time-wait>)
 end;
 
+/*
 begin
   let tcp = make(<tcp-dingens>);
   while(#t)
@@ -249,15 +253,15 @@ begin
       end;
     event(tcp)
   end
-end;
-
+end; */
+/*
 closed; application: open; syn-sent; frame: syn
 listen; frame: syn; syn-received; frame: syn & ack
 syn-received; frame: ack; established;
 established; frame: fin; close-wait; frame: ack
 syn-sent; timeout: 300; closed;
 syn-sent; application: close; closed;
-
+*/
 
 
 

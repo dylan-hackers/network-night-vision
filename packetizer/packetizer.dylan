@@ -387,9 +387,9 @@ define method assemble-frame-into (frame :: <container-frame>,
     frame.concrete-frame-fields[field.index].%start-offset := offset;
     if (instance?(field.getter(frame), <container-frame>))
       let unparsed = make(unparsed-class(field.getter(frame).object-class),
-                          cache: field.getter(frame), packet: subsequence(packet,
-                                                                          start: offset,
-                                                                          length: length));
+                          cache: field.getter(frame),
+                          packet: subsequence(packet, start: offset, length: length),
+                          parent: frame);
       field.setter(unparsed, frame);
     end;
     if (field.dynamic-end)

@@ -38,10 +38,6 @@ define method push-data-aux (input :: <push-input>,
   push-data(node.the-output, frame.payload)
 end;
 
-define class <demultiplexer> (<single-push-input-node>)
-  slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
-end;
-
 define open class <fan-in> (<single-push-output-node>)
   slot inputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
@@ -99,6 +95,10 @@ end;
 define class <filtered-push-output> (<push-output>)
   slot frame-filter :: <filter-expression>,
     required-init-keyword: frame-filter:;
+end;
+
+define class <demultiplexer> (<single-push-input-node>)
+  slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
 define method create-output-for-filter

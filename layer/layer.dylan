@@ -131,8 +131,8 @@ define generic arp-handler (object :: <ip-over-ethernet-adapter>) => (res :: <ar
 define generic v4-address (object :: <ip-over-ethernet-adapter>) => (res :: <ipv4-address>);
 define open generic ip-layer (object :: <object>) => (res :: <ip-layer>);
 define open generic ip-layer-setter (value :: <ip-layer>, object :: <object>) => (res :: <ip-layer>);
-define open generic ip-send-socket (object) => (res :: <ethernet-socket>);
-define open generic ip-send-socket-setter (value :: <ethernet-socket>, object) => (res :: <ethernet-socket>);
+define open generic ip-send-socket (object) => (res :: <socket>);
+define open generic ip-send-socket-setter (value :: <socket>, object) => (res :: <socket>);
 define open generic netmask (object :: <ip-over-ethernet-adapter>) => (res :: <integer>);
 
 define class <ip-over-ethernet-adapter> (<adapter>)
@@ -220,8 +220,8 @@ end;
 
 define open generic send-socket (object :: <object>) => (res);
 define open generic send-socket-setter (value :: <object>, object :: <object>) => (res);
-define generic default-ip-address (object :: <ip-layer>) => (res :: <ipv4-address>);
-define generic default-ip-address-setter (value :: <ipv4-address>, object :: <ip-layer>) => (res :: <ipv4-address>);
+define generic default-ip-address (object :: <layer>) => (res :: <ipv4-address>);
+define generic default-ip-address-setter (value :: <ipv4-address>, object :: <layer>) => (res :: <ipv4-address>);
 define open generic adapters (object :: <ip-layer>) => (res);
 define open generic routes (object :: <ip-layer>) => (res);
 
@@ -374,7 +374,7 @@ define method initialize (icmp-over-ip :: <icmp-over-ip-adapter>,
 end;
 
 define generic arp-table (object :: <arp-handler>) => (res :: <vector-table>);
-define generic lock (object :: <arp-handler>) => (res :: <lock>);
+define open generic lock (object) => (res :: <lock>);
 
 define class <arp-handler> (<filter>)
   constant slot arp-table :: <vector-table> = make(<vector-table>);
@@ -423,7 +423,7 @@ end;
 define method try-again (request :: <outstanding-arp-request>, handler :: <arp-handler>)
   with-lock(handler.lock)
     if (request.counter > 3)
-      remove-key!(arp-handler.arp-table, request.ip-address);
+      remove-key!(handler.arp-table, request.ip-address);
     else
       send(handler.send-socket, request.destination, request.original-request);
       request.timer := make(<timer>, in: 5, event: curry(try-again, request, handler));
@@ -494,7 +494,7 @@ end;
 
 
 
-begin
+define function init-ethernet ()
   let int = make(<ethernet-interface>, name: "Intel");
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
   let arp-handler = make(<arp-handler>);
@@ -534,7 +534,7 @@ begin
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
 
-  format-out("Mac 192.168.0.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.0.1"), default: #f));
-  sleep(1200);
+  format-out("Mac 192.168.2.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.2.1"), default: #f));
+  ip-layer;
 end;
 

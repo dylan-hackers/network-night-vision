@@ -14,7 +14,10 @@ define module layer
   use flow;
   use interfaces;
   use vector-table;
+  use byte-vector;
   use date, import: {<date>, current-date };
+  use tcp;
+  use simple-random;
 
   // Add binding exports here.
 

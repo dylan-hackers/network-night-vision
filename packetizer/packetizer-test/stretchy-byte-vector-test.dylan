@@ -226,6 +226,12 @@ define test encode-integer-test ()
   check-equal("encode integer in bit vector", #x23, sbv[0]);
 end;
 
+define test encode-integer-test2 ()
+  let sbv = make(<stretchy-byte-vector-subsequence>);
+  let sub1 = subsequence(sbv, start: 6, length: 1);
+  encode-integer(1, sub1, 1);
+  check-equal("encode integer in bit vector", 2, sbv[0]);
+end;
 define suite stretchy-byte-vector-suite ()
   test byte-vector-subsequence-read;
   test byte-vector-subsequence-modify;
@@ -239,6 +245,7 @@ define suite stretchy-byte-vector-suite ()
   test byte-vector-subsequence-with-offset-iteration;
   test byte-vector-subsequence-with-offset-modify;
   test encode-integer-test;
+  test encode-integer-test2;
 end;
 
 begin

@@ -22,6 +22,9 @@ define module packetizer
 
   export <udp-frame>, source-port, destination-port, length, checksum;
 
+  export <tcp-frame>, sequence-number, acknowledgement-number,
+    urg, ack, psh, rst, syn, fin, window, urgent-pointer, options-and-padding;
+
   export <ethernet-frame>, <ipv4-frame>,
     <ipv4-address>, <mac-address>, <ieee80211-frame>, <prism2-frame>,
     <logical-link-control>, <link-control>,
@@ -41,6 +44,11 @@ define module packetizer
 
   export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
     $DLT-EN10MB, $DLT-PRISM-HEADER, make-unix-time, decode-unix-time, timestamp;
+
+  //XXX: evil hacks
+  export float-to-byte-vector-le, byte-vector-to-float-le,
+    float-to-byte-vector-be, byte-vector-to-float-be,
+    big-endian-unsigned-integer-4byte;
 
   export <icmp-frame>, code, type, checksum;
 
@@ -89,6 +97,7 @@ define module packetizer
     <leaf-frame>,
     parse-frame,
     assemble-frame,
+    assemble-frame-as,
     read-frame,
     summary;
 
@@ -111,7 +120,8 @@ define module packetizer
     packet,
     source-address,
     destination-address,
-    payload-type;
+    payload-type,
+    get-protocol-magic;
 
   export <header-frame>,
     <unparsed-header-frame>,

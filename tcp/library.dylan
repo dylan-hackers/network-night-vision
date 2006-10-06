@@ -6,4 +6,5 @@ Copyright: (C) 2006,  All rights reserved.
 define library tcp
   use common-dylan;
   use io;
+  export tcp;
 end library tcp;

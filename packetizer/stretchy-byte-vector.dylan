@@ -394,9 +394,9 @@ define inline method encode-integer (value :: <integer>, seq :: <stretchy-byte-v
   let (fullbytes, bits) = truncate/(count - 8 + seq.bit-start-index, 8);
   let first-byte = seq.start-index;
   if ((fullbytes = 0) & (bits < 0))
-    let mask = ash(ash(#xff, - (count - seq.bit-start-index)), seq.bit-start-index);
-    seq.real-data[first-byte] := logior(logand(seq.real-data[first-byte], mask),
-                                        ash(value, 8 - (count - seq.bit-start-index)));
+    let mask = ash(ash(#xff, - (8 - count)), 8 - seq.bit-start-index - count);
+    seq.real-data[first-byte] := logior(logand(seq.real-data[first-byte], lognot(mask)),
+                                        logand(mask, ash(value, 8 - seq.bit-end-index)));
   else
     if (seq.bit-start-index = 0)
       seq.real-data[first-byte] := logand(#xff, ash(value, - (count - 8)));

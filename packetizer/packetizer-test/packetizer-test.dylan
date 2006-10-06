@@ -383,6 +383,21 @@ define test half-bytes-assembling ()
   check-equal("assembling is correct", #(#xe0, #x5a), as.packet);
 end;
 
+define protocol bits (container-frame)
+  field a :: <1bit-unsigned-integer> = 0;
+  field b :: <1bit-unsigned-integer> = 1;
+  field c :: <1bit-unsigned-integer> = 0;
+  field d :: <1bit-unsigned-integer> = 1;
+  field e :: <1bit-unsigned-integer> = 0;
+  field f :: <1bit-unsigned-integer> = 1;
+end;
+
+define test bits-assemble ()
+  let f = make(<bits>);
+  let as = assemble-frame(f);
+  check-equal("assembling is correct", 84, as.packet[0]);
+end;
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -413,6 +428,7 @@ define suite packetizer-assemble-suite ()
   test half-byte-assembling;
   test half-byte-modify;
   test half-bytes-assembling;
+  test bits-assemble;
 end;
 
 begin

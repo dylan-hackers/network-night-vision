@@ -82,8 +82,9 @@ define method print-object (object :: <frame>, stream :: <stream>) => ()
   write(stream, as(<string>, object));
 end;
 
-define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>), count :: <integer>)
-  let checksum = 0;
+define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>),
+                                    count :: <integer>) => (res :: <integer>)
+  let checksum :: <integer> = 0;
   for (i from 0 below count - 1 by 2)
     checksum := checksum + ash(frame[i], 8) + frame[i + 1];
   end;
@@ -185,19 +186,42 @@ define protocol tcp-frame (header-frame)
   field destination-port :: <2byte-big-endian-unsigned-integer>;
   field sequence-number :: <big-endian-unsigned-integer-4byte>;
   field acknowledgement-number :: <big-endian-unsigned-integer-4byte>;
-  field data-offset :: <4bit-unsigned-integer>;
-  field reserved :: <6bit-unsigned-integer>;
-  field urg :: <1bit-unsigned-integer>;
-  field ack :: <1bit-unsigned-integer>;
-  field psh :: <1bit-unsigned-integer>;
-  field rst :: <1bit-unsigned-integer>;
-  field syn :: <1bit-unsigned-integer>;
-  field fin :: <1bit-unsigned-integer>;
-  field window :: <2byte-big-endian-unsigned-integer>;
-  field checksum :: <2byte-big-endian-unsigned-integer>;
-  field urgent-pointer :: <2byte-big-endian-unsigned-integer>;
+  field data-offset :: <4bit-unsigned-integer>,
+   fixup: ceiling/(20 + byte-offset(frame-size(frame.options-and-padding)), 4);
+  field reserved :: <6bit-unsigned-integer> = 0;
+  field urg :: <1bit-unsigned-integer> = 0;
+  field ack :: <1bit-unsigned-integer> = 0;
+  field psh :: <1bit-unsigned-integer> = 0;
+  field rst :: <1bit-unsigned-integer> = 0;
+  field syn :: <1bit-unsigned-integer> = 0;
+  field fin :: <1bit-unsigned-integer> = 0;
+  field window :: <2byte-big-endian-unsigned-integer> = 0;
+  field checksum :: <2byte-big-endian-unsigned-integer> = 0;
+  field urgent-pointer :: <2byte-big-endian-unsigned-integer> = 0;
   field options-and-padding :: <raw-frame>;
   field payload :: <raw-frame>, start: frame.data-offset * 4 * 8;
+end;
+
+define protocol pseudo-header (container-frame)
+  field source-address :: <ipv4-address>;
+  field destination-address :: <ipv4-address>;
+  field reserved :: <unsigned-byte> = 0;
+  field protocol :: <unsigned-byte> = 6;
+  field segment-length :: <2byte-big-endian-unsigned-integer>;
+  field data :: <raw-frame>,
+    length: frame.segment-length;
+end;
+
+define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
+                     #next next-method)
+  let pseudo-header = make(<pseudo-header>,
+                           source-address: tcp-frame.parent.source-address,
+                           destination-address: tcp-frame.parent.destination-address,
+                           segment-length: tcp-frame.packet.size,
+                           data: make(<raw-frame>, data: tcp-frame.packet));
+  let pack = assemble-frame(pseudo-header).packet;
+  tcp-frame.checksum := calculate-checksum(pack, pack.size);
+  next-method();
 end;
 
 define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
