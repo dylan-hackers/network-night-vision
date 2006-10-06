@@ -98,8 +98,8 @@ define method send-via-tcp (conn :: <tcp-connection>,
                             #key ack, fin, rst, syn, urg, psh, data)
   let payload = make(<stretchy-byte-vector-subsequence>);
   if (data & instance?(conn.state, <established>))
-    for (i from 0 below min(conn.tcp-window-size, conn.send-buffer.size))
-      payload[i] := pop(conn.send-buffer);
+    for (i from 0 below min(conn.tcp-window-size, data.size))
+      payload[i] := data[i];
     end;
   end;
   let tcp-frame = make(<tcp-frame>,
@@ -153,37 +153,46 @@ define method write-element (tcp-connection :: <tcp-connection>, data :: <charac
   write-element(tcp-connection, as(<byte>, data));
 end;
 
+define method write (tcp-connection :: <tcp-connection>, data :: <string>)
+  write(tcp-connection, map-as(<vector>, curry(as, <byte>), data));
+end;
+
 define method write (tcp-connection :: <tcp-connection>, data :: <sequence>)
   do(curry(write-element, tcp-connection), data);
-  send-via-tcp(tcp-connection, data: #t, ack: #t);
+  send-via-tcp(tcp-connection, data: data, ack: #t);
 end;
 
 define method process-data (connection :: <tcp-connection>, packet :: <tcp-frame>)
-  if (packet.syn = 1)
-    connection.tcp-acknowledgement-number := $transform-from-bv(packet.sequence-number) + 1;
-    if (packet.ack = 1)
-      syn-ack-received(connection);
+  if ((connection.tcp-acknowledgement-number = 0) | ($transform-from-bv(packet.sequence-number) = connection.tcp-acknowledgement-number))
+    if (packet.syn = 1)
+      connection.tcp-acknowledgement-number := $transform-from-bv(packet.sequence-number) + 1;
+      if (packet.ack = 1)
+        syn-ack-received(connection);
+      else
+        syn-received(connection);
+      end;
+    elseif (packet.fin = 1)
+      connection.tcp-acknowledgement-number := connection.tcp-acknowledgement-number + 1;
+      if (packet.ack = 1)
+        fin-ack-received(connection);
+      else
+        fin-received(connection);
+      end;
+    elseif (packet.ack = 1)
+      connection.tcp-window-size := packet.window;
+      for (i from connection.tcp-sequence-number - connection.send-buffer.size below $transform-from-bv(packet.acknowledgement-number))
+        pop(connection.send-buffer);
+      end;
+      connection.tcp-acknowledgement-number := connection.tcp-acknowledgement-number + byte-offset(frame-size(packet.payload));
+      ack-received(connection);
+    elseif (packet.rst = 1)
+      rst-received(connection);
     else
-      syn-received(connection);
+      format-out("Unknown flag combination\n");
     end;
-  elseif (packet.fin = 1)
-    connection.tcp-acknowledgement-number := connection.tcp-acknowledgement-number + 1;
-    if (packet.ack = 1)
-      fin-ack-received(connection);
-    else
-      fin-received(connection);
+    if (instance?(connection.state, <established>))
+      do(curry(push-last, connection.receive-buffer), packet.payload.data)
     end;
-  elseif (packet.ack = 1)
-    connection.tcp-window-size := packet.window;
-    connection.tcp-acknowledgement-number := connection.tcp-acknowledgement-number + byte-offset(frame-size(packet.payload));
-    ack-received(connection);
-  elseif (packet.rst = 1)
-    rst-received(connection);
-  else
-    format-out("Unknown flag combination\n");
-  end;
-  if (instance?(connection.state, <established>))
-    do(curry(push-last, connection.receive-buffer), packet.payload.data)
   end;
 end;
 
