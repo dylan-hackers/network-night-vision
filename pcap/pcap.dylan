@@ -94,7 +94,7 @@ define method initialize
               ret();
             end;
           end;
-    open-interface(interface.interface-name);
+    //open-interface(interface.interface-name);
 
     format-out("trying pcap-find-alldevices\n");
     let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));

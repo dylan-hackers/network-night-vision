@@ -198,8 +198,9 @@ define protocol tcp-frame (header-frame)
   field window :: <2byte-big-endian-unsigned-integer> = 0;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field urgent-pointer :: <2byte-big-endian-unsigned-integer> = 0;
-  field options-and-padding :: <raw-frame>;
-  field payload :: <raw-frame>, start: frame.data-offset * 4 * 8;
+  field options-and-padding :: <raw-frame> = make(<raw-frame>, data: make(<stretchy-byte-vector-subsequence>));
+  field payload :: <raw-frame> = make(<raw-frame>, data: make(<stretchy-byte-vector-subsequence>)),
+    start: frame.data-offset * 4 * 8;
 end;
 
 define protocol pseudo-header (container-frame)

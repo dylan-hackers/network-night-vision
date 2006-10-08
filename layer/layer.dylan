@@ -150,7 +150,7 @@ define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-a
     send(socket.ip-send-socket, arp-entry.arp-mac-address, payload);
   else
     let arp-handler = socket.arp-handler;
-    with-lock(arp-handler.lock)
+    with-lock(arp-handler.table-lock)
       if (arp-entry)
         arp-entry.outstanding-packets := add!(arp-entry.outstanding-packets, payload);
       else
@@ -374,11 +374,10 @@ define method initialize (icmp-over-ip :: <icmp-over-ip-adapter>,
 end;
 
 define generic arp-table (object :: <arp-handler>) => (res :: <vector-table>);
-define open generic lock (object) => (res :: <lock>);
-
+define generic table-lock (object :: <arp-handler>) => (res :: <lock>);
 define class <arp-handler> (<filter>)
   constant slot arp-table :: <vector-table> = make(<vector-table>);
-  constant slot lock :: <lock> = make(<lock>);
+  constant slot table-lock :: <lock> = make(<lock>);
   slot send-socket :: <socket>;
   slot ip-send-socket :: <ethernet-socket>;
 end;
@@ -421,7 +420,7 @@ define class <dynamic-arp-entry> (<known-arp-entry>)
 end;
 
 define method try-again (request :: <outstanding-arp-request>, handler :: <arp-handler>)
-  with-lock(handler.lock)
+  with-lock(handler.table-lock)
     if (request.counter > 3)
       remove-key!(handler.arp-table, request.ip-address);
     else
@@ -435,7 +434,6 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <arp-handler>,
                              frame :: <container-frame>)
-  format-out("received arp frame %=\n", frame);
   if (frame.operation = 1
       & frame.target-mac-address = mac-address("00:00:00:00:00:00"))
     let arp-entry = element(node.arp-table, frame.target-ip-address, default: #f);
@@ -449,7 +447,7 @@ define method push-data-aux (input :: <push-input>,
       send(node.send-socket, frame.source-mac-address, arp-response);
     end;
   elseif (frame.operation = 2)
-    with-lock(node.lock)
+    with-lock(node.table-lock)
       let old-entry = element(node.arp-table, frame.source-ip-address, default: #f);
       if (instance?(old-entry, <outstanding-arp-request>))
         cancel(old-entry.timer);
@@ -495,7 +493,7 @@ end;
 
 
 define function init-ethernet ()
-  let int = make(<ethernet-interface>, name: "em0");
+  let int = make(<ethernet-interface>, name: "Intel");
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
   let arp-handler = make(<arp-handler>);
   arp-handler.arp-table[ipv4-address("192.168.0.23")]
@@ -503,12 +501,13 @@ define function init-ethernet ()
             mac-address: mac-address("00:de:ad:be:ef:00"),
             ip-address: ipv4-address("192.168.0.23"));
   let ip-layer = make(<ip-layer>);
-  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"), next-hop: ipv4-address("23.23.23.1")));
+  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"),
+                                next-hop: ipv4-address("192.168.0.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("23.23.23.220"),
+                              ipv4-address: ipv4-address("192.168.0.24"),
                               netmask: 24);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,

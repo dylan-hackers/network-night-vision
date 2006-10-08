@@ -18,6 +18,7 @@ define module layer
   use date, import: {<date>, current-date };
   use tcp;
   use simple-random;
+  use streams;
 
   // Add binding exports here.
 

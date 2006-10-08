@@ -4,235 +4,168 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
 define open class <tcp-dingens> (<object>)
+  constant slot lock :: <simple-lock> = make(<simple-lock>);
   slot state :: <tcp-state> = make(<closed>);
 end;
 
 define abstract class <tcp-state> (<object>)
 end;
 
-define class <closed> (<tcp-state>)
+define macro singleton-class-definer
+  { define singleton-class ?:name (?superclass:name) ?slots:* end }
+ =>
+  { define class ?name (?superclass) ?slots end;
+    define variable "*" ## ?name ## "-instance*" :: false-or(?name) = #f;
+    define method make(class == ?name, #next next-method, #rest rest, #key, #all-keys)
+     => (instance :: ?name);
+      "*" ## ?name ## "-instance*" | ("*" ## ?name ## "-instance*" := next-method())
+    end;
+  }
 end;
 
-define class <listen> (<tcp-state>)
+define singleton-class <closed> (<tcp-state>)
 end;
 
-
-
-
-define class <syn-sent> (<tcp-state>)
+define singleton-class <listen> (<tcp-state>)
 end;
 
-define class <syn-received> (<tcp-state>)
+define singleton-class <syn-sent> (<tcp-state>)
 end;
 
-define class <established> (<tcp-state>)
+define singleton-class <syn-received> (<tcp-state>)
 end;
 
-define class <fin-wait1> (<tcp-state>)
+define singleton-class <established> (<tcp-state>)
 end;
 
-define class <fin-wait2> (<tcp-state>)
+define singleton-class <fin-wait1> (<tcp-state>)
 end;
 
-define class <closing> (<tcp-state>)
+define singleton-class <fin-wait2> (<tcp-state>)
 end;
 
-define class <time-wait> (<tcp-state>)
+define singleton-class <closing> (<tcp-state>)
 end;
 
-define class <close-wait> (<tcp-state>)
+define singleton-class <time-wait> (<tcp-state>)
 end;
 
-define class <last-ack> (<tcp-state>)
+define singleton-class <close-wait> (<tcp-state>)
 end;
 
-define open generic passive-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic active-open (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic close (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic syn-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic syn-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic rst-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic fin-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-state :: <tcp-state>);
-
-define open generic fin-ack-received (dingens :: type-union(<tcp-dingens>, <tcp-state>)) => (new-type :: <tcp-state>);
-
-define method passive-open (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := passive-open(dingens.state)
-end;
-define method active-open (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := active-open(dingens.state)
+define singleton-class <last-ack> (<tcp-state>)
 end;
 
-define method close (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := close(dingens.state)
+define constant <tcp-events> = one-of(#"passive-open", #"active-open", #"close", #"syn-received", #"syn-ack-received",
+                                      #"rst-received", #"fin-received", #"ack-received", #"fin-ack-received",
+                                      #"2msl-timeout", #"last-ack-received");
+
+define generic next-state (state :: <tcp-state>, event :: <tcp-events>) => (res :: <tcp-state>);
+
+define method next-state (state :: <tcp-state>, event :: <tcp-events>) => (res :: <tcp-state>)
+  state
 end;
 
-define method syn-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := syn-received(dingens.state)
-end;
-
-define method syn-ack-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := syn-ack-received(dingens.state)
-end;
-
-define method rst-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := rst-received(dingens.state)
-end;
-
-define method fin-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := fin-received(dingens.state)
-end;
-
-define method ack-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := ack-received(dingens.state)
-end;
-
-define method fin-ack-received (dingens :: <tcp-dingens>) => (new-state :: <tcp-state>);
-  dingens.state := fin-ack-received(dingens.state)
-end;
-
-define method passive-open (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method active-open (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method close (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method syn-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method syn-ack-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method rst-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method fin-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method ack-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method fin-ack-received (old-state :: <tcp-state>) => (new-state :: <tcp-state>);
-  format-out("R\n");
-  old-state
-end;
-
-define method passive-open (old-state :: <closed>) => (new-state :: <tcp-state>);
-  format-out("Listen");
-  make(<listen>)
-end;
-
-define method active-open (old-state :: <closed>) => (new-state :: <tcp-state>);
-  format-out("Syn");
-  make(<syn-sent>);
-end;
-
-define method syn-received (old-state :: <listen>) => (new-state :: <tcp-state>);
-  format-out("SynAck");
-  make(<syn-received>)
-end;
-
-define method close (old-state :: <syn-sent>) => (new-state :: <tcp-state>);
-  format-out("Close");
+define method next-state (state :: <tcp-state>, event == #"rst-received") => (res :: <tcp-state>)
   make(<closed>)
 end;
 
-define method syn-received (old-state :: <syn-sent>) => (new-state :: <tcp-state>);
-  format-out("SynAck");
-  make(<syn-received>)
+define method next-state (state :: <closed>, event == #"active-open") => (res :: <tcp-state>)
+  make(<syn-sent>)  
 end;
-
-define method syn-ack-received (old-state :: <syn-sent>) => (new-state :: <tcp-state>);
-  format-out("Ack");
-  make(<established>)
-end;
-
-define method rst-received (old-state :: <syn-received>) => (new-state :: <tcp-state>);
-  format-out("Rst->Listen");
+define method next-state (state :: <closed>, event == #"passive-open") => (new-state :: <tcp-state>);
   make(<listen>)
 end;
 
-define method ack-received (old-state :: <syn-received>) => (new-state :: <tcp-state>);
-  format-out("Established");
+define method next-state (state :: <listen>, event == #"syn-received") => (new-state :: <tcp-state>);
+  make(<syn-received>)
+end;
+
+define method next-state (state :: <syn-sent>, event == #"close") => (new-state :: <tcp-state>);
+  make(<closed>)
+end;
+
+define method next-state (state :: <syn-sent>, event == #"syn-received") => (new-state :: <tcp-state>);
+  make(<syn-received>)
+end;
+
+define method next-state (state :: <syn-sent>, event == #"syn-ack-received") => (new-state :: <tcp-state>);
   make(<established>)
 end;
 
-define method close (old-state :: <syn-received>) => (new-state :: <tcp-state>);
-  format-out("FIN");
+define method next-state (old-state :: <syn-received>, event == #"rst-received") => (new-state :: <tcp-state>);
+  make(<listen>)
+end;
+
+define method next-state (old-state :: <syn-received>, event == #"last-ack-received") => (new-state :: <tcp-state>);
+  make(<established>)
+end;
+
+define method next-state (old-state :: <syn-received>, event == #"close") => (new-state :: <tcp-state>);
   make(<fin-wait1>)
 end;
 
-define method close (old-state :: <established>) => (new-state :: <tcp-state>);
-  format-out("FIN");
+define method next-state (old-state :: <established>, event == #"close") => (new-state :: <tcp-state>);
   make(<fin-wait1>)
 end;
 
-define method fin-received (old-state :: <established>) => (new-state :: <tcp-state>);
-  format-out("ACK");
+define method next-state (old-state :: <established>, event == #"fin-received") => (new-state :: <tcp-state>);
   make(<close-wait>)
 end;
 
-define method close (old-state :: <close-wait>) => (new-state :: <tcp-state>);
-  format-out("FIN");
+define method next-state (old-state :: <established>, event == #"fin-ack-received") => (new-state :: <tcp-state>);
+  make(<close-wait>)
+end;
+
+define method next-state (old-state :: <close-wait>, event == #"close") => (new-state :: <tcp-state>);
   make(<last-ack>)
 end;
 
-define method ack-received (old-state :: <last-ack>) => (new-state :: <tcp-state>);
-  format-out("Closed");
+define method next-state (old-state :: <last-ack>, event == #"last-ack-received") => (new-state :: <tcp-state>);
   make(<closed>)
 end;
 
-define method fin-received (old-state :: <fin-wait1>) => (new-state :: <tcp-state>);
-  format-out("ACK");
+define method next-state (old-state :: <fin-wait1>, event == #"fin-received") => (new-state :: <tcp-state>);
   make(<closing>)
 end;
 
-define method ack-received (old-state :: <fin-wait1>) => (new-state :: <tcp-state>);
-  format-out("fin-wait2");
+define method next-state (old-state :: <fin-wait1>, event == #"last-ack-received") => (new-state :: <tcp-state>);
   make(<fin-wait2>)
 end;
 
-define method fin-ack-received (old-state :: <fin-wait1>) => (new-state :: <tcp-state>);
-  format-out("ACK");
+define method next-state (old-state :: <fin-wait1>, event == #"fin-ack-received") => (new-state :: <tcp-state>);
   make(<time-wait>)
 end;
 
-define method fin-received (old-state :: <fin-wait2>) => (new-state :: <tcp-state>);
-  format-out("ACK");
+define method next-state (old-state :: <fin-wait2>, event == #"fin-received") => (new-state :: <tcp-state>);
   make(<time-wait>)
 end;
 
-define method ack-received (old-state :: <closing>) => (new-state :: <tcp-state>);
-  format-out("time-wait");
+define method next-state (old-state :: <fin-wait2>, event == #"fin-ack-received") => (new-state :: <tcp-state>);
   make(<time-wait>)
 end;
+
+define method next-state (old-state :: <closing>, event == #"last-ack-received") => (new-state :: <tcp-state>);
+  make(<time-wait>)
+end;
+
+define method next-state (state :: <time-wait>, event == #"2msl-timeout") => (new-state :: <tcp-state>)
+  make(<closed>)
+end;
+
+define method process-event (dingens :: <tcp-dingens>, event :: <tcp-events>)
+  let old-state = dingens.state;
+  let new-state = next-state(old-state, event);
+  format-out("State transition %= => %=\n", old-state, new-state);
+  dingens.state := new-state;
+  state-transition(dingens, old-state, new-state);
+end;
+
+define open generic state-transition (dingens :: <tcp-dingens>, old-state :: <tcp-state>, new-state :: <tcp-state>) => ();
+
+define method state-transition (dingens :: <tcp-dingens>, old-state :: <tcp-state>, new-state :: <tcp-state>) => ()
+  ignore(dingens, old-state, new-state)
+end;  
 
 /*
 begin
