@@ -398,6 +398,16 @@ define test bits-assemble ()
   check-equal("assembling is correct", 84, as.packet[0]);
 end;
 
+define protocol dns-foo (container-frame)
+  field typed :: <2bit-unsigned-integer>;
+  field pointer :: <14bit-unsigned-integer>;
+end;
+
+define test dns-foo-parsing ()
+  let frame = make(unparsed-class(<dns-foo>), packet: as(<byte-vector>, #(#xc0, #x4e)));
+  check-equal("type of frame is correct", 3, frame.typed);
+  check-equal("pointer of frame is correct", #x4e, frame.pointer);
+end;
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -412,6 +422,7 @@ define suite packetizer-suite ()
   test dyn-length;
   test dynamic-length;
   test half-byte-parsing;
+  test dns-foo-parsing;
 end;
 
 define suite packetizer-assemble-suite ()

@@ -232,6 +232,29 @@ define test encode-integer-test2 ()
   encode-integer(1, sub1, 1);
   check-equal("encode integer in bit vector", 2, sbv[0]);
 end;
+
+define test decode-integer-test ()
+  let sbv = make(<stretchy-byte-vector-subsequence>);
+  sbv[0] := #x55;
+  sbv[1] := #xaa;
+  let sub1 = subsequence(sbv, start: 2);
+  check-equal("decode integer in bit vector 4", #x5, decode-integer(sub1, 4));
+  check-equal("decode integer in bit vector 1", #x0, decode-integer(sub1, 1));
+  check-equal("decode integer in bit vector 2", #x1, decode-integer(sub1, 2));
+  check-equal("decode integer in bit vector 8", #x56, decode-integer(sub1, 8));
+  check-equal("decode integer in bit vector 10", #x15a, decode-integer(sub1, 10));
+end;
+
+define test decode-and-encode-test ()
+  let sbv = make(<stretchy-byte-vector-subsequence>);
+  for (i from 1 below 10)
+    let sub = subsequence(sbv, start: i, length: i);
+    for (j from 0 below 2 ^ i - 1)
+      encode-integer(j, sub, i);
+      check-equal("decode-encode", j, decode-integer(sub, i));
+    end;
+  end;
+end;
 define suite stretchy-byte-vector-suite ()
   test byte-vector-subsequence-read;
   test byte-vector-subsequence-modify;
@@ -246,6 +269,8 @@ define suite stretchy-byte-vector-suite ()
   test byte-vector-subsequence-with-offset-modify;
   test encode-integer-test;
   test encode-integer-test2;
+  test decode-integer-test;
+  test decode-and-encode-test;
 end;
 
 begin

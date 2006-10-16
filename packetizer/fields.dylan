@@ -133,25 +133,3 @@ define method make(class == <repeated-field>,
         rest);
 end;
 
-define generic assemble-field (frame :: <frame>, field :: <field>)
- => (packet :: <vector>);
-
-define method assemble-field (frame :: <frame>,
-                              field :: <statically-typed-field>)
- => (packet :: <vector>)
-  assemble-frame-as(field.type, field.getter(frame))
-end;
-
-define method assemble-field (frame :: <frame>,
-                              field :: <variably-typed-field>)
- => (packet :: <vector>)
-  assemble-frame(field.getter(frame))
-end;
-
-define method assemble-field (frame :: <frame>,
-                              field :: <repeated-field>)
- => (packet :: <vector>)
-  apply(concatenate, map(curry(assemble-frame-as, field.type), field.getter(frame)))
-end;
-
-

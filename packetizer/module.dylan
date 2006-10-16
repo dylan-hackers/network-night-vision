@@ -18,7 +18,7 @@ define module packetizer
     <stretchy-byte-vector-subsequence>,
     subsequence,
     <out-of-bound-error>,
-    encode-integer;
+    encode-integer, decode-integer;
 
   export <udp-frame>, source-port, destination-port, length, checksum;
 
@@ -61,7 +61,8 @@ define module packetizer
     <2byte-big-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
     <externally-delimited-string>, <1bit-unsigned-integer>,
-    <4bit-unsigned-integer>, <7bit-unsigned-integer>;
+    <4bit-unsigned-integer>, <7bit-unsigned-integer>,
+    <2bit-unsigned-integer>, <14bit-unsigned-integer>;
 
   export <fixed-size-translated-leaf-frame>, <byte-sequence>;
 

@@ -65,16 +65,25 @@ define function find-label (label-offset :: <label-offset>)
           end;
         end;
   let dns-frame = find-dns-frame(label-offset);
-  dns-frame
-    & parse-frame(<domain-name>,
-                  assemble-frame(dns-frame).packet,
-                  start: label-offset.offset * 8,
-                  parent: dns-frame);
+  if (dns-frame)
+    let dns-frame-size = dns-frame.packet.size;
+    if (label-offset.offset < dns-frame-size)
+      parse-frame(<domain-name>,
+                  subsequence(dns-frame.packet, start: label-offset.offset * 8),
+                  parent: label-offset.parent)
+    end;
+  end;
 end;
 
 define method as (class == <string>, label-offset :: <label-offset>)
  => (res :: <string>)
-  as(<string>, find-label(label-offset));
+  let label = find-label(label-offset);
+  if (label)
+    as(<string>, label);
+  else
+    format-out("couldn't find label at %d\n", label-offset.offset);
+    integer-to-string(label-offset.offset)
+  end;
 end;
 
 define class <externally-delimited-string> (<variable-size-byte-vector>)

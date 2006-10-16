@@ -256,7 +256,7 @@ define open abstract class <unparsed-container-frame> (<container-frame>)
 end;
 
 define method make (class :: subclass(<unparsed-container-frame>),
-                    #next next-method, #rest rest, #key packet, #all-keys)
+                    #next next-method, #rest rest, #key packet, parent, #all-keys)
  => (res :: <unparsed-container-frame>)
   if (instance?(packet, <byte-vector>))
     let packet = as(<stretchy-byte-vector-subsequence>, packet);
@@ -326,10 +326,6 @@ end;
 define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
-
-//define method frame-size (frame :: <unparsed-container-frame>) => (size :: <integer>)
-//  frame.packet.size * 8
-//end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
   let result = make(<stretchy-byte-vector-subsequence>, data: make(<stretchy-byte-vector>, capacity: 1548));
@@ -414,6 +410,7 @@ end;
 define method assemble-frame-into (frame :: <unparsed-container-frame>,
                                    to-packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
   copy-bytes(frame.packet, 0, to-packet, 0, frame.packet.size);
+  frame.packet.size * 8;
 end;
 
 define method assemble-field-into(field :: <single-field>,

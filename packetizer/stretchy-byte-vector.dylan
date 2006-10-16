@@ -379,6 +379,50 @@ define inline method element-setter (value :: <byte>, seq :: <stretchy-byte-vect
   value;
 end;
 
+define inline method decode-integer (seq :: <stretchy-byte-vector-subsequence>, count :: <integer>)
+ => (res :: <integer>)
+  //assumption: count is always dividable by 8!
+  let res = 0;
+  for (i from 0 below truncate/(count, 8))
+    res := ash(res, 8) + seq.real-data[seq.start-index + i];
+  end;
+  res;
+end;
+
+define inline method encode-integer (value :: <integer>, seq :: <stretchy-byte-vector-subsequence>, count :: <integer>)
+  //assumption: count is always dividable by 8!
+  let bytes = truncate/(count, 8);
+  for (i from 0 below bytes)
+    seq.real-data[seq.start-index + i] := logand(#xff, ash(value, - (count - (i + 1) * 8)))
+  end;
+end;
+
+define inline method decode-integer (seq :: <stretchy-byte-vector-subsequence-with-offset>, count :: <integer>)
+ => (res :: <integer>)
+  if (seq.end-index & (((seq.end-index - seq.start-index) * 8 - seq.bit-start-index + seq.bit-end-index) < count))  
+    signal(make(<out-of-bound-error>));
+  end;
+  let (fullbytes, bits) = truncate/(count - 8 + seq.bit-start-index, 8);
+  let first-byte = seq.start-index;
+  if ((fullbytes = 0) & (bits < 0))
+    let mask = ash(ash(#xff, - (8 - count)), 8 - seq.bit-start-index - count);
+    ash(logand(seq.real-data[first-byte], mask), bits);
+  else
+    let res :: <integer> = 0;
+    if (seq.bit-start-index = 0)
+      res := seq.real-data[first-byte];
+    else
+      res := logand(ash(#xff, - seq.bit-start-index), seq.real-data[first-byte]);
+    end;
+    for (i from 1 below fullbytes + 1)
+      res := ash(res, 8) + seq.real-data[first-byte + i];
+    end;
+    if ((bits > 0) & (fullbytes >= 0))
+      res := ash(res, bits) + ash(seq.real-data[first-byte + fullbytes + 1], - (8 - bits));
+    end;
+    res;
+  end;
+end;
 
 define inline method encode-integer (value :: <integer>, seq :: <stretchy-byte-vector-subsequence-with-offset>, count :: <integer>)
   if (value > 2 ^ count - 1)

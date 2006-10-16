@@ -119,15 +119,9 @@ define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
                            #key start :: <integer> = 0)
   => (value :: <integer>, next-unparsed :: <integer>)
   let result-size = frame-size(frame-type);
-  if (packet.size * 8 < start + result-size)
-    signal(make(<malformed-packet-error>))
-  else
-    let result = 0;
-    for (i from 0 below size(packet))
-      result := ash(result, 8) + packet[i];
-    end;
-    values(result, result-size + start);
-  end;
+  let subseq = subsequence(packet, start: start, length: result-size);
+  let value = decode-integer(subseq, result-size);
+  values(value, result-size + start);
 end;
 
 define method assemble-frame (frame :: <unsigned-integer-bit-frame>)
