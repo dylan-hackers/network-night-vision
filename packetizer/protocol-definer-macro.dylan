@@ -304,11 +304,11 @@ define method parse-frame-field-aux
     frame-fields := add!(frame-fields,
                          make(<rep-frame-field>,
                               start: start,
-                              end: byte-offset(start) * 8 + offset,
-                              length: byte-offset(start) * 8 + offset - start,
+                              end: start + offset,
+                              length: offset,
                               frame: value,
                               parent: ff));
-    start := byte-offset(start) * 8 + offset;
+    start := start + offset;
     while ((~ field.reached-end?(frames.last)) & (byte-offset(start) < packet.size))
       let (value, offset)
         = parse-frame(field.type,
@@ -321,11 +321,11 @@ define method parse-frame-field-aux
       frame-fields := add!(frame-fields,
                            make(<rep-frame-field>,
                                 start: start,
-                                end: byte-offset(start) * 8 + offset,
-                                length: byte-offset(start) * 8 + offset - start,
+                                end: start + offset,
+                                length: offset,
                                 frame: value,
                                 parent: ff));
-      start :=  byte-offset(start) * 8 + offset;
+      start :=  start + offset;
     end;
   end;
   values(frames, start);
@@ -351,11 +351,11 @@ define method parse-frame-field-aux
       frame-fields := add!(frame-fields,
                            make(<rep-frame-field>,
                                 start: start,
-                                end: byte-offset(start) * 8 + offset,
-                                length: byte-offset(start) * 8 + offset - start,
+                                end: start + offset,
+                                length: offset,
                                 frame: value,
                                 parent: ff));
-      start := byte-offset(start) * 8 + offset;
+      start := start + offset;
     end;
   end;
   values(frames, start);

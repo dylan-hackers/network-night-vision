@@ -109,19 +109,16 @@ end;
 
 define method parse-frame (frame-type == <domain-name-fragment>,
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0,
-                           parent :: false-or(<container-frame>) = #f)
+                           #key parent :: false-or(<container-frame>) = #f)
  => (value :: <domain-name-fragment>, next-unparsed :: false-or(<integer>))
-  byte-aligned(start);
-  let domain-name = make(unparsed-class(<domain-name-fragment>),
-                         packet: subsequence(packet, start: byte-offset(start)));
+  let domain-name = make(unparsed-class(<domain-name-fragment>), packet: packet);
   let label-frame-type
     = select (domain-name.type-code)
         0 => <label>;
         3 => <label-offset>;
         otherwise => signal(make(<malformed-packet-error>))
       end;
-  parse-frame(label-frame-type, packet, start: start, parent: parent);
+  parse-frame(label-frame-type, packet, parent: parent);
 end;
 
 
