@@ -82,7 +82,7 @@ define method print-object (object :: <frame>, stream :: <stream>) => ()
   write(stream, as(<string>, object));
 end;
 
-define function calculate-checksum (frame :: type-union(<byte-vector-subsequence>, <byte-vector>),
+define function calculate-checksum (frame :: <byte-sequence>,
                                     count :: <integer>) => (res :: <integer>)
   let checksum :: <integer> = 0;
   for (i from 0 below count - 1 by 2)

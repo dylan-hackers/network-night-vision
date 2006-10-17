@@ -42,8 +42,6 @@ define method \+ (a :: <unknown-at-compile-time>, b :: <unknown-at-compile-time>
 end;
 
 define constant <byte-sequence> = <stretchy-vector-subsequence>;
-define constant <byte-vector-subsequence> = <stretchy-vector-subsequence>;
-
 define constant <bit-vector> = <stretchy-bit-vector-subsequence>;
 
 define constant $protocols = make(<table>);
@@ -251,7 +249,7 @@ define method initialize (frame :: <decoded-container-frame>,
 end;
 
 define open abstract class <unparsed-container-frame> (<container-frame>)
-  slot packet :: <byte-vector-subsequence>, init-keyword: packet:;
+  slot packet :: <byte-sequence>, init-keyword: packet:;
   slot cache :: <container-frame>, init-keyword: cache:;
 end;
 

@@ -305,7 +305,7 @@ end;
 
 define method assemble-frame-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                  data :: <integer>)
-  => (packet :: <byte-vector-subsequence>)
+  => (packet :: <byte-sequence>)
   let result = make(<stretchy-byte-vector-subsequence>, end: byte-offset(frame-size(frame-type)));
   assemble-frame-into-as(frame-type, data, result);
   result;
@@ -313,7 +313,7 @@ end;
 
 define method assemble-frame-into-as (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                                       data :: <integer>,
-                                      packet :: <byte-vector-subsequence>) => (res :: <integer>)
+                                      packet :: <byte-sequence>) => (res :: <integer>)
   for (i from 0 below byte-offset(frame-size(frame-type)))
     packet[i] := logand(#xff, ash(data, - (frame-size(frame-type) - i * 8 - 8)));
   end;
