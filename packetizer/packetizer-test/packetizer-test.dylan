@@ -102,7 +102,7 @@ end;
 define protocol repeated-test (container-frame)
   field foo :: <unsigned-byte>;
   repeated field bar :: <unsigned-byte>,
-    reached-end?: method (frame) frame = 0 end;
+    reached-end?: frame = 0;
   field after :: <unsigned-byte>;
 end;
 
@@ -135,7 +135,7 @@ define protocol repeated-and-dynamic-test (header-frame)
     fixup: frame.options.size + 2;
   field type-code :: <unsigned-byte> = #x23;
   repeated field options :: <unsigned-byte>,
-    reached-end?: method(frame) frame = 0 end;
+    reached-end?: frame = 0;
   field payload :: <raw-frame>,
     start: frame.header-length * 8;
 end;
@@ -217,7 +217,7 @@ end;
 define protocol labe (container-frame)
   field a :: <unsigned-byte>;
   repeated field b :: <frag>,
-    reached-end?: method(frame) frame.data-length = 0 end;
+    reached-end?: frame.data-length = 0;
   field c :: <unsigned-byte>;
 end;
 

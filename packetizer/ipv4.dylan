@@ -129,9 +129,7 @@ define protocol ipv4-frame (header-frame)
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
   repeated field options :: <ip-option-frame> = make(<stretchy-vector>),
-    reached-end?: method(value :: <ip-option-frame>)
-                      instance?(value, <end-of-option-ip-option>)
-                  end;
+    reached-end?: instance?(frame, <end-of-option-ip-option>);
   variably-typed-field payload,
     start: frame.header-length * 4 * 8,
     end: frame.total-length * 8,

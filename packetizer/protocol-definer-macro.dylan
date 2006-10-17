@@ -134,7 +134,7 @@ define macro real-class-definer
     { type-function: ?type:expression, ... }
       => { type-function: method(?=frame :: <frame>) ?type end, ... }
     { reached-end?: ?reached:expression, ... }
-      => { reached-end?: ?reached, ... }
+      => { reached-end?: method(?=frame) ?reached end, ... }
     { fixup: ?fixup:expression, ... }
       => { fixup: method(?=frame :: <frame>) ?fixup end, ... }
     { static-start: ?start:expression, ... }

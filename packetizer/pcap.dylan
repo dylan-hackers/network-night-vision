@@ -129,9 +129,7 @@ end;
 define protocol pcap-file (container-frame)
   field header :: <pcap-file-header>;
   repeated field packets :: <pcap-packet>,
-    reached-end?: method(v :: <pcap-packet>)
-                      #f
-                  end;
+    reached-end?: #f;
 end;
 
 //linktype => payload-type mapping

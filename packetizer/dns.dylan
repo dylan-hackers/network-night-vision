@@ -36,9 +36,7 @@ end;
 
 define protocol domain-name (container-frame)
   repeated field fragment :: <domain-name-fragment>,
-    reached-end?: method(frame :: <domain-name-fragment>)
-                      frame.type-code = 3 | frame.length = 0
-                  end;
+    reached-end?: frame.type-code = 3 | frame.length = 0;
 end;
 
 define method as (class == <string>, domain-name :: <domain-name>)

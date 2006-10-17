@@ -104,7 +104,7 @@ end;
 
 define protocol ieee80211-supported-rates (ieee80211-information-field)
   repeated field supported-rate :: <rate>,
-    reached-end?: method(x) #f end,
+    reached-end?: #f,
     length: frame.length * 8;
 end;
 
@@ -244,7 +244,7 @@ define protocol ieee80211-probe-response (ieee80211-management-frame)
   field ssid :: <ieee80211-information-element>;
   field supported-rates :: <ieee80211-information-element>;
   repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: method (x) #f end;
+    reached-end?: #f;
 end;
 
 define protocol ieee80211-authentication (ieee80211-management-frame)
@@ -253,7 +253,7 @@ define protocol ieee80211-authentication (ieee80211-management-frame)
   field transaction-sequence-number :: <2byte-little-endian-unsigned-integer>;
   field status-code :: <2byte-little-endian-unsigned-integer>;
   repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: method (x) #f end;
+    reached-end?: #f;
 end;
 
 define protocol ieee80211-deauthentication (ieee80211-management-frame)
@@ -271,7 +271,7 @@ define protocol ieee80211-beacon (ieee80211-management-frame)
   field ssid :: <ieee80211-information-element>;
   field supported-rates :: <ieee80211-information-element>;
   repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: method (x) #f end;
+    reached-end?: #f;
 end;
 
 // ieee80211 data frames

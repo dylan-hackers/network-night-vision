@@ -88,9 +88,6 @@ end;
 define protocol id3v2-tag (header-frame)
   field id3v2-header :: <id3v2-header>;
   repeated field id3v2-frame :: <id3v2-frame>,
-    reached-end?: 
-      method (frame :: <id3v2-frame>)
-        frame.frame-id.data[0] == #x00
-      end method;
+    reached-end?: frame.frame-id.data[0] == #x00;
   //field payload :: <raw-frame>, start: frame.id3v2-header.tag-size * 8;
 end;
