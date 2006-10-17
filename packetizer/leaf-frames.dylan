@@ -40,14 +40,9 @@ end;
 
 define method parse-frame (frame-type == <unsigned-byte>,
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key)
  => (value :: <byte>, next-unparsed :: <integer>)
-  byte-aligned(start);
-  if (packet.size < byte-offset(start) + 1)
-    signal(make(<malformed-packet-error>))
-  else
-    values(packet[byte-offset(start)], start + 8)
-  end;
+  values(packet[0], 8)
 end;
 
 define method assemble-frame-into-as
@@ -116,12 +111,12 @@ define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
 
 define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key)
   => (value :: <integer>, next-unparsed :: <integer>)
   let result-size = frame-size(frame-type);
-  let subseq = subsequence(packet, start: start, length: result-size);
+  let subseq = subsequence(packet, length: result-size);
   let value = decode-integer(subseq, result-size);
-  values(value, result-size + start);
+  values(value, result-size);
 end;
 
 define method assemble-frame (frame :: <unsigned-integer-bit-frame>)
@@ -188,10 +183,9 @@ define sealed domain parse-frame (subclass(<fixed-size-byte-vector-frame>),
 
 define method parse-frame (frame-type :: subclass(<fixed-size-byte-vector-frame>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key)
   => (frame :: <fixed-size-byte-vector-frame>, next-unparsed :: <integer>)
-  byte-aligned(start);
-  let end-of-frame = start + field-size(frame-type);
+  let end-of-frame = field-size(frame-type);
   if (packet.size < byte-offset(end-of-frame))
     signal(make(<malformed-packet-error>))
   else
@@ -290,19 +284,17 @@ define sealed domain parse-frame (subclass(<big-endian-unsigned-integer-byte-fra
 
 define method parse-frame (frame-type :: subclass(<big-endian-unsigned-integer-byte-frame>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key)
  => (value :: <integer>, next-unparsed :: <integer>)
- byte-aligned(start);
  let result-size = byte-offset(frame-size(frame-type));
- let byte-start = byte-offset(start);
- if (packet.size < byte-start + result-size)
+ if (packet.size < result-size)
    signal(make(<malformed-packet-error>))
  else
    let result = 0;
-   for (i from byte-start below byte-start + result-size)
+   for (i from 0 below result-size)
      result := packet[i] + ash(result, 8)
    end;
-   values(result, start + 8 * result-size);
+   values(result, result-size * 8);
  end;
 end;
 
@@ -350,19 +342,17 @@ define sealed domain parse-frame (subclass(<little-endian-unsigned-integer-byte-
 
 define method parse-frame (frame-type :: subclass(<little-endian-unsigned-integer-byte-frame>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key)
  => (value :: <integer>, next-unparsed :: <integer>)
- byte-aligned(start);
  let result-size = byte-offset(frame-size(frame-type));
- let byte-start = byte-offset(start);
- if (packet.size < byte-start + result-size)
+ if (packet.size < result-size)
    signal(make(<malformed-packet-error>))
  else
    let result = 0;
-   for (i from byte-start + result-size - 1 to byte-start by -1)
+   for (i from result-size - 1 to 0 by -1)
      result := packet[i] + ash(result, 8)
    end;
-   values(result, start + 8 * result-size);
+   values(result, result-size * 8);
  end;
 end;
 
@@ -417,18 +407,9 @@ end;
 
 define method parse-frame (frame-type :: subclass(<variable-size-byte-vector>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0,
-                           parent)
+                           #key parent)
  => (frame :: <variable-size-byte-vector>, next-unparsed :: <integer>)
- byte-aligned(start);
- if (packet.size < byte-offset(start))
-   signal(make(<malformed-packet-error>))
- else
-   values(make(frame-type,
-               data: packet,
-               parent: parent),
-          start + packet.size * 8)
- end
+   values(make(frame-type, data: packet, parent: parent), packet.size * 8)
 end;
 
 define method assemble-frame (frame :: <variable-size-byte-vector>)

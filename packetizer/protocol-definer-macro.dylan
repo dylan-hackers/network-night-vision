@@ -247,7 +247,6 @@ define method parse-frame-field
   let (value, length)
     = parse-frame-field-aux(frame-field.field,
                             frame-field.frame,
-                            0,
                             subsequence(frame-field.frame.packet,
                                         start: start,
                                         end: end-of-field));
@@ -273,34 +272,30 @@ end;
 define method parse-frame-field-aux
  (field :: <single-field>,
   frame :: <unparsed-container-frame>,
-  start :: <integer>,
   packet :: <byte-sequence>)
- parse-frame(field.type, packet, start: start, parent: frame);
+ parse-frame(field.type, packet, parent: frame);
 end;
 define method parse-frame-field-aux
   (field :: <variably-typed-field>,
    frame :: <unparsed-container-frame>,
-   start :: <integer>,
    packet :: <byte-sequence>)
   let type = field.type-function(frame);
-  parse-frame(type, packet, start: start, parent: frame);
+  parse-frame(type, packet, parent: frame);
 end;
 
 //XXX: refactor here. parse more lazy; use <frame-field> infrastructure
 define method parse-frame-field-aux
   (field :: <self-delimited-repeated-field>,
    frame :: <unparsed-container-frame>,
-   start :: <integer>,
    packet :: <byte-sequence>)
   let frames = make(<stretchy-vector>);
   let ff = get-frame-field(field.index, frame);
   let frame-fields = ff.frame-field-list;
-  let start = start;
+  let start :: <integer> = 0;
   if (packet.size > 0)
     let (value, offset)
       = parse-frame(field.type,
                     subsequence(packet, start: start),
-                    start: 0,
                     parent: frame);
     unless (offset)
       offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -318,7 +313,6 @@ define method parse-frame-field-aux
       let (value, offset)
         = parse-frame(field.type,
                       subsequence(packet, start: start),
-                      start: 0,
                       parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -339,18 +333,16 @@ end;
 define method parse-frame-field-aux
   (field :: <count-repeated-field>,
    frame :: <unparsed-container-frame>,
-   start :: <integer>,
    packet :: <byte-sequence>)
   let frames = make(<stretchy-vector>);
   let ff = get-frame-field(field.index, frame);
   let frame-fields = ff.frame-field-list;
-  let start = start;
+  let start :: <integer> = 0;
   if (packet.size > 0)
     for (i from 0 below field.count(frame))
       let (value, offset)
         = parse-frame(field.type,
                       subsequence(packet, start: start),
-                      start: 0,
                       parent: frame);
       unless (offset)
         offset := end-offset(get-frame-field(field-count(value.object-class) - 1, value));
@@ -371,11 +363,9 @@ end;
 
 define method parse-frame (frame-type :: subclass(<container-frame>),
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0,
-                           parent :: false-or(<container-frame>) = #f)
-  byte-aligned(start);
+                           #key parent :: false-or(<container-frame>))
   let frame = make(unparsed-class(frame-type),
-                   packet: subsequence(packet, start: start),
+                   packet: packet,
                    parent: parent);
   let length = field-size(frame-type);
   if (length = $unknown-at-compile-time)

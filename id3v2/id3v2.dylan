@@ -18,19 +18,13 @@ end;
 
 define method parse-frame
     (frame-type == <4byte-7bit-big-endian-unsigned-integer>, packet :: <byte-sequence>,
-     #key start :: <integer> = 0)
+     #key)
  => (value :: <integer>, next-unparsed :: <integer>)
-  byte-aligned(start);
-  let byte-start = byte-offset(start);
-  if (packet.size < byte-start + 4)
-    signal(make(<malformed-packet-error>))
-  else
-    let result = 0;
-    for (i from byte-start below byte-start + 4)
-      result := packet[i] + ash(result, 7)
-    end;
-    values(result, start + 8 * 4);
+  let result = 0;
+  for (i from 0 below 4)
+    result := packet[i] + ash(result, 7)
   end;
+  values(result, 8 * 4);
 end;
 
 define protocol id3v2-string (container-frame)
@@ -49,14 +43,14 @@ define protocol ascii-string (id3v2-string)
 end;
 
 define method parse-frame
-    (frame-type == <id3v2-string>, packet :: <byte-sequence>, #key start :: <integer> = 0)
+    (frame-type == <id3v2-string>, packet :: <byte-sequence>, #key)
  => (value :: <id3v2-string>, next-unparsed :: false-or(<integer>))
   let type-code = if (packet.size == 0) #x10 else packet[0] end if;
   let string-type = select (type-code)
                       #x00 => <ascii-string-with-type>;
                         otherwise <ascii-string>;
                     end select;
-  parse-frame(string-type, packet, start: start);
+  parse-frame(string-type, packet);
 end;
 
 define protocol id3v2-flags (container-frame)
@@ -96,11 +90,7 @@ define protocol id3v2-tag (header-frame)
   repeated field id3v2-frame :: <id3v2-frame>,
     reached-end?: 
       method (frame :: <id3v2-frame>)
-        if (frame.frame-id.data[0] == #x00)
-          #t;
-        else 
-          #f;
-        end if;
+        frame.frame-id.data[0] == #x00
       end method;
   //field payload :: <raw-frame>, start: frame.id3v2-header.tag-size * 8;
 end;

@@ -151,13 +151,13 @@ define method as (class == <string>, frame :: <extended-rate>) => (res :: <strin
               " Mbit");
 end;
 
-define method parse-frame (frame == <rate>, packet :: <byte-sequence>, #key start = 0, parent)
+define method parse-frame (frame == <rate>, packet :: <byte-sequence>, #key parent)
   let f = make(unparsed-class(frame), packet: packet);
   let type = select (f.bss-basic-set?)
                0 => <extended-rate>;
                1 => <basic-set-rate>;
              end;
-  parse-frame(type, packet, start: start, parent: parent);
+  parse-frame(type, packet, parent: parent);
 end;
 
 define protocol ieee80211-reserved-field (ieee80211-raw-information-field)

@@ -14,9 +14,9 @@ end;
 
 define method parse-frame (frame-type == <ip-option-frame>,
                            packet :: <byte-sequence>,
-                           #key start :: <integer> = 0)
+                           #key parent)
  => (value :: <ip-option-frame>, next-unparsed :: <integer>)
-  let ip-option-type = parse-frame(<ip-option-type-frame>, packet, start: start);
+  let ip-option-type = parse-frame(<ip-option-type-frame>, packet, parent: parent);
   let option-frame-type
     = select (ip-option-type.class)
         0 => select (ip-option-type.number)
@@ -41,7 +41,7 @@ define method parse-frame (frame-type == <ip-option-frame>,
              end;
         otherwise => signal(make(<malformed-packet-error>))
       end;
-   parse-frame(option-frame-type, packet, start: start);
+   parse-frame(option-frame-type, packet, parent: parent);
 end;
 
 define protocol router-alert-ip-option (ip-option-frame)
