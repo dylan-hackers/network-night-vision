@@ -156,8 +156,7 @@ define class <pcap-file-reader> (<single-push-output-node>)
 end;
 
 define method toplevel (reader :: <pcap-file-reader>)
-  let file = as(<stretchy-byte-vector-subsequence>, stream-contents(reader.file-stream));
-  let pcap-file = make(unparsed-class(<pcap-file>), packet: file);
+  let pcap-file = parse-frame(<pcap-file>, stream-contents(reader.file-stream));
   for(frame in pcap-file.packets)
     push-data(reader.the-output, payload(frame));
   end;

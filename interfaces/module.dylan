@@ -18,7 +18,7 @@ define module interfaces
   use machine-words;
   use big-integers;
   use flow;
-  use packetizer, import: { unparsed-class, <ethernet-frame>, <frame>, assemble-frame };
+  use packetizer, import: { <ethernet-frame>, parse-frame, assemble-frame, packet };
 
   export <ethernet-interface>, interface-name;
 end module interfaces;

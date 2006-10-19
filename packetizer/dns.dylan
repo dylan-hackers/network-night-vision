@@ -107,9 +107,10 @@ end;
 
 define method parse-frame (frame-type == <domain-name-fragment>,
                            packet :: <byte-sequence>,
-                           #key parent :: false-or(<container-frame>) = #f)
+                           #next next-method,
+                           #key parent :: false-or(<container-frame>))
  => (value :: <domain-name-fragment>, next-unparsed :: false-or(<integer>))
-  let domain-name = make(unparsed-class(<domain-name-fragment>), packet: packet);
+  let domain-name = next-method();
   let label-frame-type
     = select (domain-name.type-code)
         0 => <label>;

@@ -30,8 +30,7 @@ define protocol test-protocol (container-frame)
 end;
 
 define test packetizer-parser ()
-  let frame = make(unparsed-class(<test-protocol>),
-                   packet: as(<byte-vector>, #(#x23, #x42)));
+  let frame = parse-frame(<test-protocol>, #(#x23, #x42));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, 8, 16);
@@ -45,8 +44,7 @@ define test packetizer-assemble ()
   check-equal("Assembled frame is correct", as(<byte-vector>, #(#x23, #x42)), byte-vector.packet);
 end;
 define test packetizer-modify ()
-  let frame = make(unparsed-class(<test-protocol>),
-                   packet: as(<byte-vector>, #(#x23, #x42)));
+  let frame = parse-frame(<test-protocol>, #(#x23, #x42));
   frame.bar := #x69;
   let byte-vector = assemble-frame(frame);
   check-equal("Modified frame is correct", as(<byte-vector>, #(#x23, #x69)), byte-vector.packet);
@@ -59,8 +57,7 @@ define protocol dynamic-test (header-frame)
 end;
 
 define test packetizer-dynamic-parser ()
-  let frame = make(unparsed-class(<dynamic-test>),
-                   packet: as(<byte-vector>, #(#x2, #x0, #x0, #x3, #x4, #x5)));
+  let frame = parse-frame(<dynamic-test>, #(#x2, #x0, #x0, #x3, #x4, #x5));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], $unknown-at-compile-time, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -83,8 +80,7 @@ define protocol static-start (container-frame)
 end;
 
 define test static-start-test ()
-  let frame = make(unparsed-class(<static-start>),
-                   packet: as(<byte-vector>, #(#x3, #x4, #x5, #x6)));
+  let frame = parse-frame(<static-start>, #(#x3, #x4, #x5, #x6));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 24, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -107,8 +103,7 @@ define protocol repeated-test (container-frame)
 end;
 
 define test repeated-test ()
-  let frame = make(unparsed-class(<repeated-test>),
-                   packet: as(<byte-vector>, #(#x23, #x42, #x43, #x44, #x67, #x0, #x55)));
+  let frame = parse-frame(<repeated-test>, #(#x23, #x42, #x43, #x44, #x67, #x0, #x55));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -141,9 +136,8 @@ define protocol repeated-and-dynamic-test (header-frame)
 end;
 
 define test repeated-and-dynamic-test ()
-  let frame = make(unparsed-class(<repeated-and-dynamic-test>),
-                   packet: as(<byte-vector>, #(#x8, #x23, #x42, #x43, #x44, #x45,
-                                               #x46, #x47, #x80, #x81, #x82)));
+  let frame = parse-frame(<repeated-and-dynamic-test>,
+                          #(#x8, #x23, #x42, #x43, #x44, #x45, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, 8, 16);
@@ -156,9 +150,8 @@ define test repeated-and-dynamic-test ()
 end;
 
 define test repeated-and-dynamic-test2 ()
-  let frame = make(unparsed-class(<repeated-and-dynamic-test>),
-                   packet: as(<byte-vector>, #(#x8, #x23, #x42, #x43, #x44, #x0,
-                                               #x46, #x47, #x80, #x81, #x82)));
+  let frame = parse-frame(<repeated-and-dynamic-test>,
+                          #(#x8, #x23, #x42, #x43, #x44, #x0, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   frame-field-checker(0, frame, 0, 8, 8);
   frame-field-checker(1, frame, 8, 8, 16);
@@ -185,9 +178,8 @@ define protocol count-repeated-test (container-frame)
 end;
 
 define test count-repeated-test ()
-  let frame = make(unparsed-class(<count-repeated-test>),
-                   packet: as(<byte-vector>, #(#x3, #x23, #x42, #x43, #x44, #x0,
-                                               #x46, #x47, #x80, #x81, #x82)));
+  let frame = parse-frame(<count-repeated-test>,
+                          #(#x3, #x23, #x42, #x43, #x44, #x0, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -222,8 +214,7 @@ define protocol labe (container-frame)
 end;
 
 define test label-test ()
-  let frame = make(unparsed-class(<labe>),
-                   packet: as(<byte-vector>, #(#x23, #x42, #x01, #x02, #x42, #x03, #x33, #x33, #x33, #x42, #x00, #x42)));
+  let frame = parse-frame(<labe>, #(#x23, #x42, #x01, #x02, #x42, #x03, #x33, #x33, #x33, #x42, #x00, #x42));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -253,8 +244,7 @@ define protocol a-sub (a-super)
 end;
 
 define test inheritance-test()
-  let frame = make(unparsed-class(<a-sub>),
-                   packet: as(<byte-vector>, #(#x23, #x42, #x23)));
+  let frame = parse-frame(<a-sub>, #(#x23, #x42, #x23));
   let field-list = fields(frame);
   check-equal("Field list has correct size",
               2, field-list.size);
@@ -278,8 +268,7 @@ define protocol b-sub (a-super)
 end;
 
 define test inheritance-dynamic-length()
-  let aframe = make(unparsed-class(<b-sub>),
-                    packet: as(<byte-vector>, #(#x23, #x3, #x0, #x0, #x0, #x42, #x42)));
+  let aframe = parse-frame(<b-sub>, #(#x23, #x3, #x0, #x0, #x0, #x42, #x42));
   let field-list = fields(aframe);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, 8, 16);
@@ -299,8 +288,7 @@ define protocol b-sub-sub (container-frame)
 end;
 
 define test dyn-length ()
-  let aframe = make(unparsed-class(<b-sub-sub>),
-                    packet: as(<byte-vector>, #(#x3, #x0, #x0, #x0, #x42, #x42)));
+  let aframe = parse-frame(<b-sub-sub>, #(#x3, #x0, #x0, #x0, #x42, #x42));
   let field-list = fields(aframe);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -316,8 +304,7 @@ define protocol b-subb (container-frame)
 end;
 
 define test dynamic-length ()
-  let aframe = make(unparsed-class(<b-subb>),
-                    packet: as(<byte-vector>, #(#x3, #x0, #x0, #x0, #x42, #x42)));
+  let aframe = parse-frame(<b-subb>, #(#x3, #x0, #x0, #x0, #x42, #x42));
   let field-list = fields(aframe);
   static-checker(field-list[0], 0, $unknown-at-compile-time, $unknown-at-compile-time);
   frame-field-checker(0, aframe, 0, 40, 40);
@@ -337,8 +324,7 @@ define protocol half-byte-protocol (container-frame)
 end;
 
 define test half-byte-parsing ()
-  let frame = make(unparsed-class(<half-byte-protocol>),
-                   packet: as(<byte-vector>, #(#x23, #x42)));
+  let frame = parse-frame(<half-byte-protocol>, #(#x23, #x42));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 4, 4);
   static-checker(field-list[1], 4, 7, 11);
@@ -404,7 +390,7 @@ define protocol dns-foo (container-frame)
 end;
 
 define test dns-foo-parsing ()
-  let frame = make(unparsed-class(<dns-foo>), packet: as(<byte-vector>, #(#xc0, #x4e)));
+  let frame = parse-frame(<dns-foo>, #(#xc0, #x4e));
   check-equal("type of frame is correct", 3, frame.typed);
   check-equal("pointer of frame is correct", #x4e, frame.pointer);
 end;

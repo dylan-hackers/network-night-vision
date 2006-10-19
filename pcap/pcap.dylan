@@ -15,7 +15,7 @@ define method pcap-receive-callback
   for (i from 0 below packet.caplen)
     res[i] := bytes[i];
   end;
-  push-data(real-interface.the-output, make(unparsed-class(<ethernet-frame>), packet: as(<stretchy-byte-vector-subsequence>, res)));
+  push-data(real-interface.the-output, parse-frame(<ethernet-frame>, res));
 end;
 
 define C-callable-wrapper receive-callback of pcap-receive-callback
@@ -168,7 +168,7 @@ end;
 
 define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
-                             frame :: <frame>)
+                             frame :: <ethernet-frame>)
   let buffer = as(<byte-vector>, assemble-frame(frame).packet);
   pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;

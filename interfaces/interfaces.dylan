@@ -112,14 +112,14 @@ end;
 
 define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
-                             frame :: <frame>)
+                             frame :: <ethernet-frame>)
   send(node.unix-interface, assemble-frame(frame).packet);
 end;
 
 define method toplevel (node :: <ethernet-interface>)
   while(#t)
     let packet = receive(node.unix-interface);
-    let frame = make(unparsed-class(<ethernet-frame>), packet: as(<stretchy-byte-vector-subsequence>, packet));
+    let frame = parse-frame(<ethernet-frame>, packet);
     push-data(node.the-output, frame);
   end while;
 end;

@@ -95,11 +95,11 @@ define open generic parse-frame
 
 define method parse-frame
   (frame-type :: subclass (<frame>),
-   packet :: <byte-vector>,
+   packet :: <sequence>,
    #rest rest,
    #key, #all-keys)
  => (value :: <object>, next-unparsed :: false-or(<integer>));
- let packet-subseq = subsequence(as(<stretchy-byte-vector-subsequence>, packet));
+ let packet-subseq = as(<stretchy-byte-vector-subsequence>, packet);
  apply(parse-frame, frame-type, packet-subseq, rest);
 end;
 
@@ -253,15 +253,6 @@ define open abstract class <unparsed-container-frame> (<container-frame>)
   slot cache :: <container-frame>, init-keyword: cache:;
 end;
 
-define method make (class :: subclass(<unparsed-container-frame>),
-                    #next next-method, #rest rest, #key packet, parent, #all-keys)
- => (res :: <unparsed-container-frame>)
-  if (instance?(packet, <byte-vector>))
-    let packet = as(<stretchy-byte-vector-subsequence>, packet);
-    replace-arg(rest, #"packet", packet);
-  end;
-  apply(next-method, class, rest);
-end;
 define method initialize (class :: <unparsed-container-frame>,
                           #rest rest, #key parent, #all-keys)
   next-method();
