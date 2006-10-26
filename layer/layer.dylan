@@ -493,13 +493,15 @@ end;
 
 
 define function init-ethernet ()
-  let int = make(<ethernet-interface>, name: "Intel");
+  let int = make(<ethernet-interface>, name: "Xtreme");
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
   let arp-handler = make(<arp-handler>);
+/*
   arp-handler.arp-table[ipv4-address("192.168.0.23")]
     := make(<advertised-arp-entry>,
             mac-address: mac-address("00:de:ad:be:ef:00"),
             ip-address: ipv4-address("192.168.0.23"));
+*/
   let ip-layer = make(<ip-layer>);
   register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"),
                                 next-hop: ipv4-address("192.168.0.1")));
@@ -514,6 +516,7 @@ define function init-ethernet ()
                           ip-layer: ip-layer,
                           icmp-handler: icmp-handler);
   let thr = make(<thread>, function: curry(toplevel, int));
+/*
   send(icmp-handler.ip-socket,
        ipv4-address("213.73.91.29"),
        make(<icmp-frame>,
@@ -534,6 +537,7 @@ define function init-ethernet ()
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
 
   format-out("Mac 192.168.2.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.2.1"), default: #f));
+*/
   ip-layer;
 end;
 

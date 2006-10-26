@@ -105,6 +105,7 @@ define class <variably-typed-field> (<field>)
 end;
 
 define abstract class <repeated-field> (<statically-typed-field>)
+  inherited slot init-value = #(), init-keyword: init-value:;
 end;
 
 define class <self-delimited-repeated-field> (<repeated-field>)

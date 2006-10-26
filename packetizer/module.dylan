@@ -20,6 +20,8 @@ define module packetizer
     <out-of-bound-error>,
     encode-integer, decode-integer;
 
+  export <dns-frame>, <dns-question>, <domain-name>;
+
   export <udp-frame>, source-port, destination-port, length, checksum;
 
   export <tcp-frame>, sequence-number, acknowledgement-number,

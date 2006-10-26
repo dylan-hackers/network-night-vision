@@ -395,7 +395,7 @@ define method close (tcp-connection :: <tcp-connection>, #key) => ()
   process-event-locked(tcp-connection, #"close")
 end;
 
-define open generic listen-port (t :: <tcp-listener-socket>) => (res :: <integer>);
+define open generic listen-port (t :: <object>) => (res :: <integer>);
 define open generic connections (t :: <tcp-listener-socket>) => (res :: <deque>);
 define open generic listener-lock (t :: <tcp-listener-socket>) => (res :: <lock>);
 
@@ -473,27 +473,4 @@ define method find-listener-socket (sockets, destination-port)
 end;
 
 
-begin
-  let ip-layer = init-ethernet();
-  let tcp = make(<tcp-layer>, ip-layer: ip-layer, default-ip-address: ip-layer.default-ip-address);
-  let s = create-client-socket(tcp, ipv4-address("213.73.91.29"), 80);
-  write(s, "GET / HTTP/1.1\r\nHost: www.ccc.de\r\nConnection: keep-alive\r\n\r\n");
-  block(ret)
-    while (#t)
-      let res = read(s, 20, on-end-of-stream: #f);
-      //if (res)
-        //format-out("Read %s\n", map-as(<string>, curry(as, <character>), res))
-      //else
-        close(s);
-        ret();
-      //end;
-    end;
-  end;
-  let ss = create-server-socket(tcp, 23);
-  while (#t)
-    let conn = accept(ss);
-    write(conn, "fnord");
-    close(conn);
-  end;
-  sleep(1000);
-end;
+

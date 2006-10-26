@@ -6,15 +6,15 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 define protocol dns-frame (container-frame)
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
-  field identifier :: <2byte-big-endian-unsigned-integer>;
-  field query-or-response :: <1bit-unsigned-integer> = 1;
-  field opcode :: <4bit-unsigned-integer>;
-  field authoritative-answer :: <1bit-unsigned-integer>;
+  field identifier :: <2byte-big-endian-unsigned-integer> = 2342;
+  field query-or-response :: <1bit-unsigned-integer> = 0;
+  field opcode :: <4bit-unsigned-integer> = 0;
+  field authoritative-answer :: <1bit-unsigned-integer> = 0;
   field truncation :: <1bit-unsigned-integer> = 0;
   field recursion-desired :: <1bit-unsigned-integer> = 1;
   field recursion-available :: <1bit-unsigned-integer> = 0;
   field reserved :: <3bit-unsigned-integer> = 0;
-  field response-code :: <4bit-unsigned-integer>;
+  field response-code :: <4bit-unsigned-integer> = 0;
   field question-count :: <2byte-big-endian-unsigned-integer>,
     fixup: frame.questions.size;
   field answer-count :: <2byte-big-endian-unsigned-integer>,
@@ -45,8 +45,15 @@ define method as (class == <string>, domain-name :: <domain-name>)
   reduce1(method(a, b) concatenate(a, ".",  b) end, strings);
 end;
 
+define method as (class == <domain-name>, string :: <string>)
+ => (res :: <domain-name>)
+  let labels = split(string, '.');
+  labels := concatenate(labels, #(""));
+  make(<domain-name>, fragment: map(curry(as, <label>), labels));
+end;
+
 define protocol domain-name-fragment (container-frame)
-  field type-code :: <2bit-unsigned-integer>;
+  field type-code :: <2bit-unsigned-integer> = 0;
 end;
 
 define protocol label-offset (domain-name-fragment)
@@ -94,8 +101,17 @@ define method as (class == <string>, frame :: <externally-delimited-string>)
   res;
 end;
 
+define method as (class == <externally-delimited-string>, string :: <string>)
+ => (res :: <externally-delimited-string>)
+  let res = make(<externally-delimited-string>,
+                 data: make(<byte-sequence>, capacity: string.size));
+  copy-bytes(string, 0, res.data, 0, string.size);
+  res;
+end;
+
 define protocol label (domain-name-fragment)
-  field length :: <6bit-unsigned-integer>;
+  field length :: <6bit-unsigned-integer>,
+    fixup: frame.raw-data.frame-size.byte-offset;
   field raw-data :: <externally-delimited-string>,
     length: frame.length * 8;
 end;
@@ -104,6 +120,11 @@ define method as (class == <string>, label :: <label>)
  => (res :: <string>)
   as(<string>, label.raw-data);
 end;  
+
+define method as (class == <label>, string :: <string>)
+ => (res :: <label>)
+  make(<label>, raw-data: as(<externally-delimited-string>, string))
+end;
 
 define method parse-frame (frame-type == <domain-name-fragment>,
                            packet :: <byte-sequence>,
@@ -124,15 +145,16 @@ end;
 define protocol dns-question (container-frame)
   field domainname :: <domain-name>;
   field question-type :: <2byte-big-endian-unsigned-integer>;
-  field question-class :: <2byte-big-endian-unsigned-integer>;
+  field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
 define protocol dns-resource-record (container-frame)
   field domainname :: <domain-name>;
   field rr-type :: <2byte-big-endian-unsigned-integer>;
-  field rr-class :: <2byte-big-endian-unsigned-integer>;
+  field rr-class :: <2byte-big-endian-unsigned-integer> = 1;
   field ttl :: <big-endian-unsigned-integer-4byte>;
-  field rdlength :: <2byte-big-endian-unsigned-integer>;
+  field rdlength :: <2byte-big-endian-unsigned-integer>,
+    fixup: frame.rdata.frame-size.byte-offset;
   variably-typed-field rdata,
     type-function: select (frame.rr-type)
                      1 => <a-host-address>;

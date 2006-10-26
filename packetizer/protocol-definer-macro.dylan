@@ -162,7 +162,7 @@ define macro decoded-class-definer
     => { slot ?name :: false-or(<frame>) = #f,
       init-keyword: ?#"name" }
     { repeated field ?:name ?rest:* }
-      => { slot ?name :: false-or(<stretchy-vector>) = #f,
+      => { slot ?name :: false-or(<collection>) = #f,
       init-keyword: ?#"name" }
 end;
 
