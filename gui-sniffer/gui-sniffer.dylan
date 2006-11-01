@@ -377,7 +377,7 @@ define method find-frame-at-offset (frame :: <container-frame>, offset :: <integ
   block(ret)
     for (ff in sorted-frame-fields(frame))
       if ((start-offset(ff) <= offset) & (end-offset(ff) >= offset))
-        format-out("looking in %s, offset %d\n", ff.field.field-name, offset - start-offset(ff));
+        //format-out("looking in %s, offset %d\n", ff.field.field-name, offset - start-offset(ff));
         ret(find-frame-at-offset(ff.value, offset - start-offset(ff)));
       end;
     end;
@@ -389,7 +389,7 @@ define method find-frame-at-offset (frame :: <collection>, offset :: <integer>)
   block(ret)
     for (ele in frame, i from 0)
       if ((start <= offset) & (frame-size(ele) >= offset))
-        format-out("looking in %d, offset %d\n", i, offset - start);
+        //format-out("looking in %d, offset %d\n", i, offset - start);
         ret(find-frame-at-offset(ele, offset - start));
       end;
       start := start + frame-size(ele);

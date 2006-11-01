@@ -82,7 +82,7 @@ define method initialize
   let errbuf = make(<byte-vector>);
   block(ret)
     local method open-interface (name)
-            format-out("trying interface %s\n", name);
+//            format-out("trying interface %s\n", name);
             let res = pcap-open-live(name,
                                      $ethernet-buffer-size,
                                      if (interface.promiscuous?) 1 else 0 end,
@@ -90,17 +90,17 @@ define method initialize
                                      buffer-offset(errbuf, 0));
             if (res ~= null-pointer(<C-void*>))
               interface.pcap-t := res;
-              format-out("Opened Interface %s\n", name);
+//              format-out("Opened Interface %s\n", name);
               ret();
             end;
           end;
     //open-interface(interface.interface-name);
 
-    format-out("trying pcap-find-alldevices\n");
+//    format-out("trying pcap-find-alldevices\n");
     let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
-    format-out("errcode %=\n", errorcode);
+//    format-out("errcode %=\n", errorcode);
     for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
-      format-out("device %s %s\n", device.name, device.description);
+//      format-out("device %s %s\n", device.name, device.description);
       if (subsequence-position(device.description, interface.interface-name))
         open-interface(device.name);
       end;

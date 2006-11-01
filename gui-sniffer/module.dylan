@@ -8,8 +8,6 @@ define module gui-sniffer
   use duim, exclude: { <frame>, frame-size };
   use win32-duim;
   use format;
-  use format-out;
-  use standard-io;
   use streams;
   use date;
   use file-system;
