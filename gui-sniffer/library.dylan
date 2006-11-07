@@ -6,6 +6,8 @@ define library gui-sniffer
   use common-dylan;
   use duim;
   use win32-duim;
+  use deuce;
+  use duim-deuce;
   use io;
   use system;
   use packetizer;

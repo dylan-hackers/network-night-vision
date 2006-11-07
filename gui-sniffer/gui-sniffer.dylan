@@ -446,7 +446,7 @@ define method counter ()
   *count*;
 end;
 
-define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
+define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <filter>)
   slot network-frames :: <stretchy-vector> = make(<stretchy-vector>);
   slot filter-expression = #f;
   slot ethernet-interface = #f;
@@ -486,13 +486,14 @@ define frame <gui-sniffer-frame> (<simple-frame>, <filter>)
          value-changed-callback: method(x) highlight-hex-dump(frame) end);
 
   pane packet-hex-dump (frame)
-    make(<text-editor>,
+    make(<deuce-pane>,
+         frame: frame,
          read-only?: #t,
          tab-stop?: #t,
          lines: 20,
          columns: 100,
          scroll-bars: #"vertical",
-         text-style: make(<text-style>, family: #"fix"));
+         text-style: make(<text-style>, family: #"fix", size: 10));
 
 
   pane sniffer-status-bar (frame)
@@ -689,6 +690,10 @@ end;
 begin
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
+  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
+  deuce/*editor-frame* := gui-sniffer;
+  deuce/*buffer* := deuce/make-initial-buffer();
+  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
   start-frame(gui-sniffer);

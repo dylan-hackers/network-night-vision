@@ -7,6 +7,8 @@ define module gui-sniffer
   use threads;
   use duim, exclude: { <frame>, frame-size };
   use win32-duim;
+  use deuce;
+  use duim-deuce;
   use format;
   use streams;
   use date;
@@ -18,5 +20,5 @@ define module gui-sniffer
   use flow;
   use interfaces;
   // Add binding exports here.
-
+  use deuce-internals, prefix: "deuce/";
 end module gui-sniffer;
