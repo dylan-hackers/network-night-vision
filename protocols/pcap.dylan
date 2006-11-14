@@ -1,4 +1,4 @@
-module: packetizer
+module: pcap
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
@@ -6,8 +6,6 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 define constant $DLT-EN10MB = 1;
 define constant $DLT-PRISM-HEADER = 119;
 
-//FIXME
-define n-byte-vector(little-endian-unsigned-integer-4byte, 4) end;
 
 define protocol pcap-file-header (container-frame)
   field magic :: <little-endian-unsigned-integer-4byte>
@@ -24,69 +22,12 @@ define protocol pcap-file-header (container-frame)
   field last-linktype :: <unsigned-byte> = 0;
 end;
 
-define function int-to-byte-vector (int :: <integer>) => (res :: <byte-vector>)
-  let res = make(<byte-vector>, size: 4);
-  for (i from 0 below 4)
-    res[i] := logand(#xff, ash(int, - i * 8));
-  end;
-  res;
-end;
-
-define function float-to-byte-vector-be (float :: <float>) => (res :: <byte-vector>)
-  let res = make(<byte-vector>, size: 4, fill: 0);
-  let r = float;
-  for (i from 3 to 0 by -1)
-    let (this, remainder) = floor/(r, 256);
-    r := this;
-    res[i] := floor(remainder);
-  end;
-  res;
-end;
-
-define function float-to-byte-vector-le (float :: <float>) => (res :: <byte-vector>)
-  let res = make(<byte-vector>, size: 4, fill: 0);
-  let r = float;
-  for (i from 0 below 4)
-    let (this, remainder) = floor/(r, 256);
-    r := this;
-    res[i] := floor(remainder);
-  end;
-  res;
-end;
 
 define protocol unix-time-value (container-frame)
   field seconds :: <little-endian-unsigned-integer-4byte>;
   field microseconds :: <little-endian-unsigned-integer-4byte>;
 end;
 
-define function byte-vector-to-float-le (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
-  let res = 0.0d0;
-  for (ele in reverse(bv))
-    res := ele + 256 * res;
-  end;
-  res;
-end;
-
-define function byte-vector-to-float-be (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
-  let res = 0.0d0;
-  for (ele in bv)
-    res := ele + 256 * res;
-  end;
-  res;
-end;
-
-define function byte-vector-to-int (bv :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
-  let res = 0;
-  let first? = #t;
-  for (ele in reverse(bv))
-    if (first?)
-      first? := #f
-    else
-      res := ele + 256 * res;
-    end;
-  end;
-  res;
-end;
 
 define method decode-unix-time (unix-time :: <unix-time-value>)
  => (res :: <date>)
@@ -95,7 +36,7 @@ define method decode-unix-time (unix-time :: <unix-time-value>)
  let (hours, rem1) = floor/(rem0, 3600);
  let (minutes, seconds) = floor/(rem1, 60);
  encode-day/time-duration(days, hours, minutes, round(seconds),
-                          byte-vector-to-int(unix-time.microseconds.data))
+                          floor/(byte-vector-to-float-le(unix-time.microseconds.data), 1))
   + make(<date>, year: 1970, month: 1, day: 1)
 end;
 
@@ -105,17 +46,17 @@ define method make-unix-time (dur :: <day/time-duration>)
   let secs = ((as(<double-float>, days) * 24 + hours) * 60 + minutes) * 60 + seconds;
   make(<unix-time-value>,
        seconds: little-endian-unsigned-integer-4byte(float-to-byte-vector-le(secs)),
-       microseconds: little-endian-unsigned-integer-4byte(int-to-byte-vector(microseconds)));
+       microseconds: little-endian-unsigned-integer-4byte(float-to-byte-vector-le(as(<double-float>, microseconds))));
 end;
 
 define protocol pcap-packet (header-frame)
   field timestamp :: <unix-time-value>
     = make-unix-time(current-date() - make(<date>, year: 1970, month: 1, day: 1));
   field capture-length :: <3byte-little-endian-unsigned-integer>,
-   fixup: byte-offset(frame-size(frame.payload));
+   fixup: size(frame.payload.packet);
   field last-capture-length :: <unsigned-byte> = 0;
   field packet-length :: <3byte-little-endian-unsigned-integer>,
-   fixup: byte-offset(frame-size(frame.payload));
+   fixup: size(frame.payload.packet);
   field last-packet-length :: <unsigned-byte> = 0;
   variably-typed-field payload,
     type-function: select (frame.parent.header.linktype)

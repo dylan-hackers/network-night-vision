@@ -13,6 +13,7 @@ define library layer
   use vector-table;
   use system, import: { date };
   use tcp;
+  use protocols;
 
   // Add any more module exports here.
   export layer;

@@ -3,20 +3,34 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 
+
 define macro protocol-module-definer
-  { protocol-module-definer (?:name; ?fields:*) }
+  { protocol-module-definer (?:name; ?super:name; ?fields:*) }
  => { define module ?name
         use dylan;
         use packetizer;
-        export "<" ## ?name ## ">";
-        export ?fields;
+        //?super;
+        create "<" ## ?name ## ">";
+        ?fields
       end; }
 
   fields:
     { } => { }
-    { field ?:name ?rest:* ; ... } => { ?name, ... }
-    { repeated field ?:name ?rest:* ; ... } => { ?name, ... }
-    { variably-typed field ?:name ?rest:* ... } => { ?name, ... }
+    { field ?filter:name ?rest:* ; ... } => { ?filter ... }
+    { repeated field ?filter:name ?rest:* ; ... } => { ?filter ... }
+    { variably-typed-field ?filter:name ?rest:* ; ... } => { ?filter ... }
+
+
+  super:
+    { container-frame } => { }
+    { header-frame } => { }
+    { ?:name } => { use ?name; }
+
+  filter:
+    { source-address } => { }
+    { destination-address } => { }
+    { payload } => { }
+    { ?:name } => { create ?name, ?name ## "-setter"; }
 
 end;
 
@@ -31,10 +45,9 @@ define macro real-class-definer
           "$" ## ?name ## "-fields"
       end;
       define method fields-initializer
-          (frame :: subclass(?name), #next next-method) => (frame-fields :: <simple-vector>)
+       (frame :: subclass(?name), #next next-method) => (frame-fields :: <simple-vector>)
         let res = concatenate(next-method(), vector(?fields-aux));
-        for (ele in res,
-             i from 0)
+        for (ele in res, i from 0)
           ele.index := i;
         end;
         res;
@@ -47,6 +60,32 @@ define macro real-class-definer
         else
           $protocols[?#"name"] := "$" ## ?name ## "-fields";
         end;
+      end;
+      define constant "$" ## ?name ## "-layering"
+        = if (subtype?(?name, <header-frame>))
+            make(<table>);
+          end;
+      define inline method layer (frame :: subclass(?name)) => (res :: false-or(<table>))
+        "$" ## ?name ## "-layering";
+      end;
+      define constant "$" ## ?name ## "-reverse-layering"
+        = if (subtype?(?name, <header-frame>))
+            make(<table>);
+          end;
+      define inline method reverse-layer (frame :: subclass(?name)) => (res :: false-or(<table>))
+        "$" ## ?name ## "-reverse-layering";
+      end;
+      define constant "$" ## ?name ## "-layer-bonding"
+        = begin
+            let res = choose(rcurry(instance?, <layering-field>), "$" ## ?name ## "-fields");
+            if (res.size = 1)
+              res[0].getter;
+            end;
+          end;
+      define inline method layer-magic (frame :: ?name) => (res)
+         if ("$" ## ?name ## "-layer-bonding")
+           "$" ## ?name ## "-layer-bonding"(frame);
+         end;
       end;
       define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
         static-end(last("$" ## ?name ## "-fields"));
@@ -64,44 +103,9 @@ define macro real-class-definer
 
   fields-aux:
    { } => { }
-   { field ?:name \:: ?field-type:name; ... }
-     => { make(<single-field>,
-               name: ?#"name",
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter"), ... }
-   { field ?:name \:: ?field-type:name, ?args:*; ... }
-     => { make(<single-field>,
-               name: ?#"name",
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter",
-               ?args), ... }
    { variably-typed-field ?:name, ?args:*; ... }
      => { make(<variably-typed-field>,
                name: ?#"name",
-               getter: ?name,
-               setter: ?name ## "-setter",
-               ?args), ... }
-   { repeated field ?:name \:: ?field-type:name, ?args:*; ... }
-     => { make(<repeated-field>,
-               name: ?#"name",
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter",
-               ?args), ... }
-   { field ?:name \:: ?field-type:name = ?init:expression ; ... }
-     => { make(<single-field>,
-               name: ?#"name",
-               init-value: ?init,
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter"), ... }
-   { field ?:name \:: ?field-type:name = ?init:expression , ?args:*; ... }
-     => { make(<single-field>,
-               name: ?#"name",
-               init-value: ?init,
-               type: ?field-type,
                getter: ?name,
                setter: ?name ## "-setter",
                ?args), ... }
@@ -109,6 +113,13 @@ define macro real-class-definer
      => { make(<variably-typed-field>,
                name: ?#"name",
                init-value: ?init,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+   { repeated field ?:name \:: ?field-type:name, ?args:*; ... }
+     => { make(<repeated-field>,
+               name: ?#"name",
+               type: ?field-type,
                getter: ?name,
                setter: ?name ## "-setter",
                ?args), ... }
@@ -120,6 +131,38 @@ define macro real-class-definer
                getter: ?name,
                setter: ?name ## "-setter",
                ?args), ... }
+   { ?attributes:* field ?:name \:: ?field-type:name; ... }
+     => { make(?attributes,
+               name: ?#"name",
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter"), ... }
+   { ?attributes:* field ?:name \:: ?field-type:name, ?args:*; ... }
+     => { make(?attributes,
+               name: ?#"name",
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+   { ?attributes:* field ?:name \:: ?field-type:name = ?init:expression ; ... }
+     => { make(?attributes,
+               name: ?#"name",
+               init-value: ?init,
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter"), ... }
+   { ?attributes:* field ?:name \:: ?field-type:name = ?init:expression , ?args:*; ... }
+     => { make(?attributes,
+               name: ?#"name",
+               init-value: ?init,
+               type: ?field-type,
+               getter: ?name,
+               setter: ?name ## "-setter",
+               ?args), ... }
+
+  attributes:
+    { } => { <single-field> }
+    { layering } => { <layering-field> }
 
   args: //FIXME: better types, not <frame>!
     { } => { }
@@ -155,14 +198,14 @@ define macro decoded-class-definer
     { ?field:*; ... } => { ?field ; ... }
     
     field:
-    { field ?:name \:: ?field-type:name ?rest:* }
-    => { slot ?name :: false-or(high-level-type(?field-type)) = #f,
-      init-keyword: ?#"name" }
     { variably-typed-field ?:name, ?rest:* }
     => { slot ?name :: false-or(<frame>) = #f,
       init-keyword: ?#"name" }
     { repeated field ?:name ?rest:* }
       => { slot ?name :: false-or(<collection>) = #f,
+      init-keyword: ?#"name" }
+    { ?attrs:* field ?:name \:: ?field-type:name ?rest:* }
+    => { slot ?name :: false-or(high-level-type(?field-type)) = #f,
       init-keyword: ?#"name" }
 end;
 
@@ -376,13 +419,10 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
 end;
 
 define macro frame-field-generator
-    { frame-field-generator(?type:name; ?count:expression; field ?field-name:name ?foo:*  ; ?rest:*) }
+    { frame-field-generator(?type:name; ?count:expression; ?args:* field ?field-name:name ?foo:*  ; ?rest:*) }
     => { unparsed-frame-field-generator(?field-name, ?type, ?count);
          frame-field-generator(?type; ?count + 1; ?rest) }
     { frame-field-generator(?type:name; ?count:expression; variably-typed-field ?field-name:name ?foo:* ; ?rest:*) }
-    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
-         frame-field-generator(?type; ?count + 1; ?rest) }
-    { frame-field-generator(?type:name; ?count:expression; repeated field ?field-name:name ?foo:* ; ?rest:*) }
     => { unparsed-frame-field-generator(?field-name, ?type, ?count);
          frame-field-generator(?type; ?count + 1; ?rest) }
     { frame-field-generator(?:name; ?count:expression) }
@@ -409,79 +449,34 @@ define macro protocol-definer
 
 
     { define protocol ?:name (container-frame) end } =>
-      { define abstract class "<" ## ?name ## ">" (<container-frame>) end;
+      { //protocol-module-definer(?name; container-frame; );
+        define abstract class "<" ## ?name ## ">" (<container-frame>) end;
         define abstract class "<decoded-" ## ?name ## ">"
          ("<" ## ?name ## ">", <decoded-container-frame>)
         end;
         gen-classes(?name; container-frame); }
 
     { define protocol ?:name (?superprotocol:name)
+        over ?super:name ?magic:expression;
         ?fields:*
       end } =>
-      { real-class-definer("<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
+      { 
+        define protocol ?name (?superprotocol) ?fields end;
+        stack-protocol(?super, "<" ## ?name ## ">", ?magic);
+      }
+ 
+    { define protocol ?:name (?superprotocol:name)
+        ?fields:*
+      end } =>
+      { //protocol-module-definer(?name; ?superprotocol; ?fields);
+        real-class-definer("<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
         decoded-class-definer("<decoded-" ## ?name ## ">";
                               "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
                               ?fields);
         gen-classes(?name; ?superprotocol);
         frame-field-generator("<unparsed-" ## ?name ## ">";
                               field-count("<unparsed-" ## ?superprotocol ## ">");
-                              ?fields); }
-end;
-
-define macro forward-bonding
-  { forward-bonding(?:name; ?field:expression; ?bondings:*) }
- => { define inline method payload-type (frame :: ?name) => (res :: <type>)
-        select (frame.?field)
-          ?bondings;
-          otherwise => <raw-frame>;
-        end;
-      end; }
-end;
-
-define macro reverse-bonding
-  { reverse-bonding(?:name; ?field:expression; ?bondings:*) }
-  => { define inline method get-protocol-magic (frame :: ?name, payload :: <frame>)
-         let value =
-           select (payload.object-class)
-             ?bondings;
-             otherwise =>
-               error("Unknown layer bonding tried %= over %=", payload.frame-name, frame.frame-name)
-           end;
-         values(frame.?field, value)
-       end; }
-
-  bondings:
-    { } => { }
-    { ?key:expression => ?value:expression; ... } =>
-      { ?value => ?key; ... }
-end;
-define macro layer-bonding-definer
-  { define layer-bonding ?:name (?field:expression)
-      ?bondings:*
-    end } =>
-    { forward-bonding(?name; ?field; ?bondings);
-      reverse-bonding(?name; ?field; ?bondings); }
-end;
-   
-define macro leaf-frame-constructor-definer
-  { define leaf-frame-constructor(?:name) end }
- =>
-  {
-    define method ?name (data :: <byte-vector>) 
-     => (res :: "<" ## ?name ## ">");
-      parse-frame("<" ## ?name ## ">", data)
-    end;
-
-    define method ?name (data :: <collection>)
-     => (res :: "<" ## ?name ## ">");
-      ?name(as(<byte-vector>, data))
-    end;
-
-    define method ?name (data :: <string>)
-     => (res :: "<" ## ?name ## ">");
-      read-frame("<" ## ?name ## ">", data)
-    end;
-
-  }
+                              ?fields);
+      }
 end;
 

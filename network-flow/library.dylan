@@ -9,6 +9,7 @@ define library network-flow
   use packetizer;
   use io;
   use system;
+  use protocols, import: { pcap };
 
   // Add any more module exports here.
   export network-flow;

@@ -20,57 +20,41 @@ define module packetizer
     <out-of-bound-error>,
     encode-integer, decode-integer;
 
-  export <dns-frame>, <dns-question>, <domain-name>;
-
-  export <udp-frame>, source-port, destination-port, length, checksum;
-
-  export <tcp-frame>, sequence-number, acknowledgement-number,
-    urg, ack, psh, rst, syn, fin, window, urgent-pointer, options-and-padding;
-
-  export <ethernet-frame>, <ipv4-frame>,
-    <ipv4-address>, <mac-address>, <ieee80211-frame>, <prism2-frame>,
-    <logical-link-control>, <link-control>,
-    <ieee80211-information-field>,
-    <ieee80211-data-frame>,
-    <ieee80211-management-frame>,
-    <ieee80211-control-frame>,
-    operation, type-code, <arp-frame>, target-mac-address,
-    target-ip-address, source-ip-address, source-mac-address,
-    mac-address, ipv4-address, 
-    <decoded-arp-frame>, <decoded-ethernet-frame>,
-    <fixed-size-byte-vector-frame>, data,
-    total-length, concrete-frame-fields,
+  export data,
+    concrete-frame-fields,
     <repeated-field>, <malformed-packet-error>;
 
   export byte-aligned, high-level-type;
 
-  export <pcap-file>, <pcap-file-header>, <pcap-packet>, header, packets,
-    $DLT-EN10MB, $DLT-PRISM-HEADER, make-unix-time, decode-unix-time, timestamp;
-
-  //XXX: evil hacks
-  export float-to-byte-vector-le, byte-vector-to-float-le,
-    float-to-byte-vector-be, byte-vector-to-float-be,
-    big-endian-unsigned-integer-4byte;
-
-  export <icmp-frame>, code, type, checksum;
-
-  export <raw-frame>;
+  export n-byte-vector-definer, n-bit-unsigned-integer-definer;
 
   export hexdump;
 
   export <unsigned-byte>,
     <3byte-big-endian-unsigned-integer>,
-    <2byte-big-endian-unsigned-integer>,
+    <2byte-big-endian-unsigned-integer>, <2byte-little-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
-    <externally-delimited-string>, <1bit-unsigned-integer>,
-    <4bit-unsigned-integer>, <7bit-unsigned-integer>,
+    <1bit-unsigned-integer>, <6bit-unsigned-integer>, <3bit-unsigned-integer>,
+    <4bit-unsigned-integer>, <5bit-unsigned-integer>,
+    <7bit-unsigned-integer>, <13bit-unsigned-integer>,
     <2bit-unsigned-integer>, <14bit-unsigned-integer>;
 
-  export <fixed-size-translated-leaf-frame>, <byte-sequence>;
+  export <variable-size-byte-vector>, <externally-delimited-string>,
+    <raw-frame>;
+
+  //XXX: evil hacks
+  export float-to-byte-vector-le, byte-vector-to-float-le,
+    float-to-byte-vector-be, byte-vector-to-float-be,
+    <big-endian-unsigned-integer-4byte>, big-endian-unsigned-integer-4byte,
+    <little-endian-unsigned-integer-4byte>, little-endian-unsigned-integer-4byte,;
+
+
+  export <fixed-size-translated-leaf-frame>, <byte-sequence>,
+    <fixed-size-byte-vector-frame>;
 
   export <integer-or-unknown>, $unknown-at-compile-time;
 
-  export <malformed-packet-error>;
+  export <malformed-packet-error>, <parse-error>;
 
   export <frame-field>,
     <repeated-frame-field>,
@@ -121,15 +105,17 @@ define module packetizer
     fixup!,
     parent,
     packet,
-    source-address,
-    destination-address,
+    cache,
+    source-address, source-address-setter,
+    destination-address, destination-address-setter,
     payload-type,
-    get-protocol-magic;
+    get-protocol-magic,
+    layer, reverse-layer, layer-magic;
 
   export <header-frame>,
     <unparsed-header-frame>,
     <decoded-header-frame>,
-    payload;
+    payload, payload-setter;
 
   export frame-size,
     byte-offset,
@@ -138,7 +124,9 @@ define module packetizer
   export protocol-definer;
   //XXX: we shouldn't need to export those
   export real-class-definer, decoded-class-definer, gen-classes,
-    frame-field-generator, summary-generator, unparsed-frame-field-generator; 
+    frame-field-generator, summary-generator, unparsed-frame-field-generator;
+
+  export protocol-module-definer;
 end module packetizer;
 
 define module packet-filter

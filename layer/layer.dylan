@@ -351,9 +351,9 @@ define method push-data-aux (input :: <push-input>,
                              node :: <icmp-handler>,
                              frame :: <container-frame>)
   //format-out("ICMP Handler received %=\n", frame);
-  if (frame.type = 8 & frame.code = 0)
+  if (frame.icmp-type = 8 & frame.code = 0)
     let response = make(<icmp-frame>,
-                        type: 0,
+                        icmp-type: 0,
                         code: 0,
                         payload: frame.payload);
     send(node.ip-socket, frame.parent.source-address, response)
@@ -493,7 +493,7 @@ end;
 
 
 define function init-ethernet ()
-  let int = make(<ethernet-interface>, name: "Xtreme");
+  let int = make(<ethernet-interface>, name: "Intel");
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
   let arp-handler = make(<arp-handler>);
 /*

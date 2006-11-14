@@ -25,7 +25,7 @@ define abstract class <variable-size-translated-leaf-frame>
     (<leaf-frame>, <variable-size-frame>, <translated-frame>)
 end;
 
-define generic read-frame
+define open generic read-frame
   (frame-type :: subclass(<leaf-frame>), string :: <string>) => (frame);
 
 define method read-frame (frame-type :: subclass(<leaf-frame>), string :: <string>)
@@ -78,7 +78,7 @@ define inline method high-level-type (low-level-type == <unsigned-byte>)
 end;
 
 
-define abstract class <unsigned-integer-bit-frame> (<fixed-size-translated-leaf-frame>)
+define open abstract class <unsigned-integer-bit-frame> (<fixed-size-translated-leaf-frame>)
 end;
 
 define macro n-bit-unsigned-integer-definer
@@ -161,7 +161,7 @@ define method read-frame (type :: subclass(<unsigned-integer-bit-frame>),
   res;
 end;
 
-define abstract class <fixed-size-byte-vector-frame> (<fixed-size-untranslated-leaf-frame>)
+define open abstract class <fixed-size-byte-vector-frame> (<fixed-size-untranslated-leaf-frame>)
   slot data :: <byte-sequence>, required-init-keyword: data:;
 end;
 
@@ -423,6 +423,25 @@ define method assemble-frame-into (frame :: <variable-size-byte-vector>,
   frame-size(frame)
 end;
 
+define class <externally-delimited-string> (<variable-size-byte-vector>)
+end;
+
+define method as (class == <string>, frame :: <externally-delimited-string>)
+ => (res :: <string>)
+  let res = make(<string>, size: byte-offset(frame-size(frame)));
+  copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
+  res;
+end;
+
+define method as (class == <externally-delimited-string>, string :: <string>)
+ => (res :: <externally-delimited-string>)
+  let res = make(<externally-delimited-string>,
+                 data: make(<byte-sequence>, capacity: string.size));
+  copy-bytes(string, 0, res.data, 0, string.size);
+  res;
+end;
+
+
 define class <raw-frame> (<variable-size-byte-vector>)
 end;
 
@@ -443,4 +462,69 @@ define method read-frame (type == <raw-frame>,
        data: copy-sequence(string));
 end;
 
+
+define macro leaf-frame-constructor-definer
+  { define leaf-frame-constructor(?:name) end }
+ =>
+  {
+    define method ?name (data :: <byte-vector>) 
+     => (res :: "<" ## ?name ## ">");
+      parse-frame("<" ## ?name ## ">", data)
+    end;
+
+    define method ?name (data :: <collection>)
+     => (res :: "<" ## ?name ## ">");
+      ?name(as(<byte-vector>, data))
+    end;
+
+    define method ?name (data :: <string>)
+     => (res :: "<" ## ?name ## ">");
+      read-frame("<" ## ?name ## ">", data)
+    end;
+
+  }
+end;
+
+//FIXME
+define n-byte-vector(little-endian-unsigned-integer-4byte, 4) end;
+define n-byte-vector(big-endian-unsigned-integer-4byte, 4) end;
+
+
+define function float-to-byte-vector-be (float :: <float>) => (res :: <byte-vector>)
+  let res = make(<byte-vector>, size: 4, fill: 0);
+  let r = float;
+  for (i from 3 to 0 by -1)
+    let (this, remainder) = floor/(r, 256);
+    r := this;
+    res[i] := floor(remainder);
+  end;
+  res;
+end;
+
+define function float-to-byte-vector-le (float :: <float>) => (res :: <byte-vector>)
+  let res = make(<byte-vector>, size: 4, fill: 0);
+  let r = float;
+  for (i from 0 below 4)
+    let (this, remainder) = floor/(r, 256);
+    r := this;
+    res[i] := floor(remainder);
+  end;
+  res;
+end;
+
+define function byte-vector-to-float-le (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
+  let res = 0.0d0;
+  for (ele in reverse(bv))
+    res := ele + 256 * res;
+  end;
+  res;
+end;
+
+define function byte-vector-to-float-be (bv :: <stretchy-byte-vector-subsequence>) => (res :: <float>)
+  let res = 0.0d0;
+  for (ele in bv)
+    res := ele + 256 * res;
+  end;
+  res;
+end;
 

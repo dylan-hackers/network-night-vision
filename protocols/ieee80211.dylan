@@ -1,4 +1,4 @@
-module:         packetizer
+module:         ieee80211
 Author:         Andreas Bogk, Hannes Mehnert, mb
 Copyright:      (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
@@ -48,7 +48,6 @@ define constant $information-element-tim = 5;
 define constant $information-element-ibss = 6;
 define constant $information-element-challenge-text = 16;
 
-define n-byte-vector(wlan-device-name, 16) end;
 define n-byte-vector(timestamp, 8) end;
 define n-bit-unsigned-integer(<11bit-unsigned-integer>; 11) end;
 define n-bit-unsigned-integer(<12bit-unsigned-integer>; 12) end;
@@ -69,18 +68,18 @@ end;
 
 // ieee80211 information fields
 define protocol ieee80211-information-field (container-frame)
-  field length :: <unsigned-byte>,
-    fixup: byte-offset(frame-size(frame.data));
+  field data-length :: <unsigned-byte>,
+    fixup: byte-offset(frame-size(frame.raw-data));
 end;
 
 define protocol ieee80211-raw-information-field (ieee80211-information-field)
-  field data :: <raw-frame>,
+  field raw-data :: <raw-frame>,
     length: frame.length * 8;
 end;
 
 define protocol ieee80211-ssid (ieee80211-information-field)
-  summary "SSID: %=", data;
-  field data :: <externally-delimited-string>,
+  summary "SSID: %=", raw-data;
+  field raw-data :: <externally-delimited-string>,
     length: frame.length * 8;
 end;
 
@@ -105,7 +104,7 @@ end;
 define protocol ieee80211-supported-rates (ieee80211-information-field)
   repeated field supported-rate :: <rate>,
     reached-end?: #f,
-    length: frame.length * 8;
+    length: frame.data-length * 8;
 end;
 
 define method summary (frame :: <rate>) => (res :: <string>)
@@ -327,7 +326,7 @@ end;
 define protocol ieee80211-frame-control (container-frame)
   summary "WEP: %=", wep;
   field subtype :: <4bit-unsigned-integer>;
-  field type :: <2bit-unsigned-integer>;
+  field ftype :: <2bit-unsigned-integer>;
   field protcol-version :: <2bit-unsigned-integer>;
   field order :: <1bit-unsigned-integer>;
   field wep :: <1bit-unsigned-integer>;

@@ -1,4 +1,4 @@
-module: packetizer
+module: ethernet
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
@@ -41,13 +41,8 @@ define protocol ethernet-frame (header-frame)
     source-address, destination-address, compose(summary, payload);
   field destination-address :: <mac-address>;
   field source-address :: <mac-address>;
-  field type-code :: <2byte-big-endian-unsigned-integer>;
+  layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
     type-function: payload-type(frame);
-end;
-
-define layer-bonding <ethernet-frame> (type-code)
-  #x800 => <ipv4-frame>;
-  #x806 => <arp-frame>
 end;
 

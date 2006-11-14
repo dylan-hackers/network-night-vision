@@ -99,7 +99,7 @@ define generic last-received-packet (c :: <tcp-connection>) => (res :: <tcp-fram
 define generic last-received-packet-setter (value :: <tcp-frame>, c :: <tcp-connection>) => (res :: <tcp-frame>);
 define generic established-notification (c :: <tcp-connection>) => (res :: <notification>);
 define generic established-notification-setter (value :: <notification>, c :: <tcp-connection>) => (res :: <notification>);
-define class <tcp-connection> (<tcp-dingens>, <stream>);
+define class <tcp-connection> (<tcp-dingens>, <stream>)
   constant slot send-buffer = make(<deque>);
   constant slot receive-buffer = make(<deque>);
   constant slot tcp-layer :: <tcp-layer>, required-init-keyword: tcp-layer:;

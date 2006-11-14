@@ -1,4 +1,4 @@
-module: packetizer
+module: dns
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
@@ -36,7 +36,7 @@ end;
 
 define protocol domain-name (container-frame)
   repeated field fragment :: <domain-name-fragment>,
-    reached-end?: frame.type-code = 3 | frame.length = 0;
+    reached-end?: frame.type-code = 3 | frame.data-length = 0;
 end;
 
 define method as (class == <string>, domain-name :: <domain-name>)
@@ -91,29 +91,11 @@ define method as (class == <string>, label-offset :: <label-offset>)
   end;
 end;
 
-define class <externally-delimited-string> (<variable-size-byte-vector>)
-end;
-
-define method as (class == <string>, frame :: <externally-delimited-string>)
- => (res :: <string>)
-  let res = make(<string>, size: byte-offset(frame-size(frame)));
-  copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
-  res;
-end;
-
-define method as (class == <externally-delimited-string>, string :: <string>)
- => (res :: <externally-delimited-string>)
-  let res = make(<externally-delimited-string>,
-                 data: make(<byte-sequence>, capacity: string.size));
-  copy-bytes(string, 0, res.data, 0, string.size);
-  res;
-end;
-
 define protocol label (domain-name-fragment)
-  field length :: <6bit-unsigned-integer>,
+  field data-length :: <6bit-unsigned-integer>,
     fixup: frame.raw-data.frame-size.byte-offset;
   field raw-data :: <externally-delimited-string>,
-    length: frame.length * 8;
+    length: frame.data-length * 8;
 end;
 
 define method as (class == <string>, label :: <label>)
@@ -197,9 +179,9 @@ define protocol domain-name-pointer (container-frame)
 end;
 
 define protocol character-string (container-frame)
-  field length :: <unsigned-byte>;
-  field data :: <externally-delimited-string>,
-    length: frame.length * 8;
+  field data-length :: <unsigned-byte>;
+  field string-data :: <externally-delimited-string>,
+    length: frame.data-length * 8;
 end;
 
 define protocol host-information (container-frame)
@@ -218,6 +200,6 @@ define protocol mail-exchange (container-frame)
 end;
 
 define protocol text-strings (container-frame)
-  field data :: <character-string>;
+  field text-data :: <character-string>;
 end;
 

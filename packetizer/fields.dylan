@@ -25,6 +25,11 @@ define function compute-static-offset(list :: <simple-vector>)
   //sets static-start, static-end, static-length for all fields
   let start = 0;
   for (field in list)
+    if (instance?(field, <layering-field>))
+      unless (field.fixup-function)
+        field.fixup-function := payload-type;
+      end;
+    end;
     if (start ~= $unknown-at-compile-time)
       unless (field.dynamic-start)
         if (field.static-start = $unknown-at-compile-time)
@@ -73,7 +78,7 @@ define abstract class <field> (<object>)
   slot static-length :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-length:;
   slot static-end :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-end:;
   slot init-value = #f, init-keyword: init-value:;
-  constant slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
+  slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
   constant slot getter, required-init-keyword: getter:;
   constant slot setter, required-init-keyword: setter:;
   constant slot dynamic-start :: false-or(<function>) = #f, init-keyword: dynamic-start:;
@@ -93,6 +98,9 @@ define abstract class <statically-typed-field> (<field>)
 end;
 
 define class <single-field> (<statically-typed-field>)
+end;
+
+define class <layering-field> (<single-field>)
 end;
 
 define method static-field-size (field :: <single-field>) => (res :: <integer-or-unknown>)

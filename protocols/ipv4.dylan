@@ -1,4 +1,4 @@
-module: packetizer
+module: ipv4
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
@@ -45,8 +45,8 @@ define method parse-frame (frame-type == <ip-option-frame>,
 end;
 
 define protocol router-alert-ip-option (ip-option-frame)
-  field length :: <unsigned-byte> = 4;
-  field value :: <2byte-big-endian-unsigned-integer>;
+  field router-alert-length :: <unsigned-byte> = 4;
+  field router-alert-data :: <2byte-big-endian-unsigned-integer>;
 end;
 
 define protocol end-of-option-ip-option (ip-option-frame)
@@ -56,7 +56,7 @@ define protocol no-operation-ip-option (ip-option-frame)
 end;
 
 define protocol security-ip-option-frame (ip-option-frame)
-  field length :: <unsigned-byte>;
+  field security-length :: <unsigned-byte>;
   field security :: <2byte-big-endian-unsigned-integer>;
   field compartments :: <2byte-big-endian-unsigned-integer>;
   field handling-restrictions :: <2byte-big-endian-unsigned-integer>;
@@ -112,6 +112,8 @@ end;
 define protocol ipv4-frame (header-frame)
   summary "IP SRC %= DST %=/%s",
     source-address, destination-address, compose(summary, payload);
+  over <ethernet-frame> #x800;
+  over <link-control> #x800;
   field version :: <4bit-unsigned-integer> = 4;
   field header-length :: <4bit-unsigned-integer>,
     fixup: ceiling/(reduce(\+, 20, map(method(x) byte-offset(frame-size(x)) end, frame.options)), 4);
@@ -124,7 +126,7 @@ define protocol ipv4-frame (header-frame)
   field more-fragments :: <1bit-unsigned-integer> = 0;
   field fragment-offset :: <13bit-unsigned-integer> = 0;
   field time-to-live :: <unsigned-byte> = 64;
-  field protocol :: <unsigned-byte>;
+  layering field protocol :: <unsigned-byte>;
   field header-checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
@@ -136,16 +138,11 @@ define protocol ipv4-frame (header-frame)
     type-function: payload-type(frame);
 end;
 
-define layer-bonding <ipv4-frame> (protocol)
-  1 => <icmp-frame>;
-  6 => <tcp-frame>;
-  17 => <udp-frame>
-end;
-
 
 define protocol icmp-frame (header-frame)
-  summary "ICMP type %= code %=", type, code;
-  field type :: <unsigned-byte>;
+  summary "ICMP type %= code %=", icmp-type, code;
+  over <ipv4-frame> 1;
+  field icmp-type :: <unsigned-byte>;
   field code :: <unsigned-byte>;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field payload :: <raw-frame>;
@@ -153,17 +150,18 @@ end;
 
 define protocol udp-frame (header-frame)
   summary "UDP port %= -> %=/%s", source-port, destination-port, compose(summary, payload);
+  over <ipv4-frame> 17;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
-  field length :: <2byte-big-endian-unsigned-integer>,
+  field payload-size :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame.payload)) + 8;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   variably-typed-field payload,
-    end: frame.length * 8,
+    end: frame.payload-size * 8,
     type-function: payload-type(frame);
 end;
 
-define inline method payload-type (frame :: <udp-frame>) => (res :: <type>)
+/*define inline method payload-type (frame :: <udp-frame>) => (res :: <type>)
   select (frame.source-port)
     53 => <dns-frame>;
     5353 => <dns-frame>;
@@ -174,12 +172,10 @@ define inline method payload-type (frame :: <udp-frame>) => (res :: <type>)
                  end;
   end;
 end;
-
-// FIXME: must do for now
-define n-byte-vector(big-endian-unsigned-integer-4byte, 4) end;
-
+*/
 define protocol tcp-frame (header-frame)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
+  over <ipv4-frame> 6;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
   field sequence-number :: <big-endian-unsigned-integer-4byte>;
@@ -207,7 +203,7 @@ define protocol pseudo-header (container-frame)
   field reserved :: <unsigned-byte> = 0;
   field protocol :: <unsigned-byte> = 6;
   field segment-length :: <2byte-big-endian-unsigned-integer>;
-  field data :: <raw-frame>,
+  field pseudo-header-data :: <raw-frame>,
     length: frame.segment-length;
 end;
 
@@ -217,7 +213,7 @@ define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
                            source-address: tcp-frame.parent.source-address,
                            destination-address: tcp-frame.parent.destination-address,
                            segment-length: tcp-frame.packet.size,
-                           data: make(<raw-frame>, data: tcp-frame.packet));
+                           pseudo-header-data: make(<raw-frame>, data: tcp-frame.packet));
   let pack = assemble-frame(pseudo-header).packet;
   tcp-frame.checksum := calculate-checksum(pack, pack.size);
   next-method();
@@ -231,6 +227,8 @@ define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
 end;
               
 define protocol arp-frame (container-frame)
+  over <ethernet-frame> #x806;
+  over <link-control> #x806;
   field mac-address-type :: <2byte-big-endian-unsigned-integer> = 1;
   field protocol-address-type :: <2byte-big-endian-unsigned-integer> = #x800;
   field mac-address-size :: <unsigned-byte> = byte-offset(field-size(<mac-address>));

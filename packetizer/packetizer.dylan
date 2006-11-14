@@ -201,10 +201,6 @@ define method frame-name(frame :: subclass(<container-frame>)) => (res :: <strin
   "anonymous"
 end;
 
-define open generic source-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
-
-define open generic destination-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
-
 define open generic payload-type (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
 
 define open generic field-count (frame :: subclass(<container-frame>))
@@ -237,9 +233,40 @@ define open generic unparsed-class (type :: subclass(<container-frame>))
 define open generic decoded-class (type :: subclass(<container-frame>))
   => (class :: <class>);
 
+define open generic layer (type :: subclass(<container-frame>))
+  => (res :: false-or(<table>));
+
+define open generic reverse-layer (type :: subclass(<container-frame>))
+  => (res :: false-or(<table>));
+
+define open generic layer-magic (frame :: <container-frame>) => (res);
+
+define method layer-magic (frame :: <container-frame>) => (res)
+  error("no magic field defined for protocol layering in protocol %s", frame.frame-name);
+end;
+
 define open abstract class <decoded-container-frame> (<container-frame>)
   slot concrete-frame-fields :: <vector>;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
+end;
+
+define method stack-protocol (bottom-layer :: <type>, upper-layer :: <type>, magic)
+  layer(bottom-layer)[magic] := upper-layer;
+  reverse-layer(bottom-layer)[decoded-class(upper-layer)] := magic;
+end;
+
+define inline method payload-type (frame :: <header-frame>) => (res :: <type>)
+  let table = layer(frame.object-class);
+  element(table, frame.layer-magic, default: <raw-frame>);
+end;
+
+define inline method get-protocol-magic (frame :: <header-frame>, payload :: <frame>) => (magic)
+  let reverse-layering = reverse-layer(frame.object-class);
+  let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);
+  unless (res)
+    error("don't know how to layer %= over %=", payload.frame-name, frame.frame-name);
+  end;
+  res;
 end;
 
 define method initialize (frame :: <decoded-container-frame>,
@@ -306,12 +333,22 @@ define open abstract class <unparsed-header-frame>
   (<header-frame>, <unparsed-container-frame>)
 end;
 
-define open generic payload (frame :: <header-frame>);
+define open generic source-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
+define open generic source-address-setter (value, frame :: type-union(<raw-frame>, <container-frame>)) => (res);
 
-define method payload (frame :: <header-frame>) => (payload :: <frame>)
+define open generic destination-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
+define open generic destination-address-setter (value, frame :: type-union(<raw-frame>, <container-frame>)) => (res);
+
+//can't specify type because unparsed-getter can't return false-or(<frame>)!
+define open generic payload (frame :: <header-frame>) => (payload);
+
+define open generic get-protocol-magic (frame :: <container-frame>, payload :: <frame>);
+define method payload (frame :: <header-frame>) => (payload)
   error("No payload specified");
 end;
 
+define open generic payload-setter (value /* :: false-or(<frame>) */, object :: <header-frame>)
+ => (res /* :: false-or(<frame>) */);
 define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;

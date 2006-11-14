@@ -1,0 +1,351 @@
+module: dylan-user
+
+define library protocols
+  use common-dylan;
+  use system;
+  use packetizer;
+  use io;
+  export logical-link,
+    ethernet,
+    pcap,
+    ipv4,
+    prism2,
+    dns;
+end;
+
+define module logical-link
+  use dylan;
+  use packetizer;
+
+  export <link-control>,
+    dsap, dsap-setter,
+    ssap, ssap-setter,
+    control, control-setter,
+    organisation-code, organisation-code-setter,
+    type-code, type-code-setter;
+end;
+
+define module ethernet
+  use common-dylan;
+  use packetizer;
+
+  use common-extensions;
+
+  export <ethernet-frame>,
+    type-code, type-code-setter;
+
+  export <mac-address>, mac-address;
+end;
+
+define module prism2
+  use dylan;
+  use packetizer;
+
+  export <prism2-header-item>,
+    item-did, item-did-setter,
+    item-status, item-status-setter,
+    item-length, item-length-setter,
+    item-data, item-data-setter;
+
+  export wlan-device-name, <wlan-device-name>;
+
+  export <prism2-frame>,
+    message-code, message-code-setter,
+    message-len, message-len-setter,
+    device-name, device-name-setter,
+    host-time, host-time-setter,
+    mac-time, mac-time-setter,
+    channel, channel-setter,
+    rssi, rssi-setter,
+    sq, sq-setter,
+    signal-level, signal-level-setter,
+    noise-level, noise-level-setter,
+    rate, rate-setter,
+    istx, istx-setter,
+    frame-length, frame-length-setter;
+end;
+
+define module pcap
+  use dylan;
+  use packetizer;
+  use date;
+
+  use ethernet, import: { <ethernet-frame> };
+  use prism2, import: { <prism2-frame> };
+
+  export <pcap-file-header>,
+    magic, magic-setter,
+    major-version, major-version-setter,
+    minor-version, minor-version-setter,
+    timezone-offset, timezone-offset-setter,
+    sigfigs, sigfigs-setter,
+    snap-length, snap-length-setter,
+    linktype, linktype-setter;
+
+  export <pcap-packet>,
+    timestamp, timestamp-setter,
+    capture-length, capture-length-setter,
+    packet-length, packet-length-setter;
+
+  export <pcap-file>,
+    header, header-setter,
+    packets, packets-setter;
+
+  export make-unix-time, decode-unix-time;
+
+  export <unix-time-value>,
+    seconds, seconds-setter,
+    microseconds, microseconds-setter;
+
+end;
+
+define module ipv4
+  use common-dylan, exclude: { format-to-string };
+  use packetizer;
+  use streams-protocol;
+  use format;
+
+  use ethernet, import: { <ethernet-frame>, <mac-address> };
+  use logical-link, import: { <link-control> };
+
+  export <ip-option-type-frame>,
+    flag, flag-setter,
+    class, class-setter,
+    number, number-setter;
+
+  export <ip-option-frame>,
+    option-type, option-type-setter;
+
+  export <router-alert-ip-option>,
+    router-alert-length, router-alert-length-setter,
+    router-alert-value, router-alert-value-setter;
+
+  export <end-of-option-ip-option>;
+
+  export <no-operation-ip-option>;
+
+  export <security-ip-option-frame>,
+    security-length, security-length-setter,
+    security, security-setter,
+    compartments, compartments-setter,
+    handling-restrictions, handling-restrictions-setter,
+    transmission-control-code, transmission-control-code-setter;
+
+  export <ipv4-address>, ipv4-address;
+
+  export <ipv4-frame>,
+    version, version-setter,
+    header-length, header-length-setter,
+    type-of-service, type-of-service-setter,
+    total-length, total-length-setter,
+    identification, identification-setter,
+    evil, evil-setter,
+    dont-fragment, dont-fragment-setter,
+    more-fragments, more-fragments-setter,
+    fragment-offset, fragment-offset-setter,
+    time-to-live, time-to-live-setter,
+    protocol, protocol-setter,
+    header-checksum, header-checksum-setter,
+    options, options-setter;
+
+  export <icmp-frame>,
+    icmp-type, icmp-type-setter,
+    code, code-setter,
+    checksum, checksum-setter;
+
+  export <udp-frame>,
+    source-port, source-port-setter,
+    destination-port, destination-port-setter,
+    payload-size, payload-size-setter,
+    checksum, checksum-setter;
+
+  export <tcp-frame>,
+    source-port, source-port-setter,
+    destination-port, destination-port-setter,
+    sequence-number, sequence-number-setter,
+    acknowledgement-number, acknowledgement-number-setter,
+    data-offset, data-offset-setter,
+    reserved, reserved-setter,
+    urg, urg-setter,
+    ack, ack-setter,
+    psh, psh-setter,
+    rst, rst-setter,
+    syn, syn-setter,
+    fin, fin-setter,
+    window, window-setter,
+    checksum, checksum-setter,
+    urgent-pointer, urgent-pointer-setter,
+    options-and-padding, options-and-padding-setter;
+
+  export <pseudo-header>,
+    reserved, reserved-setter,
+    protocol, protocol-setter,
+    segment-length, segment-length-setter,
+    pseudo-header-data, pseudo-header-data-setter;
+
+  export <arp-frame>,
+    mac-address-type, mac-address-type-setter,
+    protocol-address-type, protocol-address-type-setter,
+    mac-address-size, mac-address-size-setter,
+    protocol-address-size, protocol-address-size-setter,
+    operation, operation-setter,
+    source-mac-address, source-mac-address-setter,
+    source-ip-address, source-ip-address-setter,
+    target-mac-address, target-mac-address-setter,
+    target-ip-address, target-ip-address-setter;
+end;
+
+define module dns
+  use common-dylan;
+  use packetizer;
+  use byte-vector, import: { copy-bytes };
+  use simple-io;
+  use ipv4, import: { <ipv4-address> };
+
+  export <dns-frame>,
+    identifier, identifier-setter,
+    query-or-response, query-or-response-setter,
+    opcode, opcode-setter,
+    authoritative-answer, authoritative-answer-setter,
+    truncation, truncation-setter,
+    recursion-desired, recursion-desired-setter,
+    recursion-available, recursion-available-setter,
+    reserved, reserved-setter,
+    response-code, response-code-setter,
+    question-count, question-count-setter,
+    answer-count, answer-count-setter,
+    additional-count, additional-count-setter,
+    questions, questions-setter,
+    answers, answers-setter,
+    name-servers, name-servers-setter,
+    additional-records, additional-records-setter;
+
+  export <domain-name>,
+    fragment, fragment-setter;
+
+  export <domain-name-fragment>,
+    type-code, type-code-setter,
+    <label-offset>, offset, offset-setter,
+    <label>, data-length, data-length-setter, raw-data, raw-data-setter;
+
+  export <dns-question>,
+    domainname, domainname-setter,
+    question-type, question-type-setter,
+    question-class, question-class-setter;
+
+  export <dns-resource-record>,
+    domainname, domainname-setter,
+    rr-type, rr-type-setter,
+    rr-class, rr-class-setter,
+    ttl, ttl-setter,
+    rdlength, rdlength-setter,
+    rdata, rdata-setter;
+
+  export <a-host-address>,
+    ipv4-address, ipv4-address-setter;
+
+  export <name-server>,
+    ns-name, ns-name-setter;
+
+  export <canonical-name>,
+    cname, cname-setter;
+
+  export <start-of-authority>,
+    nameserver, nameserver-setter,
+    hostmaster, hostmaster-setter,
+    serial, serial-setter,
+    refresh, refresh-setter,
+    retry, retry-setter,
+    expire, expire-setter,
+    minimum, minimum-setter;
+
+  export <domain-name-pointer>,
+    ptr-name, ptr-name-setter;
+
+  export <character-string>,
+    data-length, data-length-setter,
+    string-data, string-data-setter;
+
+  export <host-information>,
+    cpu, cpu-setter,
+    operating-system, operating-system-setter;
+
+  export <mail-exchange>,
+    preference, preference-setter,
+    exchange, exchange-setter;
+
+  export <text-strings>,
+    text-data, text-data-setter;
+end;
+
+
+define module ieee80211
+  use dylan;
+  use packetizer;
+
+  use prism2, import: { <wlan-device-name> };
+  use ethernet, import: { <mac-address> };
+  use logical-link, import: { <link-control> };
+/*
+  export <ieee80211-sequence-control>,
+    sequence-number, sequence-number-setter,
+    fragment-number, fragment-number-setter;
+
+  export <ieee80211-capability-information>,
+    reserved, reserved-setter,
+    privacy, privacy-setter,
+    cf-poll-request, cf-poll-request-setter,
+    cl-pollable, cf-pollable-setter,
+    ibss, ibss-setter,
+    ess, ess-setter;
+
+  export <ieee80211-information-field>,
+    length, length-setter;
+
+  export <ieee80211-raw-information-field>,
+    data, data-setter;
+
+  export <ieee80211-ssid>,
+    data, data-setter;
+
+  export <ieee80211-fh-set>,
+    <ieee80211-ds-set>,
+    <ieee80211-cf-set>,
+    <ieee80211-tim>,
+    <ieee80211-ibss>,
+    <ieee80211-challenge-text>,
+    <ieee80211-supported-rates>,
+    supported-rate, supported-rate-setter;
+
+  export <rate>,
+    bss-basic-set?, bss-basic-set?-setter,
+    real-rate, real-rate-setter;
+
+  export <basic-set-rate>,
+    <extended-rate>;
+
+  export <ieee80211-reserved-field>,
+    <ieee80211-information-field>,
+    element-id, element-id-setter,
+    information-field, information-field-setter;
+
+  export <ieee80211-management-frame>,
+   duration, duration-setter,
+   bssid, bssid-setter,
+   sequence-control, sequence-control-setter;
+
+  export <ieee80211-disassociation>,
+    reason-code, reason-code-setter;
+
+  export <ieee80211-association-request>,
+    capability-information, capability-information-setter,
+    listen-interval, listen-interval-setter,
+    ssid, ssid-setter,
+    supported-rates, supported-rates-setter;
+
+  export <ieee80211-association-response>,
+    ca
+*/
+end;
+
+

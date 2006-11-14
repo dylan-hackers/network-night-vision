@@ -14,4 +14,5 @@ define library gui-sniffer
   use flow;
   use network-flow;
   use interfaces;
+  use protocols;
 end library gui-sniffer;

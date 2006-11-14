@@ -11,6 +11,8 @@ define library interfaces
   use flow;
   use packetizer;
 
+  use protocols, import: { ethernet };
+
   export interfaces;
 end;
 
@@ -24,6 +26,7 @@ define module interfaces
   use machine-words;
   use byte-vector;
   use flow;
+  use ethernet, import: { <ethernet-frame> };
   use packetizer,
     import: { parse-frame,
               <ethernet-frame>,

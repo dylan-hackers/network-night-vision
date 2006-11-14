@@ -13,6 +13,7 @@ define module network-flow
   use packetizer;
   use packet-filter;
   use file-system;
+  use pcap, import: { packets, <pcap-file-header>, <pcap-packet>, <pcap-file> };
 
   export <summary-printer>, <verbose-printer>,
     <decapsulator>, <demultiplexer>,

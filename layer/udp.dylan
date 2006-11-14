@@ -34,7 +34,7 @@ end;
 define method send (socket :: <udp-socket>, destination :: <ipv4-address>, payload :: <container-frame>);
 end;                                  
 
-begin
+define function udp-begin()
   let ip-layer = init-ethernet();
   let udp = make(<udp-layer>, ip-layer: ip-layer);
   let socket = create-socket(udp, 53);
@@ -72,3 +72,5 @@ begin
   sleep(1000);
 */
 end;
+
+udp-begin();

@@ -19,7 +19,9 @@ define module layer
   use tcp;
   use simple-random;
   use streams;
-
+  use ipv4;
+  use ethernet;
+  use dns, exclude: { ipv4-address };
   // Add binding exports here.
 
 end module layer;

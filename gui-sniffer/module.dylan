@@ -19,6 +19,9 @@ define module gui-sniffer
   use network-flow;
   use flow;
   use interfaces;
+  use ethernet, import: { <ethernet-frame> };
+  use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
+  use prism2, import: { <prism2-frame> };
   // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
 end module gui-sniffer;
