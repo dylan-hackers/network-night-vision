@@ -169,7 +169,7 @@ end;
 define method initialize (writer :: <pcap-file-writer>,
                           #rest rest, #key, #all-keys)
   next-method();
-  write(writer.file-stream, assemble-frame(make(<pcap-file-header>)));
+  write(writer.file-stream, packet(assemble-frame(make(<pcap-file-header>))));
   force-output(writer.file-stream);
 end;
 
@@ -186,7 +186,7 @@ define method push-data-aux (input :: <push-input>,
                              node :: <pcap-file-writer>,
                              frame :: <pcap-packet>)
   write(node.file-stream,
-        assemble-frame(frame));
+        packet(assemble-frame(frame)));
   force-output(node.file-stream);
 end;
 
