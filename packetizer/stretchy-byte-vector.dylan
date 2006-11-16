@@ -455,7 +455,9 @@ define inline method encode-integer (value :: <integer>, seq :: <stretchy-byte-v
       seq.real-data[first-byte + i] := logand(#xff, ash(value, - (count - i * 8 + seq.bit-start-index)));
     end;
     //last element
-    if ((bits > 0) & (fullbytes >= 0))
+    if ((seq.bit-end-index = 8) & (fullbytes > 0))
+      seq.real-data[first-byte + fullbytes] := logand(#xff, value);
+    elseif ((bits > 0) & (fullbytes >= 0))
       seq.real-data[first-byte + fullbytes + 1]
         := logior(logand(seq.real-data[first-byte + fullbytes + 1],
                          ash(#xff, - bits)),

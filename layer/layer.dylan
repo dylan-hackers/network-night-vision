@@ -211,12 +211,90 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
   let ipv4-fan-in = make(<fan-in>);
   connect(ip-socket.decapsulator, ipv4-fan-in);
   connect(ip-broadcast-socket.decapsulator, ipv4-fan-in);
-  connect(ipv4-fan-in, ip-over-ethernet.ip-layer.demultiplexer);
+  connect(ipv4-fan-in, ip-over-ethernet.ip-layer.reassembler);
 
   register-adapter(ip-over-ethernet.ip-layer, ip-over-ethernet);
   ip-over-ethernet.ip-layer.default-ip-address := ip-over-ethernet.v4-address;
 end; 
 
+
+define open generic fragmented-packets (object :: <ip-reassembler>) => (res :: <vector-table>);
+
+define class <ip-reassembler> (<filter>)
+  constant slot fragmented-packets :: <vector-table> = make(<vector-table>);
+end;
+
+define inline function generate-assembly-id (ip-frame :: <ipv4-frame>)
+ => (res :: <vector>)
+  concatenate(ip-frame.source-address.data,
+              ip-frame.destination-address.data,
+              assemble-frame-as(<2byte-big-endian-unsigned-integer>, ip-frame.identification));
+end;
+
+
+define generic first-packet (obj :: <frag-packet>) => (res);
+define generic payloads (obj :: <frag-packet>) => (res :: <stretchy-vector>);
+define generic next-fragment-offset (obj :: <frag-packet>) => (res :: <integer>);
+define generic next-fragment-offset-setter (value :: <integer>, obj :: <frag-packet>) => (res :: <integer>);
+define generic timeout (obj :: <frag-packet>) => (res);
+define generic timeout-setter (value, obj :: <frag-packet>) => (res);
+
+define class <frag-packet> (<object>)
+  constant slot first-packet, required-init-keyword: first-packet:;
+  constant slot payloads :: <stretchy-vector> = make(<stretchy-vector>);
+  slot next-fragment-offset :: <integer> = 0, init-keyword: next-offset:;
+  slot timeout, required-init-keyword: timeout:;
+end;
+
+//XXX: this really should take care of out-of-order segments
+// and don't set the precondition that IP fragments arrive
+// in correct order
+define method push-data-aux (input :: <push-input>,
+                             node :: <ip-reassembler>,
+                             frame :: <ipv4-frame>)
+  if (frame.fragment-offset = 0)
+    if (frame.more-fragments = 0)
+      //fast path, just pass frame
+      push-data(node.the-output, frame);
+    else
+      let packet-id = generate-assembly-id(frame);
+      let timer = make(<timer>, in: 300, event: curry(remove-key!, node.fragmented-packets, packet-id));
+      node.fragmented-packets[packet-id]
+        := make(<frag-packet>,
+                first-packet: frame,
+                timeout: timer,
+                next-offset: byte-offset(byte-offset(frame-size(frame.payload))));
+    end;
+  else
+    let packet-id = generate-assembly-id(frame);
+    let frag-packet = element(node.fragmented-packets, packet-id, default: #f);
+    if (frag-packet)
+      if (frag-packet.next-fragment-offset = frame.fragment-offset)
+        add!(frag-packet.payloads, frame.payload.packet);
+        frag-packet.next-fragment-offset
+          := frag-packet.next-fragment-offset + byte-offset(byte-offset(frame-size(frame.payload)));
+        cancel(frag-packet.timeout);
+        frag-packet.timeout
+          := make(<timer>, in: 300, event: curry(remove-key!, node.fragmented-packets, packet-id));
+      else
+        format-out("Received out of order IP Fragment (%d, expected %d)\n",
+                   frame.fragment-offset, frag-packet.next-fragment-offset);
+      end;
+      if (frame.more-fragments = 0)
+        let fp = frag-packet.first-packet;
+        fp.cache.payload := parse-frame(fp.payload-type,
+                                        reduce(concatenate, fp.payload.packet, frag-packet.payloads),
+                                        parent: fp);
+        push-data(node.the-output, fp);
+        cancel(frag-packet.timeout);
+        remove-key!(node.fragmented-packets, packet-id);
+      end;
+    else
+      format-out("Received out of order IP Fragment (offset %d, but didn't receive the first yet)\n",
+                 frame.fragment-offset);
+    end;
+  end;
+end;
 
 define open generic send-socket (object :: <object>) => (res);
 define open generic send-socket-setter (value :: <object>, object :: <object>) => (res);
@@ -224,12 +302,14 @@ define generic default-ip-address (object :: <layer>) => (res :: <ipv4-address>)
 define generic default-ip-address-setter (value :: <ipv4-address>, object :: <layer>) => (res :: <ipv4-address>);
 define open generic adapters (object :: <ip-layer>) => (res);
 define open generic routes (object :: <ip-layer>) => (res);
+define open generic reassembler (object :: <ip-layer>) => (res);
 
 define class <ip-layer> (<layer>)
   slot send-socket :: type-union(<socket>, <adapter>);
   constant slot adapters = make(<stretchy-vector>);
   slot default-ip-address :: <ipv4-address>;
   constant slot routes = make(<stretchy-vector>);
+  constant slot reassembler = make(<ip-reassembler>);
 end;
 
 define class <route> (<object>)
@@ -252,16 +332,45 @@ define method register-route (ip :: <ip-layer>, route :: <route>)
   sort!(ip.routes, test: method(x, y) x.cidr.cidr-netmask > y.cidr.cidr-netmask end)
 end;
 
+//implicit assumptions made: *frame has no ip-options (header-length = 5)
 define method initialize (ip-layer :: <ip-layer>,
                           #rest rest, #key, #all-keys);
   let cls = make(<closure-node>,
                  closure: method(x)
                             let (adapter, next-hop)
                               = find-adapter-for-forwarding(ip-layer, x.destination-address);
-                            send(adapter, next-hop, x)
+                            let mtu = find-mtu-for-destination(adapter, x.destination-address) * 8;
+                            let full-payload = assemble-frame(x.payload).packet;
+                            let data-size = frame-size(x.payload);
+                            if (mtu < data-size)
+                              x.more-fragments := 1;
+                              for (i from 0 below data-size - mtu by mtu,
+                                   j from 0)
+                                x.payload := parse-frame(<raw-frame>, subsequence(full-payload, start: i, length: mtu));
+                                let ip-frame = assemble-frame(x);
+                                fixup!(ip-frame);
+                                send(adapter, next-hop, ip-frame);
+                                x.fragment-offset := byte-offset(byte-offset((j + 1) * mtu));
+                              end;
+                            end;
+                            x.more-fragments := 0;
+                            x.payload := parse-frame(<raw-frame>, subsequence(full-payload,
+                                                                              start: x.fragment-offset * 8 * 8,
+                                                                              length: modulo(data-size, mtu)));
+                            x.total-length := #f;
+                            let ip-frame = assemble-frame(x);
+                            fixup!(ip-frame);
+                            send(adapter, next-hop, ip-frame);
                           end);
   connect(ip-layer.fan-in, cls);
+  connect(ip-layer.reassembler, ip-layer.demultiplexer);
 end;
+
+define method find-mtu-for-destination (adapter :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>)
+ => (res :: <integer>)
+  1480;
+end;
+
 define method register-adapter (ip :: <ip-layer>,
                                 adapter :: <ip-over-ethernet-adapter>)
   add!(ip.adapters, adapter);
@@ -504,40 +613,39 @@ define function init-ethernet ()
 */
   let ip-layer = make(<ip-layer>);
   register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"),
-                                next-hop: ipv4-address("192.168.0.1")));
+                                next-hop: ipv4-address("192.168.2.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("192.168.0.24"),
+                              ipv4-address: ipv4-address("192.168.2.23"),
                               netmask: 24);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,
                           ip-layer: ip-layer,
                           icmp-handler: icmp-handler);
   let thr = make(<thread>, function: curry(toplevel, int));
-/*
   send(icmp-handler.ip-socket,
        ipv4-address("213.73.91.29"),
        make(<icmp-frame>,
-            type: 8,
+            icmp-type: 8,
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
   send(icmp-handler.ip-socket,
        ipv4-address("212.202.174.224"),
        make(<icmp-frame>,
-            type: 8,
+            icmp-type: 8,
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
   send(icmp-handler.ip-socket,
        ipv4-address("192.168.0.1"),
        make(<icmp-frame>,
-            type: 8,
+            icmp-type: 8,
             code: 0,
             payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
 
-  format-out("Mac 192.168.2.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.2.1"), default: #f));
-*/
+//  format-out("Mac 192.168.2.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.2.1"), default: #f));
+
   ip-layer;
 end;
 

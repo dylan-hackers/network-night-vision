@@ -385,8 +385,8 @@ define test bits-assemble ()
 end;
 
 define protocol dns-foo (container-frame)
-  field typed :: <2bit-unsigned-integer>;
-  field pointer :: <14bit-unsigned-integer>;
+  field typed :: <2bit-unsigned-integer> = 3;
+  field pointer :: <14bit-unsigned-integer> = 42;
 end;
 
 define test dns-foo-parsing ()
@@ -394,6 +394,14 @@ define test dns-foo-parsing ()
   check-equal("type of frame is correct", 3, frame.typed);
   check-equal("pointer of frame is correct", #x4e, frame.pointer);
 end;
+
+define test dns-foo-assemble ()
+  let f = make(<dns-foo>);
+  let as = assemble-frame(f);
+  check-equal("assembling of dns-foo[0] is correct", 192, as.packet[0]);
+  check-equal("assembling of dns-foo[1] is correct", 42, as.packet[1]);
+end;
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -426,6 +434,7 @@ define suite packetizer-assemble-suite ()
   test half-byte-modify;
   test half-bytes-assembling;
   test bits-assemble;
+  test dns-foo-assemble;
 end;
 
 begin
