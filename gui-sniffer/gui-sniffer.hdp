@@ -1,20 +1,21 @@
-Format-Version:   2
-Library:          gui-sniffer
-Synopsis:         A brief description of the project.
-Author:           Andreas Bogk, Hannes Mehnert
-Copyright:        (C) 2005,  All rights reserved.
-Major-Version:    1
-Minor-Version:    0
-Files:            library
+comment:	This file is generated, please don't edit
+format-version:	2
+library:	gui-sniffer
+files:	library
 	module
+	hex-view
 	gui-sniffer
-Linker-Options:   $(guilflags)
-Start-Function:   main
-Compilation-Mode: loose
-Target-Type:      executable
-RC-Files:	bitmaps.rc
-C-Header-Files:	icons/open.ico
-			icons/save.ico
-			icons/play.ico
-			icons/stop.ico
-
+base-address:	0x63FE0000
+start-function:	main
+linker-options:	$(guilflags)
+c-header-files:	icons\open.ico
+	icons\save.ico
+	icons\play.ico
+	icons\stop.ico
+rc-files:	bitmaps.rc
+major-version:	1
+minor-version:	0
+library-pack:	0
+compilation-mode:	loose
+target-type:	executable
+comment:	additional keywords

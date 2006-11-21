@@ -231,7 +231,7 @@ define method print-time (gui :: <gui-sniffer-frame>, frame :: <frame-with-metad
   let (days, hours, minutes, seconds, microseconds)
     = decode-duration(diff);
   let secs = (((days * 24 + hours) * 60) + minutes) * 60 + seconds;
-  secs + as(<float>, microseconds) / 1000000
+  concatenate(integer-to-string(secs), ".", integer-to-string(truncate/(microseconds, 1000), size: 3));
 end;
 
 define method apply-filter (frame :: <gui-sniffer-frame>)
@@ -267,10 +267,13 @@ define method filter-packet-table (frame :: <gui-sniffer-frame>)
 end;
 
 define method show-packet (frame :: <gui-sniffer-frame>)
-  let packet = frame.packet-table.gadget-value;
-  if (packet) packet := real-frame(packet) end;
-  show-packet-tree(frame, packet);
-  show-packet-hex-dump(frame, packet);
+  let current-packet = frame.packet-table.gadget-value;
+  if (current-packet) current-packet := real-frame(current-packet) end;
+  show-packet-tree(frame, current-packet);
+  current-packet & show-hexdump(frame, current-packet.packet);
+  redisplay-window(frame.packet-hex-dump);
+//  note-gadget-text-changed(window);
+//  note-gadget-value-changed(window);
 end;
 
 define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
@@ -282,26 +285,6 @@ define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
        end;
 end;
 
-define method show-packet-hex-dump (frame :: <gui-sniffer-frame>, network-packet)
-  frame.packet-hex-dump.gadget-value := get-hex-dump(network-packet);
-end;
-
-define function get-hex-dump (network-packet) => (string :: <string>)
-  if (network-packet)
-    //XXX: this should be easier!
-    let out = make(<string-stream>, direction: #"output");
-    block()
-      hexdump(out, network-packet.packet); //XXX: once assemble-frame
-                                           //on unparsed-container-frame works,
-                                           //we can use assemble-frame here
-      stream-contents(out);
-    cleanup
-      close(out)
-    end
-  else
-    ""
-  end;
-end;
 define method compute-absolute-offset (frame :: <ethernet-frame>)
  => (res :: <integer>)
   0
@@ -409,35 +392,9 @@ define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let start-highlight = compute-absolute-offset(selected-packet);
   let end-highlight = start-highlight + compute-length(selected-packet);
 
-  let (start-line, start-rest) = floor/(byte-offset(start-highlight), 16);
-  let (end-line, end-rest) = floor/(byte-offset(end-highlight + 7), 16);
+  set-highlight(mframe, start-highlight, end-highlight);
+  redisplay-window(mframe.packet-hex-dump);
 
-  if (end-rest = 0)
-    end-rest := 16;
-    end-line := end-line - 1
-  end;
-
-  let hex-dump = split(get-hex-dump(packet.real-frame), '\n');
-  hex-dump := copy-sequence(hex-dump, end: hex-dump.size - 1);
-
-  if (end-line >= hex-dump.size - 1)
-    end-line := hex-dump.size - 2;
-    end-rest := 16;
-  end;
-  
-  let start-pos = 6 + start-rest * 3 + if (start-rest >= 8) 1 else 0 end;
-  let end-pos = 6 + end-rest * 3 + if (end-rest > 8) 1 else 0 end;
-  
-  unless (start-line = end-line & start-pos = end-pos)
-    hex-dump[start-line + 1][start-pos - 1] := '[';
-    if (end-pos >= hex-dump[end-line + 1].size)
-      hex-dump[end-line + 1] := add!(hex-dump[end-line + 1], ']');
-    else
-      hex-dump[end-line + 1][end-pos - 1] := ']';
-    end;
-  end;
-  hex-dump := reduce1(method(a,b) concatenate(a, "\n", b) end, hex-dump);
-  mframe.packet-hex-dump.gadget-value := hex-dump;
 end;
 
 define variable *count* :: <integer> = 0;
@@ -445,6 +402,8 @@ define method counter ()
   *count* := *count* + 1;
   *count*;
 end;
+
+define constant $text-style = make(<text-style>, family: #"fix", size: 8);
 
 define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <filter>)
   slot network-frames :: <stretchy-vector> = make(<stretchy-vector>);
@@ -458,6 +417,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          label: "Filter expression",
          value-changed-callback: method(x) apply-filter(frame) end,
          activate-callback: method(x) apply-filter(frame) end,
+         text-style: $text-style,
          items: frame.filter-history);
 
   pane filter-pane (frame)
@@ -475,7 +435,9 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                           print-destination,
                           print-protocol,
                           print-info),
+         widths: #[30, 60, 150, 150, 100, 500],
          items: #[],
+         text-style: $text-style,
          value-changed-callback: method(x) show-packet(frame) end);
 
   pane packet-tree-view (frame)
@@ -483,6 +445,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          label-key: frame-print-label,
          children-generator: frame-children-generator,
          children-predicate: frame-children-predicate,
+         text-style: $text-style,
          value-changed-callback: method(x) highlight-hex-dump(frame) end);
 
   pane packet-hex-dump (frame)
@@ -493,7 +456,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          lines: 20,
          columns: 100,
          scroll-bars: #"vertical",
-         text-style: make(<text-style>, family: #"fix", size: 10));
+         text-style: $text-style);
 
 
   pane sniffer-status-bar (frame)
@@ -529,7 +492,9 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                    make(<column-splitter>,
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
-                                         frame.packet-hex-dump));
+                                         scrolling (scroll-bars: #"both")
+                                           frame.packet-hex-dump
+                                         end));
                  end;
 
   tool-bar (frame) frame.sniffer-tool-bar;
@@ -690,6 +655,7 @@ end;
 begin
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
+  set-frame-size(gui-sniffer, 800, 600);
   deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
   deuce/*editor-frame* := gui-sniffer;
   deuce/*buffer* := deuce/make-initial-buffer();
