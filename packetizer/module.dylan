@@ -84,6 +84,8 @@ define module packetizer
     <leaf-frame>,
     parse-frame,
     assemble-frame,
+    assemble-frame!,
+    copy-frame,
     assemble-frame-as,
     read-frame,
     summary;

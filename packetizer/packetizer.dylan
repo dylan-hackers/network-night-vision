@@ -260,6 +260,10 @@ define inline method payload-type (frame :: <header-frame>) => (res :: <type>)
   element(table, frame.layer-magic, default: <raw-frame>);
 end;
 
+define inline method fixup-protocol-magic (frame :: <header-frame>) => (magic)
+  get-protocol-magic(frame, frame.payload);
+end;
+
 define inline method get-protocol-magic (frame :: <header-frame>, payload :: <frame>) => (magic)
   let reverse-layering = reverse-layer(frame.object-class);
   let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);
@@ -354,6 +358,11 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
 end;
 
 define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
+  let f = copy-frame(frame);
+  assemble-frame!(f);
+end;
+
+define function assemble-frame! (frame :: <container-frame>) => (packet :: <unparsed-container-frame>)
   let result = make(<stretchy-byte-vector-subsequence>, data: make(<stretchy-byte-vector>, capacity: 1548));
   assemble-frame-into(frame, result);
   let uf = make(unparsed-class(frame.object-class), cache: frame, packet: result);
@@ -378,6 +387,18 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
                           field-as-string,
                           "\n")
             end, fields(frame)))
+end;
+
+define method copy-frame (frame :: <container-frame>) => (res :: <container-frame>)
+  let res = make(decoded-class(frame.object-class));
+  for (field in frame.fields)
+    field.setter(copy-frame(field.getter(frame)), res);
+  end;
+  res;
+end;
+
+define method copy-frame (frame) => (res)
+  frame;
 end;
 
 define method assemble-frame-into (frame :: <container-frame>,

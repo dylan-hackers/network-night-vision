@@ -27,7 +27,7 @@ define function compute-static-offset(list :: <simple-vector>)
   for (field in list)
     if (instance?(field, <layering-field>))
       unless (field.fixup-function)
-        field.fixup-function := payload-type;
+        field.fixup-function := fixup-protocol-magic;
       end;
     end;
     if (start ~= $unknown-at-compile-time)
