@@ -416,14 +416,14 @@ define method assemble-frame-into (frame :: <container-frame>,
       let real-frame-start = field.dynamic-start(frame);
       if (real-frame-start ~= offset)
         //pad!
-        format-out("Need dynamic padding at start of %s : %d ~= %d\n",
-                   field.field-name, real-frame-start, offset);
+        //format-out("Need dynamic padding at start of %s : %d ~= %d\n",
+        //           field.field-name, real-frame-start, offset);
       end;
       offset := real-frame-start;
     end;
     if ((field.static-start ~= $unknown-at-compile-time) & (field.static-start ~= offset))
-      format-out("Need static padding at start of %s : %d ~= %d\n",
-                 field.field-name, field.static-start, offset);
+      //format-out("Need static padding at start of %s : %d ~= %d\n",
+      //           field.field-name, field.static-start, offset);
       offset := field.static-start;
     end;
     let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset));
@@ -439,14 +439,14 @@ define method assemble-frame-into (frame :: <container-frame>,
       let real-frame-end = field.dynamic-end(frame);
       if (real-frame-end ~= length)
         //pad!
-        format-out("Need dynamic padding at end of %s : %d ~= %d\n",
-                   field.field-name, real-frame-end, length);
+        //format-out("Need dynamic padding at end of %s : %d ~= %d\n",
+        //           field.field-name, real-frame-end, length);
       end;
       length := real-frame-end;
     end;
     if ((field.static-end ~= $unknown-at-compile-time) & (field.static-end ~= length))
-      format-out("Need static padding at end of %s : %d ~= %d\n",
-                 field.field-name, field.static-end, length);
+      //format-out("Need static padding at end of %s : %d ~= %d\n",
+      //           field.field-name, field.static-end, length);
       offset := field.static-end;
     end;
     offset := length;

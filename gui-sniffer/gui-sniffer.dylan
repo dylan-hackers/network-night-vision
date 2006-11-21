@@ -217,6 +217,7 @@ define method print-number (frame :: <frame-with-metadata>)
   frame.number;
 end;
 
+define generic print-time (gui :: <gui-sniffer-frame>, frame :: <frame-with-metadata>);
 define method print-time (gui :: <gui-sniffer-frame>, frame :: <frame-with-metadata>)
   let diff = frame.receive-time - gui.first-packet-arrived;
   let (days, hours, minutes, seconds, microseconds)
@@ -225,6 +226,7 @@ define method print-time (gui :: <gui-sniffer-frame>, frame :: <frame-with-metad
   concatenate(integer-to-string(secs), ".", integer-to-string(truncate/(microseconds, 1000), size: 3));
 end;
 
+define generic apply-filter (frame :: <gui-sniffer-frame>);
 define method apply-filter (frame :: <gui-sniffer-frame>)
   let filter-string = gadget-value(frame.filter-field);
   let old = frame.filter-expression;

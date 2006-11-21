@@ -283,8 +283,8 @@ define method parse-frame-field
      end;
 
   if (end-of-field > full-frame-size)
-    format-out("Wanted to read beyond frame, field %s start %d end %d frame-size %d\n",
-               frame-field.field.field-name, start, end-of-field, full-frame-size);
+    //format-out("Wanted to read beyond frame, field %s start %d end %d frame-size %d\n",
+    //           frame-field.field.field-name, start, end-of-field, full-frame-size);
     end-of-field := full-frame-size;
   end;
   let (value, length)
@@ -297,8 +297,8 @@ define method parse-frame-field
     let real-end = length + start;
     unless (real-end = end-of-field)
       if (real-end < end-of-field)
-        format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
-                   frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
+        //format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
+        //           frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
         //padding? only if end-of-field ~= end-of-frame!?
         end-of-field := real-end;
       else
