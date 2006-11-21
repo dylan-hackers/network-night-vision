@@ -97,14 +97,12 @@ define function calculate-checksum (frame :: <byte-sequence>,
 end;
 
 define method fixup! (frame :: <unparsed-ipv4-frame>,
-                      foo :: <stretchy-vector-subsequence>,
                       #next next-method)
   frame.header-checksum := calculate-checksum(frame.packet, frame.header-length * 4);
   next-method();
 end;
 
 define method fixup! (frame :: <unparsed-icmp-frame>,
-                      foo :: <stretchy-vector-subsequence>,
                       #next next-method)
   frame.checksum := calculate-checksum(frame.packet, frame.packet.size);
   next-method();
@@ -207,8 +205,7 @@ define protocol pseudo-header (container-frame)
     length: frame.segment-length;
 end;
 
-define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
-                     foo :: <stretchy-vector-subsequence>,
+define method fixup!(tcp-frame :: <unparsed-tcp-frame>
                      #next next-method)
   let pseudo-header = make(<pseudo-header>,
                            source-address: tcp-frame.parent.source-address,
