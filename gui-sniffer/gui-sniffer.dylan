@@ -261,7 +261,10 @@ define method filter-packet-table (frame :: <gui-sniffer-frame>)
         frame.network-frames
       end;
   unless (shown-packets = gadget-items(frame.packet-table))
-    gadget-items(frame.packet-table) := shown-packets;
+    gadget-items(frame.packet-table) := #();
+    do(method(x)
+         add-item(frame.packet-table, make-item(frame.packet-table, x))
+       end, shown-packets);
     show-packet(frame);
   end;
 end;
