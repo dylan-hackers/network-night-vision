@@ -60,6 +60,9 @@ define method hexdump (sequence :: <sequence>) => (dump :: <string>)
         else
           format(stream, ".")
         end;
+        if(modulo(byte-index, 16) == 7)
+          format(stream, " ");
+        end;
       end for;
       format(stream, "\n");
     end for;
@@ -80,8 +83,10 @@ define method set-highlight (frame, start-offset, end-offset)
     let (end-line, end-rest) = floor/(floor/(end-offset - 1, 8), 16);
     let start-pos = 6 + start-rest * 3 + if (start-rest >= 8) 1 else 0 end;
     let end-pos = 8 + end-rest * 3 + if (end-rest >= 8) 1 else 0 end;
-    let start-pos2 = start-rest + 58;
-    let end-pos2 = end-rest + 59;
+    let start-pos2 = start-rest + 57 + if (start-rest >= 8) 1 else 0 end;
+    let end-pos2 = end-rest + 58 + if (end-rest >= 8) 1 else 0 end;
+
+    format-out("%= %=, %= %=, %= %=\n", start-offset, end-offset, start-line, start-pos, end-line, end-pos);
 
     For (i from 0,
         line = buffer.buffer-start-node.node-section.section-start-line then line.line-next,
@@ -112,6 +117,10 @@ define method set-highlight (frame, start-offset, end-offset)
                                           make(<style-change>,
                                                index: start-pos,
                                                font: window-default-bold-font(window)));
+          line.line-style-changes := add!(line.line-style-changes,
+                                          make(<style-change>,
+                                                 index: 57,
+                                                 font: window-default-font(window))); 
           line.line-style-changes := add!(line.line-style-changes,
                                           make(<style-change>,
                                                index: start-pos2,
