@@ -294,11 +294,11 @@ define method parse-frame-field
                                         start: start,
                                         end: end-of-field));
   if (length)
-    let real-end = length - bit-offset(start) + start;
+    let real-end = length + start;
     unless (real-end = end-of-field)
       if (real-end < end-of-field)
-        //format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
-        //           frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
+        format-out("estimated end in %s at %d (%d bytes), but parser was done after %d (%d bytes)\n",
+                   frame-field.field.field-name, end-of-field, byte-offset(end-of-field), real-end, byte-offset(real-end));
         //padding? only if end-of-field ~= end-of-frame!?
         end-of-field := real-end;
       else
