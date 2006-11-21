@@ -438,6 +438,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          widths: #[30, 60, 150, 150, 100, 500],
          items: #[],
          text-style: $text-style,
+         popup-menu-callback: display-popup-menu,
          value-changed-callback: method(x) show-packet(frame) end);
 
   pane packet-tree-view (frame)
@@ -516,6 +517,24 @@ end;
 define command-table *gui-sniffer-command-table* (*global-command-table*)
   menu-item "File" = *file-command-table*;
   menu-item "Capture" = *interface-command-table*;
+end;
+
+define command-table *popup-menu-command-table* (*global-command-table*)
+  menu-item "Follow TCP Stream" = follow-tcp-stream;
+end;
+
+define method display-popup-menu (sheet, object, #key x, y)
+  let frame = sheet.sheet-frame;
+  let menu = make-menu-from-command-table-menu
+               (command-table-menu(*popup-menu-command-table*),
+                frame, frame-manager(frame),
+                command-table: *popup-menu-command-table*,
+                owner: frame);
+  display-menu(menu);
+end;
+
+define method follow-tcp-stream (frame :: <gui-sniffer-frame>)
+  //
 end;
 
 define method open-pcap-file (frame :: <gui-sniffer-frame>)
