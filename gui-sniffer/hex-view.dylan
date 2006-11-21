@@ -83,8 +83,6 @@ define method set-highlight (frame, start-offset, end-offset)
     let start-pos2 = start-rest + 58;
     let end-pos2 = end-rest + 59;
 
-    format-out("%= %=, %= %=, %= %=\n", start-offset, end-offset, start-line, start-pos, end-line, end-pos);
-
     For (i from 0,
         line = buffer.buffer-start-node.node-section.section-start-line then line.line-next,
         while: line)
