@@ -10,7 +10,7 @@ define module hex-view
   use deuce;
   use deuce-internals;
 
-  export show-hexdump, set-highlight;
+  export show-hexdump, set-highlight, hexdump;
 end;
 
 define module gui-sniffer
@@ -26,7 +26,7 @@ define module gui-sniffer
   use date;
   use file-system;
   use operating-system;
-  use packetizer;
+  use packetizer, exclude: { hexdump };
   use packet-filter;
   use network-flow;
   use flow;

@@ -48,33 +48,24 @@ define class <raw-frame-element> (<position-mixin>)
 end;
 
 define method frame-children-generator (raw-frame :: <raw-frame>)
-  let out = make(<string-stream>, direction: #"output");
-  let hex = block()
-              hexdump(out, raw-frame.data);
-              stream-contents(out);
-            cleanup
-              close(out)
-            end;
-  let lines = split(hex, '\n');
-  if (lines[0] = "")
-    lines := copy-sequence(lines, start: 1)
-  end;
+  let out = hexdump(raw-frame.data);
+  let lines = split(out, '\n');
   if (lines[lines.size - 1] = "")
     lines := copy-sequence(lines, end: lines.size - 1)
   end;
 
-  let start :: <integer> = 0;
-  let length :: <integer> = 16 * 8;
-  map(method(x)
-        let rff = make(<raw-frame-element>,
-                       start: start,
-                       length: length,
-                       end: start + length,
-                       raw-frame: raw-frame,
-                       value: x);
-        start := start + length;
-        rff;
-      end, lines)
+  let children = make(<stretchy-vector>);
+
+  for (line in lines, offset from 0 by 16 * 8)
+    let length = min(16 * 8, raw-frame.data.size * 8 - offset);
+    add!(children, make(<raw-frame-element>,
+                        start: offset,
+                        length: length,
+                        end: offset + length,
+                        raw-frame: raw-frame,
+                        value: line));
+  end;
+  children;
 end;
 
 define method frame-children-generator (a-frame :: <header-frame>)
@@ -308,7 +299,6 @@ define method find-frame-field (frame :: <container-frame>, search :: type-union
 end;
 
 define method compute-absolute-offset (frame :: type-union(<container-frame>, <raw-frame>), relative-to)
-  format-out("%= %=\n", frame, relative-to);
   if (frame.parent & frame ~= relative-to)
     let ff = find-frame-field(frame.parent, frame);
     compute-absolute-offset(ff, relative-to);

@@ -5,32 +5,6 @@ define function hex(integer :: <integer>, #key size)
   integer-to-string(integer, base: 16, size: size)
 end function hex;
 
-/*
-define method hexdump (sequence :: <sequence>) => (dump :: <string>)
-  let stream = make(<string-stream>, direction: #"output");
-  block()
-    for (byte in sequence,
-         index from 0)
-      if(modulo(index, 16) == 0)
-        format(stream, "%s  ", hex(index, size: 4))
-      end;
-      format(stream, "%s", hex(byte, size: 2));
-      if(modulo(index, 16) == 15 
-        | (index == sequence.size - 1 & sequence.size > 16))
-        format(stream, "\n")
-      elseif(modulo(index, 16) == 7)
-        format(stream, "  ");
-      else
-        format(stream, " ");
-      end if;
-    end for;
-    stream-contents(stream);
-  cleanup
-    close(stream)
-  end
-end method hexdump;
-*/
-
 define method hexdump (sequence :: <sequence>) => (dump :: <string>)
   let stream = make(<string-stream>, direction: #"output");
   block()
