@@ -97,20 +97,21 @@ define function calculate-checksum (frame :: <byte-sequence>,
 end;
 
 define method fixup! (frame :: <unparsed-ipv4-frame>,
+                      foo :: <stretchy-vector-subsequence>,
                       #next next-method)
   frame.header-checksum := calculate-checksum(frame.packet, frame.header-length * 4);
   next-method();
 end;
 
 define method fixup! (frame :: <unparsed-icmp-frame>,
+                      foo :: <stretchy-vector-subsequence>,
                       #next next-method)
   frame.checksum := calculate-checksum(frame.packet, frame.packet.size);
   next-method();
 end;
 
 define protocol ipv4-frame (header-frame)
-  summary "IP SRC %= DST %=/%s",
-    source-address, destination-address, compose(summary, payload);
+  summary "IP SRC %= DST %=", source-address, destination-address;
   over <ethernet-frame> #x800;
   over <link-control> #x800;
   field version :: <4bit-unsigned-integer> = 4;
@@ -148,10 +149,10 @@ define protocol icmp-frame (header-frame)
 end;
 
 define protocol udp-frame (header-frame)
-  summary "UDP port %= -> %=/%s", source-port, destination-port, compose(summary, payload);
+  summary "UDP port %= -> %=", source-port, destination-port;
   over <ipv4-frame> 17;
   field source-port :: <2byte-big-endian-unsigned-integer>;
-  field destination-port :: <2byte-big-endian-unsigned-integer>;
+  layering field destination-port :: <2byte-big-endian-unsigned-integer>;
   field payload-size :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame.payload)) + 8;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
@@ -207,6 +208,7 @@ define protocol pseudo-header (container-frame)
 end;
 
 define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
+                     foo :: <stretchy-vector-subsequence>,
                      #next next-method)
   let pseudo-header = make(<pseudo-header>,
                            source-address: tcp-frame.parent.source-address,

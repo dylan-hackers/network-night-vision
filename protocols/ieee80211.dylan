@@ -339,7 +339,7 @@ define protocol ieee80211-frame-control (container-frame)
 end;
 
 define protocol ieee80211-frame (header-frame)
-  summary "IEEE80211 %s/%s", compose(summary, frame-control), compose(summary, payload);
+  summary "IEEE80211 %s", compose(summary, frame-control);
   field frame-control :: <ieee80211-frame-control>;
   variably-typed-field payload,
     type-function: 

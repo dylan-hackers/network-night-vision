@@ -3,7 +3,6 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define protocol link-control (header-frame)
-  summary "%s", compose(summary, payload);
   field dsap :: <unsigned-byte>;
   field ssap :: <unsigned-byte>;
   field control :: <unsigned-byte>;

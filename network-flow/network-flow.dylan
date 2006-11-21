@@ -10,10 +10,17 @@ define class <summary-printer> (<single-push-input-node>)
   slot stream :: <stream>, required-init-keyword: stream:;
 end;
 
+define method recursive-summary (frame :: <header-frame>) => (res :: <string>)
+  concatenate(summary(frame), "/", recursive-summary(frame.payload));
+end;
+
+define method recursive-summary (frame :: <frame>) => (res :: <string>)
+  summary(frame);
+end;
 define method push-data-aux (input :: <push-input>,
                              node :: <summary-printer>,
                              frame :: <frame>)
-  format(node.stream, "%s\n", summary(frame));
+  format(node.stream, "%s\n", recursive-summary(frame));
   force-output(node.stream);
 end;
 
