@@ -9,8 +9,6 @@ define protocol prism2-header-item (container-frame)
   field item-data :: <little-endian-unsigned-integer-4byte>;
 end;
 
-define n-byte-vector(wlan-device-name, 16) end;
-
 define protocol prism2-frame (header-frame)
   summary "PRISM2/%s", compose(summary, payload);
   field message-code :: <little-endian-unsigned-integer-4byte>;
@@ -26,5 +24,15 @@ define protocol prism2-frame (header-frame)
   field rate ::  <prism2-header-item>;
   field istx ::  <prism2-header-item>;
   field frame-length ::  <prism2-header-item>;
-  field payload :: <raw-frame>; //<ieee80211-frame>;
+  field payload :: <ieee80211-frame>;
 end;
+
+define protocol bsd-80211-radio-frame (header-frame)
+  field version :: <unsigned-byte>;
+  field pad :: <unsigned-byte>;
+  field frame-length :: <2byte-little-endian-unsigned-integer>;
+  field it-present :: <little-endian-unsigned-integer-4byte>;
+  field options :: <raw-frame>;
+  field payload :: <ieee80211-frame>, start: frame.frame-length * 8;
+end;
+

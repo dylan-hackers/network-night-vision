@@ -205,7 +205,7 @@ define protocol pseudo-header (container-frame)
     length: frame.segment-length;
 end;
 
-define method fixup!(tcp-frame :: <unparsed-tcp-frame>
+define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
                      #next next-method)
   let pseudo-header = make(<pseudo-header>,
                            source-address: tcp-frame.parent.source-address,

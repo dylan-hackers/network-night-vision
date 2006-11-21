@@ -285,15 +285,6 @@ define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
        end;
 end;
 
-define method compute-absolute-offset (frame :: <ethernet-frame>)
- => (res :: <integer>)
-  0
-end;
-define method compute-absolute-offset (frame :: <prism2-frame>)
- => (res :: <integer>)
-  0
-end;
-
 define method find-frame-field (frame :: <container-frame>, search :: type-union(<container-frame>, <raw-frame>))
  => (res :: false-or(type-union(<frame-field>, <rep-frame-field>)))
   block(ret)
@@ -313,26 +304,27 @@ define method find-frame-field (frame :: <container-frame>, search :: type-union
   end;
 end;
 
-define method compute-absolute-offset (frame :: type-union(<container-frame>, <raw-frame>))
-  if (frame.parent)
+define method compute-absolute-offset (frame :: type-union(<container-frame>, <raw-frame>), relative-to)
+  format-out("%= %=\n", frame, relative-to);
+  if (frame.parent & frame ~= relative-to)
     let ff = find-frame-field(frame.parent, frame);
-    compute-absolute-offset(ff);
+    compute-absolute-offset(ff, relative-to);
   else
     0;
   end;
 end;
-define method compute-absolute-offset (ff :: <rep-frame-field>)
+define method compute-absolute-offset (ff :: <rep-frame-field>, relative-to)
  => (res :: <integer>)
-  start-offset(ff) + compute-absolute-offset(ff.parent-frame-field);
+  start-offset(ff) + compute-absolute-offset(ff.parent-frame-field, relative-to);
 end;
-define method compute-absolute-offset (frame-field :: <frame-field>)
+define method compute-absolute-offset (frame-field :: <frame-field>, relative-to)
  => (res :: <integer>)
-  start-offset(frame-field) + compute-absolute-offset(frame-field.frame)
+  start-offset(frame-field) + compute-absolute-offset(frame-field.frame, relative-to)
 end;
 
-define method compute-absolute-offset (ff :: <raw-frame-element>)
+define method compute-absolute-offset (ff :: <raw-frame-element>, relative-to)
  => (res :: <integer>)
-  start-offset(ff) + compute-absolute-offset(ff.raw-frame);
+  start-offset(ff) + compute-absolute-offset(ff.raw-frame, relative-to);
 end;
 
 define method compute-length (frame :: <header-frame>) => (res :: <integer>)
@@ -389,7 +381,7 @@ define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
 
-  let start-highlight = compute-absolute-offset(selected-packet);
+  let start-highlight = compute-absolute-offset(selected-packet, packet.real-frame);
   let end-highlight = start-highlight + compute-length(selected-packet);
 
   set-highlight(mframe, start-highlight, end-highlight);

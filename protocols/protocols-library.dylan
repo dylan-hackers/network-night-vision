@@ -37,17 +37,88 @@ define module ethernet
   export <mac-address>, mac-address;
 end;
 
+define module ieee80211
+  use dylan;
+  use packetizer;
+
+  use ethernet, import: { <mac-address> };
+  use logical-link, import: { <link-control> };
+
+  export wlan-device-name, <wlan-device-name>;
+
+  export <ieee80211-frame>;
+/*
+  export <ieee80211-sequence-control>,
+    sequence-number, sequence-number-setter,
+    fragment-number, fragment-number-setter;
+
+  export <ieee80211-capability-information>,
+    reserved, reserved-setter,
+    privacy, privacy-setter,
+    cf-poll-request, cf-poll-request-setter,
+    cl-pollable, cf-pollable-setter,
+    ibss, ibss-setter,
+    ess, ess-setter;
+
+  export <ieee80211-information-field>,
+    length, length-setter;
+
+  export <ieee80211-raw-information-field>,
+    data, data-setter;
+
+  export <ieee80211-ssid>,
+    data, data-setter;
+
+  export <ieee80211-fh-set>,
+    <ieee80211-ds-set>,
+    <ieee80211-cf-set>,
+    <ieee80211-tim>,
+    <ieee80211-ibss>,
+    <ieee80211-challenge-text>,
+    <ieee80211-supported-rates>,
+    supported-rate, supported-rate-setter;
+
+  export <rate>,
+    bss-basic-set?, bss-basic-set?-setter,
+    real-rate, real-rate-setter;
+
+  export <basic-set-rate>,
+    <extended-rate>;
+
+  export <ieee80211-reserved-field>,
+    <ieee80211-information-field>,
+    element-id, element-id-setter,
+    information-field, information-field-setter;
+
+  export <ieee80211-management-frame>,
+   duration, duration-setter,
+   bssid, bssid-setter,
+   sequence-control, sequence-control-setter;
+
+  export <ieee80211-disassociation>,
+    reason-code, reason-code-setter;
+
+  export <ieee80211-association-request>,
+    capability-information, capability-information-setter,
+    listen-interval, listen-interval-setter,
+    ssid, ssid-setter,
+    supported-rates, supported-rates-setter;
+
+  export <ieee80211-association-response>,
+    ca
+*/
+end;
+
 define module prism2
   use dylan;
   use packetizer;
+  use ieee80211;
 
   export <prism2-header-item>,
     item-did, item-did-setter,
     item-status, item-status-setter,
     item-length, item-length-setter,
     item-data, item-data-setter;
-
-  export wlan-device-name, <wlan-device-name>;
 
   export <prism2-frame>,
     message-code, message-code-setter,
@@ -63,6 +134,14 @@ define module prism2
     rate, rate-setter,
     istx, istx-setter,
     frame-length, frame-length-setter;
+
+  export <bsd-80211-radio-frame>,
+    version, version-setter,
+    pad, pad-setter,
+    frame-length, frame-length-setter,
+    it-present, it-present-setter,
+    options, options-setter;
+
 end;
 
 define module pcap
@@ -71,7 +150,7 @@ define module pcap
   use date;
 
   use ethernet, import: { <ethernet-frame> };
-  use prism2, import: { <prism2-frame> };
+  use prism2, import: { <prism2-frame>, <bsd-80211-radio-frame> };
 
   export <pcap-file-header>,
     magic, magic-setter,
@@ -278,74 +357,5 @@ define module dns
     text-data, text-data-setter;
 end;
 
-
-define module ieee80211
-  use dylan;
-  use packetizer;
-
-  use prism2, import: { <wlan-device-name> };
-  use ethernet, import: { <mac-address> };
-  use logical-link, import: { <link-control> };
-/*
-  export <ieee80211-sequence-control>,
-    sequence-number, sequence-number-setter,
-    fragment-number, fragment-number-setter;
-
-  export <ieee80211-capability-information>,
-    reserved, reserved-setter,
-    privacy, privacy-setter,
-    cf-poll-request, cf-poll-request-setter,
-    cl-pollable, cf-pollable-setter,
-    ibss, ibss-setter,
-    ess, ess-setter;
-
-  export <ieee80211-information-field>,
-    length, length-setter;
-
-  export <ieee80211-raw-information-field>,
-    data, data-setter;
-
-  export <ieee80211-ssid>,
-    data, data-setter;
-
-  export <ieee80211-fh-set>,
-    <ieee80211-ds-set>,
-    <ieee80211-cf-set>,
-    <ieee80211-tim>,
-    <ieee80211-ibss>,
-    <ieee80211-challenge-text>,
-    <ieee80211-supported-rates>,
-    supported-rate, supported-rate-setter;
-
-  export <rate>,
-    bss-basic-set?, bss-basic-set?-setter,
-    real-rate, real-rate-setter;
-
-  export <basic-set-rate>,
-    <extended-rate>;
-
-  export <ieee80211-reserved-field>,
-    <ieee80211-information-field>,
-    element-id, element-id-setter,
-    information-field, information-field-setter;
-
-  export <ieee80211-management-frame>,
-   duration, duration-setter,
-   bssid, bssid-setter,
-   sequence-control, sequence-control-setter;
-
-  export <ieee80211-disassociation>,
-    reason-code, reason-code-setter;
-
-  export <ieee80211-association-request>,
-    capability-information, capability-information-setter,
-    listen-interval, listen-interval-setter,
-    ssid, ssid-setter,
-    supported-rates, supported-rates-setter;
-
-  export <ieee80211-association-response>,
-    ca
-*/
-end;
 
 

@@ -2,6 +2,9 @@ module:         ieee80211
 Author:         Andreas Bogk, Hannes Mehnert, mb
 Copyright:      (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+
+define n-byte-vector(wlan-device-name, 16) end;
+
 // main frame types
 define constant $management-frame = #x0;
 define constant $control-frame = #x1;
@@ -74,13 +77,13 @@ end;
 
 define protocol ieee80211-raw-information-field (ieee80211-information-field)
   field raw-data :: <raw-frame>,
-    length: frame.length * 8;
+    length: frame.data-length * 8;
 end;
 
 define protocol ieee80211-ssid (ieee80211-information-field)
   summary "SSID: %=", raw-data;
   field raw-data :: <externally-delimited-string>,
-    length: frame.length * 8;
+    length: frame.data-length * 8;
 end;
 
 define protocol ieee80211-fh-set (ieee80211-raw-information-field)
@@ -343,7 +346,7 @@ define protocol ieee80211-frame (header-frame)
   field frame-control :: <ieee80211-frame-control>;
   variably-typed-field payload,
     type-function: 
-      select (frame.frame-control.type)
+      select (frame.frame-control.ftype)
         $management-frame =>
           select (frame.frame-control.subtype)
             $atim => <ieee80211-atim>;
