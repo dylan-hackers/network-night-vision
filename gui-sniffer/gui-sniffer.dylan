@@ -192,7 +192,11 @@ define method find-protocol-name (frame :: type-union(<raw-frame>, <container-fr
   end;
 end;
 
-define method payload-type (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
+define method payload-type (frame :: <container-frame>) => (res)
+  frame
+end;
+
+define method payload-type (frame :: <raw-frame>) => (res)
   #f
 end;
 
@@ -390,6 +394,26 @@ define method counter ()
   *count*;
 end;
 
+define method safe(func :: <function>)
+  method(#rest args)
+    block()
+      apply(func, args)
+    exception (e :: <error>)
+      "broken"
+    end
+  end
+end;
+
+define method safe-p(func :: <function>)
+  method(#rest args)
+    block()
+      apply(func, args)
+    exception (e :: <error>)
+      #f
+    end
+  end
+end;
+
 define constant $text-style = make(<text-style>, family: #"fix", size: 8);
 
 define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <filter>)
@@ -416,25 +440,25 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   pane packet-table (frame)
     make(<table-control>,
          headings: #("No", "Time", "Source", "Destination", "Protocol", "Info"),
-         generators: list(print-number,
-                          curry(print-time, frame),
-                          print-source,
-                          print-destination,
-                          print-protocol,
-                          print-info),
+         generators: list(safe(print-number),
+                          safe(curry(print-time, frame)),
+                          safe(print-source),
+                          safe(print-destination),
+                          safe(print-protocol),
+                          safe(print-info)),
          widths: #[30, 60, 150, 150, 100, 500],
          items: #[],
          text-style: $text-style,
          popup-menu-callback: display-popup-menu,
-         value-changed-callback: method(x) show-packet(frame) end);
+         value-changed-callback: safe-p(method(x) show-packet(frame) end));
 
   pane packet-tree-view (frame)
     make(<tree-control>,
-         label-key: frame-print-label,
-         children-generator: frame-children-generator,
-         children-predicate: frame-children-predicate,
+         label-key: safe(frame-print-label),
+         children-generator: safe(frame-children-generator),
+         children-predicate: safe-p(frame-children-predicate),
          text-style: $text-style,
-         value-changed-callback: method(x) highlight-hex-dump(frame) end);
+         value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
 
   pane packet-hex-dump (frame)
     make(<deuce-pane>,

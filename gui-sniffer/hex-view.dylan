@@ -71,7 +71,7 @@ define method set-highlight (frame, start-offset, end-offset)
                                                  font: window-default-bold-font(window)));
           line.line-style-changes := add!(line.line-style-changes,
                                           make(<style-change>,
-                                                 index: 58,
+                                                 index: 57,
                                                  font: window-default-bold-font(window))); 
        end;
         if (end-line = i)
@@ -91,7 +91,7 @@ define method set-highlight (frame, start-offset, end-offset)
                                                font: window-default-bold-font(window)));
           line.line-style-changes := add!(line.line-style-changes,
                                           make(<style-change>,
-                                                 index: 57,
+                                                 index: 56,
                                                  font: window-default-font(window))); 
           line.line-style-changes := add!(line.line-style-changes,
                                           make(<style-change>,
