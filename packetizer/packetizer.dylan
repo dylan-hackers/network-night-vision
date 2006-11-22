@@ -357,12 +357,19 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
 end;
 
+define method assemble-frame (frame :: <unparsed-container-frame>) => (packet :: <unparsed-container-frame>);
+  frame;
+end;
+
 define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
   let f = copy-frame(frame);
   assemble-frame!(f);
 end;
 
-define function assemble-frame! (frame :: <container-frame>) => (packet :: <unparsed-container-frame>)
+define method assemble-frame! (frame :: <unparsed-container-frame>) => (res :: <unparsed-container-frame>)
+  frame;
+end;
+define method assemble-frame! (frame :: <decoded-container-frame>) => (packet :: <unparsed-container-frame>)
   let result = make(<stretchy-byte-vector-subsequence>, data: make(<stretchy-byte-vector>, capacity: 1548));
   assemble-frame-into(frame, result);
   let uf = make(unparsed-class(frame.object-class), cache: frame, packet: result);
@@ -389,7 +396,15 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
             end, fields(frame)))
 end;
 
-define method copy-frame (frame :: <container-frame>) => (res :: <container-frame>)
+define method copy-frame (frame :: <unparsed-container-frame>) => (res :: <container-frame>)
+  let my-cache = copy-frame(frame.cache);
+  make(unparsed-class(frame.object-class),
+       cache: my-cache,
+       packet: as(<stretchy-byte-vector-subsequence>, (copy-sequence(frame.packet))),
+       parent: frame.parent);
+end;
+
+define method copy-frame (frame :: <decoded-container-frame>) => (res :: <decoded-container-frame>)
   let res = make(decoded-class(frame.object-class));
   for (field in frame.fields)
     field.setter(copy-frame(field.getter(frame)), res);
@@ -428,7 +443,7 @@ define method assemble-frame-into (frame :: <container-frame>,
     end;
     let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset));
     frame.concrete-frame-fields[field.index].%start-offset := offset;
-    if (instance?(field.getter(frame), <container-frame>))
+    if (instance?(field.getter(frame), <decoded-container-frame>))
       let unparsed = make(unparsed-class(field.getter(frame).object-class),
                           cache: field.getter(frame),
                           packet: subsequence(packet, start: offset, length: length),
