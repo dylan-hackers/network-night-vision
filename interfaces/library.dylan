@@ -11,6 +11,7 @@ define library interfaces
   use collection-extensions;
   use flow;
   use packetizer;
+  use protocols, import: { ethernet };
 
   export interfaces;
 end library interfaces;
