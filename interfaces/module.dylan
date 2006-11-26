@@ -12,11 +12,9 @@ define module interfaces
   use standard-io;
   use functional-dylan, import: { <byte-character> };
   use dylan-extensions, import: { <byte> };
-  use unix-sockets, exclude: { send };
+  use unix-sockets, exclude: { send, connect };
   use C-FFI;
   use dylan-direct-c-ffi;
-  use machine-words;
-  use big-integers;
   use flow;
   use packetizer, import: { parse-frame, assemble-frame, packet };
   use ethernet, import: { <ethernet-frame> };
