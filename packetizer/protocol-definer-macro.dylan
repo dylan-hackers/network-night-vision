@@ -303,7 +303,7 @@ define method parse-frame-field
         end-of-field := real-end;
       else
         error("This shouldn't happen... in %s, start %d end %d (%d bits), used %d\n",
-              frame-field.field.field-name, start, end-of-field, end-of-field - start, length);
+              frame-field.field.field-name, start, end-of-field, end-of-field - start, length - bit-offset(start));
       end;
     end;
   else

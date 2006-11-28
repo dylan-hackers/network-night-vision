@@ -398,8 +398,8 @@ define method safe(func :: <function>)
   method(#rest args)
     block()
       apply(func, args)
-//    exception (e :: <error>)
-//      "broken"
+    exception (e :: <error>)
+      "broken"
     end
   end
 end;
