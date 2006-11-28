@@ -34,7 +34,23 @@ end;
 define method send (socket :: <udp-socket>, destination :: <ipv4-address>, payload :: <container-frame>);
 end;                                  
 
-define function udp-begin()
+define method a-query(name :: <string>)
+  make(<dns-question>,
+       question-type:  1, // A
+       question-class: 1, // THE INTERNET
+       domainname: as(<domain-name>, name))
+end;
+
+begin
+  let string = "";
+  for(i from 0 below 3)
+    string := concatenate(string, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890.");
+  end;
+  string := concatenate(string, "foo.andreas.org");
+  let s1 = a-query(concatenate("a.", string));
+  let s2 = a-query(concatenate("b.", string));
+  let s3 = a-query(concatenate("c.", string));
+
   let ip-layer = init-ethernet();
   let udp = make(<udp-layer>, ip-layer: ip-layer);
   let socket = create-socket(udp, 53);
@@ -43,10 +59,7 @@ define function udp-begin()
        ipv4-address("141.1.1.1"),
        make(<udp-frame>, source-port: 53, destination-port: 53,
             payload: make(<dns-frame>,
-                          questions: vector(make(<dns-question>,
-                                                 question-type:  1, // A
-                                                 question-class: 1, // THE INTERNET
-                                                 domainname: as(<domain-name>, "www.ccc.de"))))));
+                          questions: vector(s1, s2, s3))));
   sleep(10000);
 /*
   let tcp = make(<tcp-layer>, ip-layer: ip-layer, default-ip-address: ip-layer.default-ip-address);
@@ -72,5 +85,3 @@ define function udp-begin()
   sleep(1000);
 */
 end;
-
-udp-begin();

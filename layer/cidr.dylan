@@ -1,9 +1,6 @@
 module: layer
 
 
-define open generic cidr-network-address (cidr :: <cidr>) => (res :: <ipv4-address>);
-define open generic cidr-netmask (cidr :: <cidr>) => (res :: <integer>);
-
 define class <cidr> (<object>)
   constant slot cidr-network-address :: <ipv4-address>,
     required-init-keyword: network-address:;

@@ -34,10 +34,11 @@ define module packetizer
     <3byte-big-endian-unsigned-integer>,
     <2byte-big-endian-unsigned-integer>, <2byte-little-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
-    <1bit-unsigned-integer>, <6bit-unsigned-integer>, <3bit-unsigned-integer>,
-    <4bit-unsigned-integer>, <5bit-unsigned-integer>,
-    <7bit-unsigned-integer>, <13bit-unsigned-integer>,
-    <2bit-unsigned-integer>, <14bit-unsigned-integer>;
+    <1bit-unsigned-integer>, <2bit-unsigned-integer>, <3bit-unsigned-integer>,
+    <4bit-unsigned-integer>, <5bit-unsigned-integer>, <6bit-unsigned-integer>,
+    <7bit-unsigned-integer>, <9bit-unsigned-integer>, <10bit-unsigned-integer>,
+    <11bit-unsigned-integer>, <12bit-unsigned-integer>, <13bit-unsigned-integer>,
+    <14bit-unsigned-integer>, <15bit-unsigned-integer>;
 
   export <variable-size-byte-vector>, <externally-delimited-string>,
     <raw-frame>;

@@ -124,6 +124,12 @@ define class <count-repeated-field> (<repeated-field>)
   slot count, required-init-keyword: count:;
 end;
 
+/* one day I want to have this... 
+define class <externally-delimited-repeated-field> (<self-delimited-repeated-field>)
+  keyword reached-end?:, init-value: always(#f);
+end;
+*/
+
 define method make(class == <repeated-field>,
                    #rest rest, 
                    #key count, reached-end?,
@@ -135,7 +141,7 @@ define method make(class == <repeated-field>,
         elseif(reached-end?)
           <self-delimited-repeated-field>
         else
-          error("unsupported repeated field")
+          error("unknown repeated field type encountered");
         end,
         count: count,
         reached-end?: reached-end?,

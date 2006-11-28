@@ -106,6 +106,10 @@ define n-bit-unsigned-integer(<4bit-unsigned-integer>; 4) end;
 define n-bit-unsigned-integer(<5bit-unsigned-integer>; 5) end;
 define n-bit-unsigned-integer(<6bit-unsigned-integer>; 6) end;
 define n-bit-unsigned-integer(<7bit-unsigned-integer>; 7) end;
+define n-bit-unsigned-integer(<9bit-unsigned-integer>; 9) end;
+define n-bit-unsigned-integer(<10bit-unsigned-integer>; 10) end;
+define n-bit-unsigned-integer(<11bit-unsigned-integer>; 11) end;
+define n-bit-unsigned-integer(<12bit-unsigned-integer>; 12) end;
 define n-bit-unsigned-integer(<13bit-unsigned-integer>; 13) end;
 define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
 
