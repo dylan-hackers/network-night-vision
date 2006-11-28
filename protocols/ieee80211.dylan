@@ -52,8 +52,6 @@ define constant $information-element-ibss = 6;
 define constant $information-element-challenge-text = 16;
 
 define n-byte-vector(timestamp, 8) end;
-define n-bit-unsigned-integer(<11bit-unsigned-integer>; 11) end;
-define n-bit-unsigned-integer(<12bit-unsigned-integer>; 12) end;
 
 define protocol ieee80211-sequence-control (container-frame)
   field sequence-number :: <12bit-unsigned-integer>;

@@ -68,6 +68,17 @@ define protocol snap-frame (header-frame)
     type-function: element(<ethernet-frame>.layer, frame.type-code, default: <raw-frame>);
 end;
 
+define protocol vlan-tag (header-frame)
+  over <ethernet-frame> #x8100;
+  summary "VLAN: %=", vlan-id;
+  field priority :: <3bit-unsigned-integer>;
+  field canonical-format-indicatior :: <1bit-unsigned-integer>;
+  field vlan-id :: <12bit-unsigned-integer>;
+  layering field type-code :: <2byte-big-endian-unsigned-integer>;
+  variably-typed-field payload,
+    type-function: element(<ethernet-frame>.layer, frame.type-code, default: <raw-frame>);
+end;
+
 define protocol stp-identifier (container-frame)
   summary "%=/%=", bridge-priority, bridge-address;
   field bridge-priority :: <2byte-big-endian-unsigned-integer>;
@@ -133,7 +144,8 @@ define method parse-frame (frame-type == <cdp-record>,
                      #x000a => <cdp-vtp-native-vlan-id>;
                      #x000b => <cdp-duplex>;
                      #x000e => <cdp-ata-186-voip-vlan-request>;
-                     #x0010 => <cdp-ata-186-voip-vlan-assignment>;
+                     #x000f => <cdp-ata-186-voip-vlan-assignment>;
+                     #x0010 => <cdp-power>;
                      #x0011 => <cdp-mtu>;
                      #x0012 => <cdp-avvid-trust-bitmap>;
                      #x0013 => <cdp-avvid-untrusted-port-CoS>;
@@ -231,6 +243,10 @@ end;
 
 define protocol cdp-ata-186-voip-vlan-assignment (cdp-unknown-record)
   summary "ATA 186 VoIP VLAN Assignment";
+end;
+
+define protocol cdp-power (cdp-unknown-record)
+  summary "Power: %=", cdp-value;
 end;
 
 define protocol cdp-mtu (cdp-record)
