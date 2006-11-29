@@ -36,6 +36,7 @@ end;
 
 
 define protocol domain-name (container-frame)
+  summary "%s", curry(as, <string>);
   repeated field fragment :: <domain-name-fragment>,
     reached-end?: frame.type-code = 3 | frame.data-length = 0;
 end;
@@ -53,11 +54,12 @@ define method as (class == <domain-name>, string :: <string>)
   make(<domain-name>, fragment: map(curry(as, <label>), labels));
 end;
 
-define protocol domain-name-fragment (container-frame)
-  field type-code :: <2bit-unsigned-integer> = 0;
+define protocol domain-name-fragment (variably-typed-container-frame)
+  layering field type-code :: <2bit-unsigned-integer> = 0;
 end;
 
 define protocol label-offset (domain-name-fragment)
+  over <domain-name-fragment> 3;
   field offset :: <14bit-unsigned-integer>;
 end;
 
@@ -93,6 +95,7 @@ define method as (class == <string>, label-offset :: <label-offset>)
 end;
 
 define protocol label (domain-name-fragment)
+  over <domain-name-fragment> 0;
   field data-length :: <6bit-unsigned-integer>,
     fixup: frame.raw-data.frame-size.byte-offset;
   field raw-data :: <externally-delimited-string>,
@@ -107,21 +110,6 @@ end;
 define method as (class == <label>, string :: <string>)
  => (res :: <label>)
   make(<label>, raw-data: as(<externally-delimited-string>, string))
-end;
-
-define method parse-frame (frame-type == <domain-name-fragment>,
-                           packet :: <byte-sequence>,
-                           #next next-method,
-                           #key parent :: false-or(<container-frame>))
- => (value :: <domain-name-fragment>, next-unparsed :: false-or(<integer>))
-  let domain-name = next-method();
-  let label-frame-type
-    = select (domain-name.type-code)
-        0 => <label>;
-        3 => <label-offset>;
-        otherwise => signal(make(<malformed-packet-error>))
-      end;
-  parse-frame(label-frame-type, packet, parent: parent);
 end;
 
 
