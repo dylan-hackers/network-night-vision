@@ -102,6 +102,11 @@ define method set-highlight (frame, start-offset, end-offset)
     end;
     select-buffer-in-appropriate-window(window, buffer);
     initialize-redisplay-for-buffer(window, buffer);
+    frame-numeric-arg-state(frame) := #"digits";
+    frame-numeric-arg(frame) := start-line;
+    goto-line(frame);
+    frame-numeric-arg-state(frame) := #f;
+    force-recenter(frame);
     frame-last-command-type(frame) := #"display";
   end;
 end;
