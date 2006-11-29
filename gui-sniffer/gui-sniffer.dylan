@@ -394,12 +394,18 @@ define method counter ()
   *count*;
 end;
 
+define variable *debugging?* = #t;
+
 define method safe(func :: <function>)
   method(#rest args)
     block()
       apply(func, args)
     exception (e :: <error>)
-      "broken"
+      if(*debugging?*)
+        break()
+      else
+        "broken"
+      end
     end
   end
 end;
@@ -409,7 +415,9 @@ define method safe-p(func :: <function>)
     block()
       apply(func, args)
     exception (e :: <error>)
-      #f
+      if(*debugging?*)
+        break()
+      end
     end
   end
 end;
