@@ -64,12 +64,16 @@ define macro real-class-definer
       define constant "$" ## ?name ## "-layering"
         = if (subtype?(?name, <header-frame>))
             make(<table>);
+          elseif (subtype?(?name, <variably-typed-container-frame>))
+            make(<table>);
           end;
       define inline method layer (frame :: subclass(?name)) => (res :: false-or(<table>))
         "$" ## ?name ## "-layering";
       end;
       define constant "$" ## ?name ## "-reverse-layering"
         = if (subtype?(?name, <header-frame>))
+            make(<table>);
+          elseif (subtype?(?name, <variably-typed-container-frame>))
             make(<table>);
           end;
       define inline method reverse-layer (frame :: subclass(?name)) => (res :: false-or(<table>))
@@ -402,6 +406,20 @@ define method parse-frame-field-aux
     end;
   end;
   values(frames, start);
+end;
+
+define method parse-frame (frame-type :: subclass(<variably-typed-container-frame>),
+                           packet :: <byte-sequence>,
+                           #key parent :: false-or(<container-frame>))
+  if (layer(frame-type) & layer(frame-type).size > 0)
+    let superprotocol-frame = next-method();
+    let real-type = element(layer(frame-type),
+                            layer-magic(superprotocol-frame),
+                            default: <raw-frame>);
+    parse-frame(real-type, packet, parent: parent);
+  else
+    next-method()
+  end;
 end;
 
 define method parse-frame (frame-type :: subclass(<container-frame>),

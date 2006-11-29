@@ -78,7 +78,7 @@ define inline method high-level-type (low-level-type == <unsigned-byte>)
 end;
 
 
-define open abstract class <unsigned-integer-bit-frame> (<fixed-size-translated-leaf-frame>)
+define abstract class <unsigned-integer-bit-frame> (<fixed-size-translated-leaf-frame>)
 end;
 
 define macro n-bit-unsigned-integer-definer
@@ -112,6 +112,7 @@ define n-bit-unsigned-integer(<11bit-unsigned-integer>; 11) end;
 define n-bit-unsigned-integer(<12bit-unsigned-integer>; 12) end;
 define n-bit-unsigned-integer(<13bit-unsigned-integer>; 13) end;
 define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
+define n-bit-unsigned-integer(<15bit-unsigned-integer>; 15) end;
 
 define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
                            packet :: <byte-sequence>,

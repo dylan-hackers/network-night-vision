@@ -121,40 +121,13 @@ define protocol stp-topology-change-frame (stp-frame)
   summary "STP topology change notification";
 end;
 
-define protocol cdp-record (container-frame)
-  field cdp-type :: <2byte-big-endian-unsigned-integer>;
+define protocol cdp-record (variably-typed-container-frame)
+  layering field cdp-type :: <2byte-big-endian-unsigned-integer>;
   field cdp-length :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define method parse-frame (frame-type == <cdp-record>,
-                           packet :: <byte-sequence>,
-                           #key parent)
- => (value :: <cdp-record>, next-unparsed :: false-or(<integer>));
-  let bpdu-type = next-method().cdp-type;
-  let bpdu-class = select (bpdu-type)
-                     #x0001 => <cdp-device-id>;
-                     #x0002 => <cdp-addresses>;
-                     #x0003 => <cdp-port-id>;
-                     #x0004 => <cdp-capabilities>;
-                     #x0005 => <cdp-version>;
-                     #x0006 => <cdp-platform>;
-                     #x0007 => <cdp-ip-prefixes>;
-                     #x0008 => <cdp-hello>;
-                     #x0009 => <cdp-vtp-management-domain>;
-                     #x000a => <cdp-vtp-native-vlan-id>;
-                     #x000b => <cdp-duplex>;
-                     #x000e => <cdp-ata-186-voip-vlan-request>;
-                     #x000f => <cdp-ata-186-voip-vlan-assignment>;
-                     #x0010 => <cdp-power>;
-                     #x0011 => <cdp-mtu>;
-                     #x0012 => <cdp-avvid-trust-bitmap>;
-                     #x0013 => <cdp-avvid-untrusted-port-CoS>;
-                     #x0014 => <cdp-system-name>;
-                     #x0016 => <cdp-system-object-id>;
-                     #x0017 => <cdp-physical-location>;
-                     otherwise => <cdp-unknown-record>;
-                   end;
-  parse-frame(bpdu-class, packet, parent: parent);
+define method frame-size (frame :: <cdp-record>) => (res :: <integer>)
+  frame.cdp-length * 8;
 end;
 
 define protocol cdp-unknown-record (cdp-record)
@@ -166,6 +139,7 @@ define protocol cdp-string-record (cdp-record)
 end;
 
 define protocol cdp-device-id (cdp-string-record)
+  over <cdp-record> #x1;
   summary "ID: %=", cdp-value;
 end;
 
@@ -178,6 +152,7 @@ define protocol cdp-address (container-frame)
 end; 
 
 define protocol cdp-addresses (cdp-record)
+  over <cdp-record> #x2;
   field address-count :: <unsigned-byte>;
   repeated field cdp-addresses :: <cdp-address>,
     count: frame.address-count;
@@ -185,10 +160,12 @@ define protocol cdp-addresses (cdp-record)
 end;
 
 define protocol cdp-port-id (cdp-string-record)
+  over <cdp-record> #x3;
   summary "Port: %=", cdp-value;
 end;
 
 define protocol cdp-capabilities (cdp-record)
+  over <cdp-record> #x4;
   field padding1 :: <3byte-big-endian-unsigned-integer>;
   field padding2 :: <1bit-unsigned-integer>;
   field cdp-layer1 :: <1bit-unsigned-integer>;
@@ -201,10 +178,12 @@ define protocol cdp-capabilities (cdp-record)
 end;
 
 define protocol cdp-version (cdp-string-record)
+  over <cdp-record> #x5;
   summary "Version: %=", cdp-value;
 end;
 
 define protocol cdp-platform (cdp-string-record)
+  over <cdp-record> #x6;
   summary "Platform: %=", cdp-value;
 end;
 
@@ -214,63 +193,77 @@ define protocol cdp-ip-prefix (container-frame)
 end;
 
 define protocol cdp-ip-prefixes (cdp-record)
+  over <cdp-record> #x7;
   field ip-prefix-count :: <unsigned-byte>;
   repeated field ip-prefixes :: <cdp-ip-prefix>,
     count: frame.ip-prefix-count;
 end;
 
 define protocol cdp-vtp-management-domain (cdp-string-record)
+  over <cdp-record> #x9;
   summary "VTP Management domain: %=", cdp-value;
 end;
 
 define protocol cdp-vtp-native-vlan-id (cdp-record)
+  over <cdp-record> #xa;
   summary "VTP native VLAN: %=", cdp-native-vlan-id;
   field cdp-native-vlan-id :: <2byte-big-endian-unsigned-integer>;
 end;
 
 define protocol cdp-duplex (cdp-record)
+  over <cdp-record> #xb;
   summary "Duplex: %s", method(x) if (x.cdp-duplex = 0) "half" else "full" end end;
   field cdp-duplex :: <unsigned-byte>;
 end;
 
 define protocol cdp-hello (cdp-unknown-record)
+  over <cdp-record> #x8;
   summary "Hello (undocumented)";
 end;
 
 define protocol cdp-ata-186-voip-vlan-request (cdp-unknown-record)
+  over <cdp-record> #xe;
   summary "ATA 186 VoIP VLAN Request";
 end;
 
 define protocol cdp-ata-186-voip-vlan-assignment (cdp-unknown-record)
+  over <cdp-record> #xf;
   summary "ATA 186 VoIP VLAN Assignment";
 end;
 
 define protocol cdp-power (cdp-unknown-record)
+  over <cdp-record> #x10;
   summary "Power: %=", cdp-value;
 end;
 
 define protocol cdp-mtu (cdp-record)
+  over <cdp-record> #x11;
   summary "MTU: %=", cdp-mtu;
   field cdp-mtu :: <big-endian-unsigned-integer-4byte>;
 end;
 
 define protocol cdp-avvid-trust-bitmap (cdp-unknown-record)
+  over <cdp-record> #x12;
   summary "AVVID Trust Bitmap";
 end;
 
 define protocol cdp-avvid-untrusted-port-CoS (cdp-unknown-record)
+  over <cdp-record> #x13;
   summary "AVVID Untrusted Port CoS";
 end;
 
 define protocol cdp-system-name (cdp-string-record)
+  over <cdp-record> #x14;
   summary "System name: %=", cdp-value;
 end;
 
 define protocol cdp-system-object-id (cdp-unknown-record)
+  over <cdp-record> #x16;
   summary "System OID: %=", cdp-value;
 end;
 
 define protocol cdp-physical-location (cdp-string-record)
+  over <cdp-record> #x17;
   summary "Physical location: %=", cdp-value;
 end;
 

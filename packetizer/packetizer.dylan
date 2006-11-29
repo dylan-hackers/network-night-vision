@@ -148,7 +148,7 @@ define method fixup!(frame :: <header-frame>)
   fixup!(frame.payload);
 end;
 
-define generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
+define open generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
  => (length :: <integer>);
 
 define open generic summary (frame :: <frame>) => (summary :: <string>);
@@ -264,6 +264,9 @@ define inline method fixup-protocol-magic (frame :: <header-frame>) => (magic)
   get-protocol-magic(frame, frame.payload);
 end;
 
+//define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
+//  get-protocol-magic
+//end;
 define inline method get-protocol-magic (frame :: <header-frame>, payload :: <frame>) => (magic)
   let reverse-layering = reverse-layer(frame.object-class);
   let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);
@@ -324,6 +327,17 @@ end;
 define function sorted-frame-fields (frame :: <container-frame>)
   map(method(x) get-frame-field(x.field-name, frame) end,
       fields(frame))
+end;
+
+define open abstract class <variably-typed-container-frame> (<container-frame>)
+end;
+
+define open abstract class <decoded-variably-typed-container-frame>
+  (<variably-typed-container-frame>, <decoded-container-frame>)
+end;
+
+define open abstract class <unparsed-variably-typed-container-frame>
+  (<variably-typed-container-frame>, <unparsed-container-frame>)
 end;
 
 define open abstract class <header-frame> (<container-frame>)

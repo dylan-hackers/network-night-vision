@@ -46,7 +46,7 @@ end;
 
 define protocol router-alert-ip-option (ip-option-frame)
   field router-alert-length :: <unsigned-byte> = 4;
-  field router-alert-data :: <2byte-big-endian-unsigned-integer>;
+  field router-alert-value :: <2byte-big-endian-unsigned-integer>;
 end;
 
 define protocol end-of-option-ip-option (ip-option-frame)
@@ -233,6 +233,8 @@ define protocol arp-frame (container-frame)
   field protocol-address-size :: <unsigned-byte> 
     = byte-offset(field-size(<ipv4-address>));
   field operation :: <2byte-big-endian-unsigned-integer>;
+//    enum: { #x1 => #"arp-request", "ARP WHO HAS %= TELL %=";
+//            #x2 => #"arp-response", "ARP %= IS AT %="; };
   field source-mac-address :: <mac-address>;
   field source-ip-address :: <ipv4-address>;
   field target-mac-address :: <mac-address>;

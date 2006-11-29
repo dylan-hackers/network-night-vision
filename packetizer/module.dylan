@@ -120,6 +120,10 @@ define module packetizer
     <decoded-header-frame>,
     payload, payload-setter;
 
+  export <variably-typed-container-frame>,
+    <unparsed-variably-typed-container-frame>,
+    <decoded-variably-typed-container-frame>;
+
   export frame-size,
     byte-offset,
     bit-offset;
