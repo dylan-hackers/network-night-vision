@@ -122,20 +122,18 @@ define protocol stp-topology-change-frame (stp-frame)
 end;
 
 define protocol cdp-record (variably-typed-container-frame)
+  length frame.cdp-length * 8;
   layering field cdp-type :: <2byte-big-endian-unsigned-integer>;
-  field cdp-length :: <2byte-big-endian-unsigned-integer>;
-end;
-
-define method frame-size (frame :: <cdp-record>) => (res :: <integer>)
-  frame.cdp-length * 8;
+  field cdp-length :: <2byte-big-endian-unsigned-integer>,
+    fixup: byte-offset(frame-size(frame));
 end;
 
 define protocol cdp-unknown-record (cdp-record)
-  field cdp-value :: <raw-frame>, end: frame.cdp-length * 8;
+  field cdp-value :: <raw-frame>;
 end;
 
 define protocol cdp-string-record (cdp-record)
-  field cdp-value :: <externally-delimited-string>, end: frame.cdp-length * 8;
+  field cdp-value :: <externally-delimited-string>;
 end;
 
 define protocol cdp-device-id (cdp-string-record)
@@ -156,7 +154,6 @@ define protocol cdp-addresses (cdp-record)
   field address-count :: <unsigned-byte>;
   repeated field cdp-addresses :: <cdp-address>,
     count: frame.address-count;
-  field padding :: <raw-frame>, end: frame.cdp-length * 8;
 end;
 
 define protocol cdp-port-id (cdp-string-record)

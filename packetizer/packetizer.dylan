@@ -148,6 +148,12 @@ define method fixup!(frame :: <header-frame>)
   fixup!(frame.payload);
 end;
 
+define open generic container-frame-size (frame :: <container-frame>) => (length :: false-or(<integer>));
+
+define method container-frame-size (frame :: <container-frame>) => (res :: false-or(<integer>))
+  #f
+end;
+
 define open generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
  => (length :: <integer>);
 
@@ -260,13 +266,30 @@ define inline method payload-type (frame :: <header-frame>) => (res :: <type>)
   element(table, frame.layer-magic, default: <raw-frame>);
 end;
 
+define open generic recursive-reverse-layer (frame) => (res :: false-or(<table>));
+
+define inline method recursive-reverse-layer (frame) => (res :: false-or(<table>))
+  #f
+end;
 define inline method fixup-protocol-magic (frame :: <header-frame>) => (magic)
   get-protocol-magic(frame, frame.payload);
 end;
 
-//define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
-//  get-protocol-magic
-//end;
+define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
+  let layer-table = recursive-reverse-layer(frame.object-class);
+  if (layer-table)
+    let res = element(layer-table, frame.object-class, default: #f);
+    if (res)
+      res
+    else
+      error("Inline layering not found for %=", frame);
+    end;
+  else
+    error("No non-empty layering table not found for %=", frame);
+  end;
+end;
+
+
 define inline method get-protocol-magic (frame :: <header-frame>, payload :: <frame>) => (magic)
   let reverse-layering = reverse-layer(frame.object-class);
   let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);

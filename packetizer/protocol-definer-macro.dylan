@@ -64,7 +64,7 @@ define macro real-class-definer
       define constant "$" ## ?name ## "-layering"
         = if (subtype?(?name, <header-frame>))
             make(<table>);
-          elseif (subtype?(?name, <variably-typed-container-frame>))
+          elseif (?superclasses == <variably-typed-container-frame>)
             make(<table>);
           end;
       define inline method layer (frame :: subclass(?name)) => (res :: false-or(<table>))
@@ -73,11 +73,19 @@ define macro real-class-definer
       define constant "$" ## ?name ## "-reverse-layering"
         = if (subtype?(?name, <header-frame>))
             make(<table>);
-          elseif (subtype?(?name, <variably-typed-container-frame>))
+          elseif (?superclasses == <variably-typed-container-frame>)
             make(<table>);
           end;
       define inline method reverse-layer (frame :: subclass(?name)) => (res :: false-or(<table>))
-        "$" ## ?name ## "-reverse-layering";
+        "$" ## ?name ## "-reverse-layering"
+      end;
+      define inline method recursive-reverse-layer (frame :: subclass(?name), #next next-method)
+       => (res :: false-or(<table>))
+        if ("$" ## ?name ## "-reverse-layering")
+          "$" ## ?name ## "-reverse-layering"
+        else
+          next-method()
+        end;
       end;
       define constant "$" ## ?name ## "-layer-bonding"
         = begin
@@ -423,14 +431,20 @@ define method parse-frame (frame-type :: subclass(<variably-typed-container-fram
 end;
 
 define method parse-frame (frame-type :: subclass(<container-frame>),
-                           packet :: <byte-sequence>,
+                           byte-packet :: <byte-sequence>,
                            #key parent :: false-or(<container-frame>))
   let frame = make(unparsed-class(frame-type),
-                   packet: packet,
+                   packet: byte-packet,
                    parent: parent);
   let length = field-size(frame-type);
   if (length = $unknown-at-compile-time)
-    frame;
+    let fr-length = container-frame-size(frame);
+    if (fr-length)
+      frame.packet := subsequence(frame.packet, length: fr-length);
+      values(frame, fr-length);
+    else
+      frame
+    end;
   else
     values(frame, length)
   end;
@@ -483,6 +497,18 @@ define macro protocol-definer
         stack-protocol(?super, "<" ## ?name ## ">", ?magic);
       }
  
+    { define protocol ?:name (?superprotocol:name)
+        length ?container-frame-length:expression;
+        ?fields:*
+      end } =>
+      { 
+        define protocol ?name (?superprotocol) ?fields end;
+        define inline method container-frame-size (?=frame :: "<" ## ?name ## ">") => (res :: <integer>)
+          ?container-frame-length
+        end;
+      }
+
+
     { define protocol ?:name (?superprotocol:name)
         ?fields:*
       end } =>
