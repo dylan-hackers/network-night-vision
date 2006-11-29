@@ -111,7 +111,6 @@ define module packetizer
     cache,
     source-address, source-address-setter,
     destination-address, destination-address-setter,
-    payload-type,
     container-frame-size,
     get-protocol-magic, layer-magic,
     layer,

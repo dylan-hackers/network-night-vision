@@ -149,8 +149,8 @@ end;
 define protocol udp-frame (header-frame)
   summary "UDP port %= -> %=", source-port, destination-port;
   over <ipv4-frame> 17;
-  field source-port :: <2byte-big-endian-unsigned-integer>;
-  layering field destination-port :: <2byte-big-endian-unsigned-integer>;
+  layering field source-port :: <2byte-big-endian-unsigned-integer>;
+  field destination-port :: <2byte-big-endian-unsigned-integer>;
   field payload-size :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame.payload)) + 8;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
@@ -159,18 +159,6 @@ define protocol udp-frame (header-frame)
     type-function: payload-type(frame);
 end;
 
-/*define inline method payload-type (frame :: <udp-frame>) => (res :: <type>)
-  select (frame.source-port)
-    53 => <dns-frame>;
-    5353 => <dns-frame>;
-    otherwise => select (frame.destination-port)
-                   53 => <dns-frame>;
-                   5353 => <dns-frame>;
-                   otherwise => <raw-frame>;
-                 end;
-  end;
-end;
-*/
 define protocol tcp-frame (header-frame)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   over <ipv4-frame> 6;

@@ -24,4 +24,13 @@ define module layer
   use dns, exclude: { ipv4-address };
   // Add binding exports here.
 
+  export <ethernet-layer>,
+    <ip-over-ethernet-adapter>,
+    <ip-layer>,
+    <icmp-handler>,
+    <icmp-over-ip-adapter>,
+    <arp-handler>,
+    register-route,
+    <cidr>,
+    send;
 end module layer;

@@ -183,21 +183,12 @@ define method find-protocol-name (frame :: <header-frame>)
   find-protocol-name(frame.payload) | next-method()
 end;
 
-define method find-protocol-name (frame :: type-union(<raw-frame>, <container-frame>))
-  let res = payload-type(frame);
-  if (res = <raw-frame>)
-    #f
-  else
-    res;
-  end;
-end;
-
-define method payload-type (frame :: <container-frame>) => (res)
-  frame
-end;
-
-define method payload-type (frame :: <raw-frame>) => (res)
+define method find-protocol-name (frame :: <raw-frame>)
   #f
+end;
+
+define method find-protocol-name (frame :: <container-frame>)
+  frame;
 end;
 
 define method print-info (frame :: <frame-with-metadata>)

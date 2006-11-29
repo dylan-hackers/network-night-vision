@@ -279,7 +279,7 @@ define module dns
   use packetizer;
   use byte-vector, import: { copy-bytes };
   use simple-io;
-  use ipv4, import: { <ipv4-address> };
+  use ipv4, import: { <ipv4-address>, <udp-frame> };
 
   export <dns-frame>,
     identifier, identifier-setter,

@@ -61,27 +61,17 @@ define macro real-class-definer
           $protocols[?#"name"] := "$" ## ?name ## "-fields";
         end;
       end;
-      define constant "$" ## ?name ## "-layering"
-        = if (subtype?(?name, <header-frame>))
-            make(<table>);
-          elseif (?superclasses == <variably-typed-container-frame>)
-            make(<table>);
-          end;
+      define constant "$" ## ?name ## "-layering" = make(<table>);
       define inline method layer (frame :: subclass(?name)) => (res :: false-or(<table>))
         "$" ## ?name ## "-layering";
       end;
-      define constant "$" ## ?name ## "-reverse-layering"
-        = if (subtype?(?name, <header-frame>))
-            make(<table>);
-          elseif (?superclasses == <variably-typed-container-frame>)
-            make(<table>);
-          end;
+      define constant "$" ## ?name ## "-reverse-layering" = make(<table>);
       define inline method reverse-layer (frame :: subclass(?name)) => (res :: false-or(<table>))
         "$" ## ?name ## "-reverse-layering"
       end;
       define inline method recursive-reverse-layer (frame :: subclass(?name), #next next-method)
        => (res :: false-or(<table>))
-        if ("$" ## ?name ## "-reverse-layering")
+        if ("$" ## ?name ## "-reverse-layering".size > 0)
           "$" ## ?name ## "-reverse-layering"
         else
           next-method()

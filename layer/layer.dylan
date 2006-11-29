@@ -613,12 +613,12 @@ define function init-ethernet ()
 */
   let ip-layer = make(<ip-layer>);
   register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"),
-                                next-hop: ipv4-address("192.168.2.1")));
+                                next-hop: ipv4-address("192.168.0.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("192.168.2.23"),
+                              ipv4-address: ipv4-address("192.168.0.23"),
                               netmask: 24);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,

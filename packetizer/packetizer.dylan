@@ -207,8 +207,6 @@ define method frame-name(frame :: subclass(<container-frame>)) => (res :: <strin
   "anonymous"
 end;
 
-define open generic payload-type (frame :: type-union(<raw-frame>, <container-frame>)) => (res);
-
 define open generic field-count (frame :: subclass(<container-frame>))
  => (res :: <integer>);
 
@@ -261,7 +259,7 @@ define method stack-protocol (bottom-layer :: <type>, upper-layer :: <type>, mag
   reverse-layer(bottom-layer)[decoded-class(upper-layer)] := magic;
 end;
 
-define inline method payload-type (frame :: <header-frame>) => (res :: <type>)
+define function payload-type (frame :: <container-frame>) => (res :: <type>)
   let table = layer(frame.object-class);
   element(table, frame.layer-magic, default: <raw-frame>);
 end;
@@ -273,6 +271,13 @@ define inline method recursive-reverse-layer (frame) => (res :: false-or(<table>
 end;
 define inline method fixup-protocol-magic (frame :: <header-frame>) => (magic)
   get-protocol-magic(frame, frame.payload);
+end;
+
+define inline method fixup-protocol-magic (frame :: <container-frame>) => (magic)
+  let res = choose(rcurry(instance?, <variably-typed-field>), fields(frame));
+  if (res.size = 1)
+    get-protocol-magic(frame, res[0].getter(frame));
+  end;
 end;
 
 define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
@@ -290,7 +295,7 @@ define inline method fixup-protocol-magic (frame :: <variably-typed-container-fr
 end;
 
 
-define inline method get-protocol-magic (frame :: <header-frame>, payload :: <frame>) => (magic)
+define inline method get-protocol-magic (frame :: <container-frame>, payload :: <frame>) => (magic)
   let reverse-layering = reverse-layer(frame.object-class);
   let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);
   unless (res)
