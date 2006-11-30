@@ -2,60 +2,27 @@ module: ipv4
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define protocol ip-option-type-frame (container-frame)
-  field flag :: <1bit-unsigned-integer>;
-  field class :: <2bit-unsigned-integer>;
-  field number :: <5bit-unsigned-integer>;
-end;
-
-define protocol ip-option-frame (container-frame)
-  field option-type :: <ip-option-type-frame>;
-end;
-
-define method parse-frame (frame-type == <ip-option-frame>,
-                           packet :: <byte-sequence>,
-                           #key parent)
- => (value :: <ip-option-frame>, next-unparsed :: <integer>)
-  let ip-option-type = parse-frame(<ip-option-type-frame>, packet, parent: parent);
-  let option-frame-type
-    = select (ip-option-type.class)
-        0 => select (ip-option-type.number)
-               0 => <end-of-option-ip-option>;
-               1 => <no-operation-ip-option>;
-               2 => <security-ip-option>;
-               3 => <loose-source-and-record-route-ip-option>;
-               9 => <strict-source-and-record-route-ip-option>;
-               7 => <record-route-ip-option>;
-               8 => <stream-id-ip-option>;
-               20 => <router-alert-ip-option>;
-               otherwise => signal(make(<malformed-packet-error>))
-             end;
-        1 => select (ip-option-type.class)
-               1 => <general-error-ip-option>;
-               otherwise => signal(make(<malformed-packet-error>))
-             end;
-        2 => select (ip-option-type.class)
-               4 => <internet-timestamp-ip-option>;
-               5 => <satellite-timestamp-ip-option>;
-               otherwise => signal(make(<malformed-packet-error>))
-             end;
-        otherwise => signal(make(<malformed-packet-error>))
-      end;
-   parse-frame(option-frame-type, packet, parent: parent);
+define protocol ip-option-frame (variably-typed-container-frame)
+  field copy-flag :: <1bit-unsigned-integer>;
+  layering field option-type :: <7bit-unsigned-integer>;
 end;
 
 define protocol router-alert-ip-option (ip-option-frame)
+  over <ip-option-frame> 20;
   field router-alert-length :: <unsigned-byte> = 4;
   field router-alert-value :: <2byte-big-endian-unsigned-integer>;
 end;
 
 define protocol end-of-option-ip-option (ip-option-frame)
+  over <ip-option-frame> 0;
 end;
 
 define protocol no-operation-ip-option (ip-option-frame)
+  over <ip-option-frame> 1;
 end;
 
 define protocol security-ip-option-frame (ip-option-frame)
+  over <ip-option-frame> 2;
   field security-length :: <unsigned-byte>;
   field security :: <2byte-big-endian-unsigned-integer>;
   field compartments :: <2byte-big-endian-unsigned-integer>;

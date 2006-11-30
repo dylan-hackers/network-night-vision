@@ -85,27 +85,15 @@ define protocol stp-identifier (container-frame)
   field bridge-address :: <mac-address>;
 end;
 
-define protocol stp-frame (container-frame)
+define protocol stp-frame (variably-typed-container-frame)
   field protocol-identifier :: <2byte-big-endian-unsigned-integer>;
   field protocol-version :: <unsigned-byte>;
-  field bpdu-type :: <unsigned-byte>;
-end;
-
-define method parse-frame (frame-type == <stp-frame>,
-                           packet :: <byte-sequence>,
-                           #key parent)
- => (value :: <stp-frame>, next-unparsed :: <integer>);
-  let bpdu-type = next-method().bpdu-type;
-  let bpdu-class = select (bpdu-type)
-                     0    => <stp-configuration-frame>;
-                     #x80 => <stp-topology-change-frame>;
-                     otherwise => signal(make(<malformed-packet-error>));
-                   end;
-  parse-frame(bpdu-class, packet, parent: parent);
+  layering field bpdu-type :: <unsigned-byte>;
 end;
 
 define protocol stp-configuration-frame (stp-frame)
   summary "STP configuration";
+  over <stp-frame> 0;
   field flags :: <unsigned-byte>;
   field root-identifier :: <stp-identifier>;
   field root-path-cost :: <big-endian-unsigned-integer-4byte>;
@@ -118,6 +106,7 @@ define protocol stp-configuration-frame (stp-frame)
 end;
 
 define protocol stp-topology-change-frame (stp-frame)
+  over <stp-frame> #x80;
   summary "STP topology change notification";
 end;
 
