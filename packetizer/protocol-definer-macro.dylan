@@ -224,7 +224,8 @@ define macro gen-classes
       end;
 
       define class "<unparsed-" ## ?name ## ">" ("<" ## ?name ## ">", "<unparsed-" ## ?superframe ## ">")
-        inherited slot cache :: "<" ## ?name ## ">" = make("<decoded-" ## ?name ## ">"),
+        //sadly, inherited slots can't specify a type (and generate a warning if you try)
+        inherited slot cache /* :: "<" ## ?name ## ">" */ = make("<decoded-" ## ?name ## ">"),
           init-keyword: cache:;
       end; }
 end;

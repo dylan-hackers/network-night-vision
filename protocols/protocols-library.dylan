@@ -9,6 +9,7 @@ define library protocols
     ethernet,
     pcap,
     ipv4,
+    dhcp,
     prism2,
     dns;
 end;
@@ -268,6 +269,12 @@ define module ipv4
     source-ip-address, source-ip-address-setter,
     target-mac-address, target-mac-address-setter,
     target-ip-address, target-ip-address-setter;
+end;
+
+define module dhcp
+  use common-dylan;
+  use packetizer;
+  use ipv4, import: { <ipv4-address>, <udp-frame> };
 end;
 
 define module dns

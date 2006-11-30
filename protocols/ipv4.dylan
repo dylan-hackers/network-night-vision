@@ -116,16 +116,24 @@ end;
 define protocol udp-frame (header-frame)
   summary "UDP port %= -> %=", source-port, destination-port;
   over <ipv4-frame> 17;
-  layering field source-port :: <2byte-big-endian-unsigned-integer>;
-  field destination-port :: <2byte-big-endian-unsigned-integer>;
+  field source-port :: <2byte-big-endian-unsigned-integer>;
+  layering field destination-port :: <2byte-big-endian-unsigned-integer>;
   field payload-size :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame.payload)) + 8;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   variably-typed-field payload,
     end: frame.payload-size * 8,
-    type-function: payload-type(frame);
+    type-function: my-payload-type(frame);
 end;
 
+define function my-payload-type (frame :: <udp-frame>)
+  let res = payload-type(frame);
+  if (res == <raw-frame>)
+    element(layer(frame.object-class), frame.source-port, default: <raw-frame>);
+  else
+    res;
+  end;
+end;
               
 define protocol arp-frame (container-frame)
   over <ethernet-frame> #x806;

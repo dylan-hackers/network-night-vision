@@ -4,6 +4,7 @@ files:	protocols-library
 	ethernet
 	ipv4
 	tcp
+	dhcp
 	dns
 	ieee80211
 	prism2
