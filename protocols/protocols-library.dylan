@@ -187,12 +187,8 @@ define module ipv4
   use ethernet, import: { <ethernet-frame>, <mac-address> };
   use logical-link, import: { <link-control> };
 
-  export <ip-option-type-frame>,
-    flag, flag-setter,
-    class, class-setter,
-    number, number-setter;
-
   export <ip-option-frame>,
+    copy-flag, copy-flag-setter,
     option-type, option-type-setter;
 
   export <router-alert-ip-option>,

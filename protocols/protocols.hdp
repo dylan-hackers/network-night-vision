@@ -3,6 +3,7 @@ files:	protocols-library
 	logical-link
 	ethernet
 	ipv4
+	tcp
 	dns
 	ieee80211
 	prism2
