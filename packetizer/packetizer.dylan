@@ -692,7 +692,12 @@ define method get-field-size-aux (frame :: <container-frame>, field :: <variably
 end;
 
 define method get-field-size-aux (frame :: <container-frame>, field :: <repeated-field>)
-  reduce(\+, 0, map(frame-size, field.getter(frame)));
+  //XXX: refactor this whole crap
+  if (field-size(field.type))
+    field-size(field.type) * size(field.getter(frame))
+  else
+    reduce(\+, 0, map(frame-size, field.getter(frame)));
+  end;
 end;
 
 define method get-field-size-aux-aux (frame :: <frame>,
