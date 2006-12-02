@@ -35,7 +35,7 @@ define method send (socket :: <udp-socket>, destination :: <ipv4-address>, paylo
 end;                                  
 
 define function udp-begin()
-  let ip-layer = init-ethernet();
+  let ip-layer = init-ip-layer();
   let udp = make(<udp-layer>, ip-layer: ip-layer);
   let socket = create-socket(udp, 53);
   connect(socket.decapsulator, make(<verbose-printer>, stream: *standard-output*));

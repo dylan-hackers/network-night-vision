@@ -35,7 +35,9 @@ define module layer
     <cidr>,
     broadcast-address,
     init-arp-handler,
+    init-ip-layer,
     decapsulator,
     create-socket,
+    send-socket,
     send;
 end module layer;

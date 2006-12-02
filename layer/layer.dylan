@@ -145,37 +145,41 @@ define class <ip-over-ethernet-adapter> (<adapter>)
 end;
 
 define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>, payload :: <container-frame>);
-  let arp-entry = element(socket.arp-handler.arp-table, destination, default: #f);
-  if (instance?(arp-entry, <known-arp-entry>))
-    send(socket.ip-send-socket, arp-entry.arp-mac-address, payload);
+  if (broadcast-address(make(<cidr>, network-address: socket.v4-address, netmask: socket.netmask)) = destination)
+    send(socket.ip-send-socket, $broadcast-ethernet-address, payload);
   else
-    let arp-handler = socket.arp-handler;
-    with-lock(arp-handler.table-lock)
-      if (arp-entry)
-        arp-entry.outstanding-packets := add!(arp-entry.outstanding-packets, payload);
-      else
-        let from-addr = arp-handler.send-socket.listen-address;
-        let from-ip = find-key(arp-handler.arp-table,
-                               method(x)
-                                 x.arp-mac-address = from-addr
-                               end);
-        let arp-request = make(<arp-frame>,
-                               operation: 1,
-                               source-mac-address: from-addr,
-                               source-ip-address: from-ip,
-                               target-ip-address: destination,
-                               target-mac-address: mac-address("00:00:00:00:00:00"));
-        send(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
-        let outstanding-request = make(<outstanding-arp-request>,
-                                       handler: arp-handler,
-                                       request: arp-request,
-                                       destination: $broadcast-ethernet-address,
-                                       ip-address: destination,
-                                       outstanding-packets: list(payload));
-        let timer* = make(<timer>, in: 5, event: curry(try-again, outstanding-request, arp-handler));
-        outstanding-request.timer := timer*;
-        arp-handler.arp-table[destination] := outstanding-request;
-        arp-entry := outstanding-request;
+    let arp-entry = element(socket.arp-handler.arp-table, destination, default: #f);
+    if (instance?(arp-entry, <known-arp-entry>))
+      send(socket.ip-send-socket, arp-entry.arp-mac-address, payload);
+    else
+      let arp-handler = socket.arp-handler;
+      with-lock(arp-handler.table-lock)
+        if (arp-entry)
+          arp-entry.outstanding-packets := add!(arp-entry.outstanding-packets, payload);
+        else
+          let from-addr = arp-handler.send-socket.listen-address;
+          let from-ip = find-key(arp-handler.arp-table,
+                                 method(x)
+                                   x.arp-mac-address = from-addr
+                                 end);
+          let arp-request = make(<arp-frame>,
+                                 operation: 1,
+                                 source-mac-address: from-addr,
+                                 source-ip-address: from-ip,
+                                 target-ip-address: destination,
+                                 target-mac-address: mac-address("00:00:00:00:00:00"));
+          send(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
+          let outstanding-request = make(<outstanding-arp-request>,
+                                         handler: arp-handler,
+                                         request: arp-request,
+                                         destination: $broadcast-ethernet-address,
+                                         ip-address: destination,
+                                         outstanding-packets: list(payload));
+          let timer* = make(<timer>, in: 5, event: curry(try-again, outstanding-request, arp-handler));
+          outstanding-request.timer := timer*;
+          arp-handler.arp-table[destination] := outstanding-request;
+          arp-entry := outstanding-request;
+        end;
       end;
     end;
   end;
@@ -615,7 +619,7 @@ end;
 define function init-arp-handler (#key mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"),
                                   ip-address :: <ipv4-address> = ipv4-address("23.23.23.23"),
                                   netmask :: <integer> = 24,
-                                  interface-name :: <string> = "Intel");
+                                  interface-name :: <string> = "eth0");
   let interface = make(<ethernet-interface>, name: interface-name);
   let ethernet-layer = make(<ethernet-layer>,
                             ethernet-interface: interface,
@@ -638,52 +642,26 @@ define function init-arp-handler (#key mac-address :: <mac-address> = mac-addres
   ethernet-layer;
 end;
 
-
-define function init-ethernet ()
-  let int = make(<ethernet-interface>, name: "Intel");
-  let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int);
+define function init-ip-layer (#key mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"),
+                               ip-address :: <ipv4-address> = ipv4-address("23.23.23.23"),
+                               netmask :: <integer> = 24,
+                               interface-name :: <string> = "eth0")
+  let int = make(<ethernet-interface>, name: interface-name);
+  let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int, default-mac-address: mac-address);
   let arp-handler = make(<arp-handler>);
-/*
-  arp-handler.arp-table[ipv4-address("192.168.0.23")]
-    := make(<advertised-arp-entry>,
-            mac-address: mac-address("00:de:ad:be:ef:00"),
-            ip-address: ipv4-address("192.168.0.23"));
-*/
   let ip-layer = make(<ip-layer>);
-  register-route(ip-layer, make(<next-hop-route>, cidr: as(<cidr>, "0.0.0.0/0"),
-                                next-hop: ipv4-address("192.168.0.1")));
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ipv4-address("192.168.0.23"),
-                              netmask: 24);
+                              ipv4-address: ip-address,
+                              netmask: netmask);
+  send-gratitious-arp(arp-handler, ip-address);
   let icmp-handler = make(<icmp-handler>);
   let icmp-over-ip = make(<icmp-over-ip-adapter>,
                           ip-layer: ip-layer,
                           icmp-handler: icmp-handler);
-  let thr = make(<thread>, function: curry(toplevel, int));
-  send(icmp-handler.ip-socket,
-       ipv4-address("213.73.91.29"),
-       make(<icmp-frame>,
-            icmp-type: 8,
-            code: 0,
-            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
-  send(icmp-handler.ip-socket,
-       ipv4-address("212.202.174.224"),
-       make(<icmp-frame>,
-            icmp-type: 8,
-            code: 0,
-            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
-  send(icmp-handler.ip-socket,
-       ipv4-address("192.168.0.1"),
-       make(<icmp-frame>,
-            icmp-type: 8,
-            code: 0,
-            payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x23, #x42, #x0, #x0)))));
-
-//  format-out("Mac 192.168.2.1: %=\n", element(arp-handler.arp-table, ipv4-address("192.168.2.1"), default: #f));
-
-  ip-layer;
+  make(<thread>, function: curry(toplevel, int));
+  values(ip-layer, ip-over-ethernet);
 end;
 
