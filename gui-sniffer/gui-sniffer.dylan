@@ -238,7 +238,6 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
     filter-packet-table(frame);
   end;
 end;
-
 define method filter-packet-table (frame :: <gui-sniffer-frame>)
   let shown-packets
     = if (frame.filter-expression)
@@ -530,7 +529,9 @@ define command-table *gui-sniffer-command-table* (*global-command-table*)
 end;
 
 define command-table *popup-menu-command-table* (*global-command-table*)
-  menu-item "Follow TCP Stream" = follow-tcp-stream;
+  menu-item "Filter packet-source" = filter-source;
+  menu-item "Filter packet-destination" = filter-destination; 
+  menu-item "Follow connection" = follow-connection;
 end;
 
 define method display-popup-menu (sheet, object, #key x, y)
@@ -543,8 +544,128 @@ define method display-popup-menu (sheet, object, #key x, y)
   display-menu(menu);
 end;
 
-define method follow-tcp-stream (frame :: <gui-sniffer-frame>)
-  //
+define method filter-source (frame :: <gui-sniffer-frame>)
+  filter-by(source-address, frame);
+end;
+
+define method filter-destination (frame :: <gui-sniffer-frame>)
+  filter-by(destination-address, frame);
+end;
+
+define function filter-by (filter-method :: <function>, frame :: <gui-sniffer-frame>)
+  let current-packet = frame.packet-table.gadget-value;
+  if (current-packet) current-packet := real-frame(current-packet) end;
+  let layer = find-decent-layer(filter-method, current-packet);
+  let (field, frame-name) = find-protocol-field(frame-name(layer), filter-method.debug-name);
+  let filter = concatenate(frame-name, ".", filter-method.debug-name, " = ",
+                           as(<string>, filter-method(layer)));
+  frame.filter-expression := make(<field-equals>,
+                                  frame: as(<symbol>, frame-name),
+                                  name: as(<symbol>, filter-method.debug-name),
+                                  value: filter-method(layer),
+                                  field: field);
+  filter-packet-table(frame);
+  gadget-value(frame.filter-field) := filter;
+end;
+
+define method find-decent-layer(filter-method :: <function>, frame :: <header-frame>)
+  find-decent-layer(filter-method, frame.payload) | next-method();
+end;
+
+define method find-decent-layer(filter-method :: <function>, frame :: type-union(<container-frame>, <raw-frame>))
+  if (filter-method(frame))
+    frame;
+  end;
+end;
+define method real-payload (f :: <header-frame>)
+  real-payload(f.payload)
+end;
+define method real-payload (f :: type-union(<container-frame>, <raw-frame>))
+  f;
+end;
+
+define method follow-connection (frame :: <gui-sniffer-frame>)
+  let current-packet = frame.packet-table.gadget-value;
+  if (current-packet) current-packet := real-frame(current-packet) end;
+  let filters = create-connection-filter(current-packet);
+  gadget-value(frame.filter-field) := filters;
+  apply-filter(frame);
+  let packets = map(real-frame, frame.packet-table.gadget-items);
+  let payloads = map(method(x) real-payload(x).data end, packets);
+  show-payloads(apply(concatenate, payloads), owner: frame);
+end;
+
+define method show-payloads
+  (text, #key title = "Following Connection", owner)
+ => ()
+  let stream = make(<string-stream>, direction: #"output");
+  let mytext = #f;
+  block()
+    for (byte in text)
+      if ((byte >= 32 & byte < 128) | (byte = #xa) | (byte = #xd)) // lame, I know
+        format(stream, "%s", as(<character>, byte))
+      else
+        format(stream, ".")
+      end;
+    end;
+    mytext := stream-contents(stream);
+  cleanup
+    close(stream)
+  end;
+  //format-out("Show patload %s\n", mytext);
+  let text-editor = make(<text-editor>,
+                         read-only?: #t,
+                         tab-stop?: #t,
+                         lines: 60,
+                         columns: 100,
+                         scroll-bars: #"vertical",
+                         text: mytext,
+                         text-style: make(<text-style>, family: #"fix"));
+  let dialog = make(<dialog-frame>,
+                    title: title,
+                    owner: owner,
+                    layout: text-editor);
+  start-dialog(dialog)
+end;
+
+define method create-connection-filter (frame :: <header-frame>)
+  create-connection-filter(frame.payload) | next-method();
+end;
+
+define function generate-filter (protocol, key1, value1, key2, value2)
+  concatenate("((", protocol, ".", key1, " = ", value1, ") & ",
+              "(", protocol, ".", key2, " = ", value2, ")) | ",
+              "((", protocol, ".", key2, " = ", value1, ") & ",
+              "(", protocol, ".", key1, " = ", value2, "))");
+end;
+define method create-connection-filter (frame :: <ethernet-frame>)
+  next-method() |
+   generate-filter(frame.frame-name,
+                   "source-address", as(<string>, frame.source-address),
+                   "destination-address", as(<string>, frame.destination-address));
+end;
+
+define method create-connection-filter (frame :: <ipv4-frame>)
+  let next-filter = create-connection-filter(frame.payload);
+  let ip-filter
+    = generate-filter(frame.frame-name,
+                      "source-address", as(<string>, frame.source-address),
+                      "destination-address", as(<string>, frame.destination-address));
+  if (next-filter)
+    concatenate("(", next-filter, ") & (", ip-filter, ")");
+  else
+    ip-filter;
+  end;
+end;
+
+define method create-connection-filter (frame :: type-union(<tcp-frame>, <udp-frame>))
+  generate-filter(frame.frame-name,
+                  "source-port", integer-to-string(frame.source-port),
+                  "destination-port", integer-to-string(frame.destination-port));
+end;
+
+define method create-connection-filter (frame)
+  #f;
 end;
 
 define method open-pcap-file (frame :: <gui-sniffer-frame>)
@@ -671,14 +792,14 @@ end;
 define constant $icons = make(<string-table>);
 
 define function initialize-icons ()
-  local method doit (name)
+  local method load-and-register-item (name)
     $icons[as-lowercase(name)]
       := read-image-as(<win32-icon>, as(<byte-string>, name), #"icon", width: 16, height: 16);
   end;
-  doit("PLAY");
-  doit("OPEN");
-  doit("SAVE");
-  doit("STOP");
+  load-and-register-item("PLAY");
+  load-and-register-item("OPEN");
+  load-and-register-item("SAVE");
+  load-and-register-item("STOP");
 end;
 
 begin

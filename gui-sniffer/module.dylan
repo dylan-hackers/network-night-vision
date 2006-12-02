@@ -15,6 +15,7 @@ end;
 
 define module gui-sniffer
   use common-dylan, exclude: { format-to-string };
+  use dylan-extensions, import: { debug-name };
   use threads;
   use duim, exclude: { <frame>, frame-size };
   use win32-duim;
@@ -35,6 +36,7 @@ define module gui-sniffer
   use ethernet, import: { <ethernet-frame> };
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
+  use ipv4, import: { <ipv4-frame>, <tcp-frame>, <udp-frame>, source-port, destination-port };
   // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
 end module gui-sniffer;

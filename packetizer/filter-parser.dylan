@@ -25,7 +25,7 @@ define constant $filter-tokens
       token RPAREN = "\\)";
       token COLON = ":";
 
-      token Name = "[a-zA-Z_0-9-]+",
+      token Name = "[a-zA-Z_0-9-<>]+",
          semantic-value-function: extract-action;
 end;
 
