@@ -16,5 +16,5 @@ define module timer
   use date;
   use threads;
 
-  export <timer>, cancel;
+  export <timer>, cancel, <recurrent-timer>;
 end module;

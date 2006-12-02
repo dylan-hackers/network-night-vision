@@ -1,6 +1,7 @@
 module: timer
 
 define method main ()
+  let timer23 = make(<recurrent-timer>, interval: 2, event: print-foo);
   let timer1 = make(<timer>, in: 1, event: print-date);
   let timer3 = make(<timer>, in: 3, event: print-date);
   let timer8 = make(<timer>, in: 8, event: print-date);
@@ -12,6 +13,9 @@ define method main ()
   sleep(3);
 end;
 
+define method print-foo ()
+  format-out("FOO\n");
+end;
 define method print-date ()
   let date = current-date();
   format-out("%s\n", as-iso8601-string(date));
