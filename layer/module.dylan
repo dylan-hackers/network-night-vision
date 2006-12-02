@@ -25,6 +25,7 @@ define module layer
   // Add binding exports here.
 
   export <ethernet-layer>,
+    ethernet-interface,
     <ip-over-ethernet-adapter>,
     <ip-layer>,
     <icmp-handler>,
@@ -32,5 +33,9 @@ define module layer
     <arp-handler>,
     register-route,
     <cidr>,
+    broadcast-address,
+    init-arp-handler,
+    decapsulator,
+    create-socket,
     send;
 end module layer;

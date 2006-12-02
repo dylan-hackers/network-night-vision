@@ -47,3 +47,15 @@ define method as (class == <cidr>, string :: <string>)
        network-address: ipv4-address(ip),
        netmask: string-to-integer(mask));
 end;
+
+define method broadcast-address (cidr :: <cidr>) => (res :: <ipv4-address>);
+  let res = ipv4-address(as(<string>, cidr.cidr-network-address));
+  let (bytes, bits) = truncate/(32 - cidr.cidr-netmask, 8);
+  for (i from 0 below bytes)
+    res.data[3 - i] := #xff;
+  end;
+  if (bits > 0)
+    res.data[3 - bytes] := logior(res.data[3 - bytes], logand(#xff, 2 ^ bits - 1));
+  end;
+  res;
+end;

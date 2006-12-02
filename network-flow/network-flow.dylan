@@ -36,6 +36,19 @@ define method push-data-aux (input :: <push-input>,
 end;
 
 
+define class <encapsulator> (<filter>)
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <encapsulator>,
+                             frame :: <frame>)
+  if (frame.parent)
+    push-data(node.the-output, frame.parent)
+  else
+    error("No parent found")
+  end;
+end;
+
 define class <decapsulator> (<filter>)
 end;
 

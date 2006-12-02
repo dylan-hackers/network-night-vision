@@ -599,6 +599,44 @@ define method maybe-add-response-to-table
   add-response-to-table(node, frame)
 end;
 
+define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-address>)
+  let arp-entry = element(arp-handler.arp-table, ip, default: #f);
+  if (arp-entry)
+    let arp-frame = make(<arp-frame>,
+                         operation: 1,
+                         source-mac-address: arp-entry.arp-mac-address,
+                         source-ip-address: arp-entry.ip-address,
+                         target-mac-address: mac-address("00:00:00:00:00:00"),
+                         target-ip-address: arp-entry.ip-address);
+    send(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
+  end;
+end;
+
+define function init-arp-handler (#key mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"),
+                                  ip-address :: <ipv4-address> = ipv4-address("23.23.23.23"),
+                                  netmask :: <integer> = 24,
+                                  interface-name :: <string> = "Intel");
+  let interface = make(<ethernet-interface>, name: interface-name);
+  let ethernet-layer = make(<ethernet-layer>,
+                            ethernet-interface: interface,
+                            default-mac-address: mac-address);
+  let arp-handler = make(<arp-handler>);
+  let cidr = make(<cidr>, network-address: ip-address, netmask: netmask);
+  unless (broadcast-address(cidr) = ip-address)
+    arp-handler.arp-table[ip-address] := make(<advertised-arp-entry>,
+                                              mac-address: mac-address,
+                                              ip-address: ip-address);
+  end;
+  let arp-socket = create-socket(ethernet-layer, #x806);
+  let arp-broadcast-socket = create-socket(ethernet-layer, #x806, mac-address: $broadcast-ethernet-address);
+  let arp-fan-in = make(<fan-in>);
+  arp-handler.send-socket := arp-socket;
+  connect(arp-socket.decapsulator, arp-fan-in);
+  connect(arp-broadcast-socket.decapsulator, arp-fan-in);
+  connect(arp-fan-in, arp-handler);
+  send-gratitious-arp(arp-handler, ip-address);
+  ethernet-layer;
+end;
 
 
 define function init-ethernet ()

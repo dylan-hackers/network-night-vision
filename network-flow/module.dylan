@@ -16,8 +16,8 @@ define module network-flow
   use pcap, import: { packets, <pcap-file-header>, <pcap-packet>, <pcap-file> };
 
   export <summary-printer>, <verbose-printer>,
-    <decapsulator>, <demultiplexer>,
-    create-output-for-filter,
+    <decapsulator>, <encapsulator>,
+    <demultiplexer>, create-output-for-filter,
     <completer>,
     <frame-filter>,
     <pcap-file-reader>,
