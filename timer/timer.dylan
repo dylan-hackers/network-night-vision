@@ -4,8 +4,8 @@ author:
 copyright: 
 
 define class <timer> (<priority-queueable-mixin>)
-  slot timestamp :: <date>, required-init-keyword: timestamp:;
-  slot event :: <function>, required-init-keyword: event:;
+  constant slot timestamp :: <date>, required-init-keyword: timestamp:;
+  constant slot event :: <function>, required-init-keyword: event:;
 end;
 
 define method make (timer == <timer>,
@@ -45,12 +45,12 @@ end;
 
 
 define class <timer-manager> (<object>)
-  slot queue :: <priority-queue>
+  constant slot queue :: <priority-queue>
     = make(<priority-queue>,
            comparison-function: method (a, b)
                                   a.timestamp < b.timestamp
                                 end);
-  slot lock :: <lock> = make(<lock>);
+  constant slot lock :: <lock> = make(<lock>);
   slot notification :: <notification>;
 end;
 
