@@ -10,7 +10,7 @@ define protocol tcp-frame (header-frame)
   field sequence-number :: <big-endian-unsigned-integer-4byte>;
   field acknowledgement-number :: <big-endian-unsigned-integer-4byte>;
   field data-offset :: <4bit-unsigned-integer>,
-   fixup: ceiling/(20 + byte-offset(frame-size(frame.options-and-padding)), 4);
+   fixup: ceiling/(20 + byte-offset(reduce(method(x, y) frame-size(y) + x end, 0, frame.options-and-padding)), 4);
   field reserved :: <6bit-unsigned-integer> = 0;
   field urg :: <1bit-unsigned-integer> = 0;
   field ack :: <1bit-unsigned-integer> = 0;
