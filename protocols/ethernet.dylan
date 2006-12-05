@@ -50,13 +50,15 @@ define protocol ethernet-frame (header-frame)
 end;
 
 define protocol llc-frame (header-frame)
-  field dsap :: <unsigned-byte>;
-  field ssap :: <unsigned-byte>;
+  field dsap :: <7bit-unsigned-integer>;
+  field address-type-designation :: <1bit-unsigned-integer>;
+  field ssap :: <7bit-unsigned-integer>;
+  field command-response-identifer :: <1bit-unsigned-integer>;
   field control :: <unsigned-byte>;
   variably-typed-field payload,
     type-function: case
-                     frame.dsap = 170 & frame.ssap = 170 => <snap-frame>;
-                     frame.dsap = 66 & frame.ssap = 66 => <stp-frame>;
+                     frame.dsap = 85 & frame.ssap = 85 => <snap-frame>;
+                     frame.dsap = 33 & frame.ssap = 33 => <stp-frame>;
                      otherwise => <raw-frame>;
                    end;
 end;
