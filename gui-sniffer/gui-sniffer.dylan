@@ -257,8 +257,7 @@ define method filter-packet-table (frame :: <gui-sniffer-frame>)
 end;
 
 define method show-packet (frame :: <gui-sniffer-frame>)
-  let current-packet = frame.packet-table.gadget-value;
-  if (current-packet) current-packet := real-frame(current-packet) end;
+  let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
   current-packet & show-hexdump(frame, current-packet.packet);
   redisplay-window(frame.packet-hex-dump);
@@ -528,10 +527,43 @@ define command-table *gui-sniffer-command-table* (*global-command-table*)
   menu-item "Capture" = *interface-command-table*;
 end;
 
+define function reinject-packet(frame :: <gui-sniffer-frame>)
+  push-data(frame.the-output, current-packet(frame))
+end;
+
+define constant $transform-from-bv = compose(byte-vector-to-float-be, data);
+define constant $transform-to-bv = compose(big-endian-unsigned-integer-4byte, float-to-byte-vector-be);
+
+define method tcpkill (node :: <gui-sniffer-frame>);
+  let data = current-packet(node);
+  let incoming-ip = data.payload;
+  let incoming-tcp = incoming-ip.payload;
+  let sequence = $transform-from-bv(incoming-tcp.acknowledgement-number);
+  let tcp-frame = make(<tcp-frame>,
+                       source-port: incoming-tcp.destination-port,
+                       destination-port: incoming-tcp.source-port,
+                       rst: 1,
+                       sequence-number: $transform-to-bv(sequence),
+                       acknowledgement-number: $transform-to-bv(0.0s0));
+  let ip-frame = make(<ipv4-frame>,
+                      source-address: incoming-ip.destination-address,
+                      destination-address: incoming-ip.source-address,
+                      protocol: 6,
+                      payload: tcp-frame);
+  let ethernet-frame = make(<ethernet-frame>,
+                            source-address: data.destination-address,
+                            destination-address: data.source-address,
+                            type-code: #x800,
+                            payload: ip-frame);
+  push-data(node.the-output, ethernet-frame);
+end;
+
 define command-table *popup-menu-command-table* (*global-command-table*)
-  menu-item "Filter packet-source" = filter-source;
-  menu-item "Filter packet-destination" = filter-destination; 
-  menu-item "Follow connection" = follow-connection;
+  menu-item "Filter Packet-Source" = filter-source;
+  menu-item "Filter Packet-Destination" = filter-destination; 
+  menu-item "Follow Connection" = follow-connection;
+  menu-item "Re-inject Packet" = reinject-packet;
+  menu-item "Kill TCP Connection" = tcpkill;
 end;
 
 define method display-popup-menu (sheet, object, #key x, y)
@@ -552,10 +584,13 @@ define method filter-destination (frame :: <gui-sniffer-frame>)
   filter-by(destination-address, frame);
 end;
 
-define function filter-by (filter-method :: <function>, frame :: <gui-sniffer-frame>)
+define function current-packet (frame :: <gui-sniffer-frame>)
   let current-packet = frame.packet-table.gadget-value;
-  if (current-packet) current-packet := real-frame(current-packet) end;
-  let layer = find-decent-layer(filter-method, current-packet);
+  current-packet & real-frame(current-packet)
+end;
+
+define function filter-by (filter-method :: <function>, frame :: <gui-sniffer-frame>)
+  let layer = find-decent-layer(filter-method, current-packet(frame));
   let (field, frame-name) = find-protocol-field(frame-name(layer), filter-method.debug-name);
   let filter = concatenate(frame-name, ".", filter-method.debug-name, " = ",
                            as(<string>, filter-method(layer)));
@@ -612,7 +647,7 @@ define method show-payloads
   cleanup
     close(stream)
   end;
-  //format-out("Show patload %s\n", mytext);
+  //format-out("Show payload %s\n", mytext);
   let text-editor = make(<text-editor>,
                          read-only?: #t,
                          tab-stop?: #t,
@@ -711,6 +746,7 @@ define method open-interface (frame :: <gui-sniffer-frame>)
                          name: interface-name,
                          promiscuous?: promiscuous?);
     connect(interface, frame);
+    connect(frame, interface);
     reinit-gui(frame);
     make(<thread>, function: curry(toplevel, interface));
     frame.ethernet-interface := interface;
@@ -728,6 +764,7 @@ define method close-interface (frame :: <gui-sniffer-frame>)
   frame.ethernet-interface.running? := #f;
   gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
   disconnect(frame.ethernet-interface, frame);
+  disconnect(frame, frame.ethernet-interface);
   command-enabled?(open-pcap-file, frame) := #t;
   gadget-enabled?(frame.open-button) := #t;
   command-enabled?(open-interface, frame) := #t;
