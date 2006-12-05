@@ -12,6 +12,7 @@ define library protocols
     dhcp,
     prism2,
     dns;
+    cidr;
 end;
 
 define module logical-link
@@ -361,4 +362,13 @@ define module dns
 end;
 
 
+define module cidr
+  use dylan;
+  use ipv4, import: { ipv4-address, <ipv4-address> };
+  use print;
+
+  export <cidr>,
+    cidr-network-address, cidr-netmask,
+    ip-in-cidr?, broadcast-address;
+end;
 

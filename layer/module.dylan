@@ -22,6 +22,7 @@ define module layer
   use ipv4;
   use ethernet;
   use dns, exclude: { ipv4-address };
+  use cidr;
   // Add binding exports here.
 
   export <ethernet-layer>,
@@ -32,8 +33,6 @@ define module layer
     <icmp-over-ip-adapter>,
     <arp-handler>,
     register-route,
-    <cidr>,
-    broadcast-address,
     init-arp-handler,
     init-ip-layer,
     decapsulator,
