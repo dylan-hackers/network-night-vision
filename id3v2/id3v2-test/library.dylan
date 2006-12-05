@@ -5,7 +5,7 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 define library id3v2-test
   use common-dylan;
   use io;
-  use parse-arguments;
+  use getopt;
   use flow;
   use network-flow;
   use system;
@@ -21,7 +21,7 @@ define module id3v2-test
   use file-system;
   use flow;
   use network-flow;
-  use parse-arguments;
+  use getopt;
   use interfaces;
   use id3v2;
 end;

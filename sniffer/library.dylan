@@ -5,7 +5,7 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 define library sniffer
   use common-dylan;
   use io;
-  use parse-arguments;
+  use getopt;
   use flow;
   use network-flow;
   use system;
@@ -20,6 +20,6 @@ define module sniffer
   use file-system;
   use flow;
   use network-flow;
-  use parse-arguments;
+  use getopt;
   use interfaces;
 end;
