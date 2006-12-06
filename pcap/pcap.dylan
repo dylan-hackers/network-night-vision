@@ -3,10 +3,11 @@ author: Andreas Bogk, Hannes Mehnert
 copyright: (c) 2006, All rights reserved. Free for non-commercial user
 
 
+/*
 define simple-C-mapped-subtype <C-buffer-offset> (<C-char*>)
   export-map <machine-word>, export-function: identity;
 end;
-
+*/
 define method pcap-receive-callback
     (interface, packet :: <pcap-packet-header*>, bytes)
   let real-interface = import-c-dylan-object(interface);
@@ -57,13 +58,13 @@ define C-function pcap-open-live
   result pcap-t :: <C-void*>;
   c-name: "pcap_open_live";
 end;
-
+/*
 define C-struct <timeval>
   slot tv_sec :: <C-int>;
   slot tv_usec :: <C-int>;
   c-name: "timeval";
 end;
-
+*/
 define C-struct <pcap-packet-header>
   slot ts :: <timeval>;
   slot caplen :: <C-int>;
@@ -109,27 +110,89 @@ define method initialize
   end;
 end;
 
+define class <device> (<object>)
+  constant slot device-name :: <string>, required-init-keyword: name:;
+  constant slot device-cidrs :: <collection>, required-init-keyword: cidrs:;
+end;
+
+define method print-object (dev :: <device>, stream :: <stream>) => ()
+  format(stream, "%s", as(<string>, dev));
+end;
+define method as (class == <string>, dev :: <device>) => (res :: <string>)
+  format-to-string("%s (%=)", dev.device-name, dev.device-cidrs);
+end;
+
 define method find-all-devices () => (res :: <collection>)
   let res = make(<stretchy-vector>);
   let errbuf = make(<byte-vector>);
   let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
   for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
+    let cidrs = make(<stretchy-vector>);
+    for (ele = device.addresses then ele.next, while: ele ~= null-pointer(<pcap-addr*>))
+      format-out("GOT as address %= ", ele.address.sa-family-value);
+      local method printme (x)
+              for (f from 2 below 6)
+                format-out("%X ", sa-data-array(x, f));
+              end;
+              format-out(" ");
+            end;
+      printme(ele.address);
+      if (null-pointer(<sockaddr*>) ~= ele.netmask)
+        format-out("netmask "); printme(ele.netmask);
+      end;
+      if (null-pointer(<sockaddr*>) ~= ele.broadcast-address)
+        format-out("broadcast-address "); printme(ele.broadcast-address);
+      end;
+      if (null-pointer(<sockaddr*>) ~= ele.destination-address)
+        format-out("destination-address "); printme(ele.destination-address);
+      end;
+      local method get-address (foo :: <pcap-addr*>)
+              let res = make(<stretchy-vector-subsequence>, size: 4);
+              for (i from 2 below 6)
+                res[i - 2] := as(<byte>, sa-data-array(foo.address, i));
+              end;
+              make(<ipv4-address>, data: res);
+            end;
+      local method get-netmask (foo :: <pcap-addr*>)
+              let res = make(<stretchy-vector>);
+              for (i from 2 below 6)
+                add!(res, sa-data-array(foo.netmask, i));
+              end;
+              netmask-from-byte-vector(res);
+            end;
+
+      format-out("\n");
+      add!(cidrs, concatenate(as(<string>, get-address(ele)), "/", integer-to-string(get-netmask(ele))));
+    end;
+
     let str = make(<string>, size: device.description.size);
     //XXX: isn't there a convinience function for converting <C-string> to <string>
     //XXX: generate a real object, and also return device-name
     for (ele in device.description, i from 0)
       str[i] := ele;
     end;
-    add!(res, str)
+    add!(res, make(<device>, name: str, cidrs: cidrs))
   end;
   res;
 end;
  
+
+define constant <sockaddr*> = <LPSOCKADDR>;
+define C-struct <pcap-addr>
+  slot next :: <pcap-addr*>;
+  slot address :: <sockaddr*>;
+  slot netmask :: <sockaddr*>;
+  slot broadcast-address :: <sockaddr*>;
+  slot destination-address :: <sockaddr*>;
+  pointer-type-name: <pcap-addr*>;
+  c-name: "pcap_addr";
+end;
+
 define C-struct <pcap-if>
   slot next :: <pcap-if*>;
   slot name :: <C-string>;
   slot description :: <C-string>;
-  slot addresses :: <C-void*>;
+  slot addresses :: <pcap-addr*>;
   slot flags :: <C-unsigned-int>;
   pointer-type-name: <pcap-if*>;
   c-name: "pcap_if";

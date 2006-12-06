@@ -5,6 +5,7 @@ define library protocols
   use system;
   use packetizer;
   use io;
+  use dylan;
   export logical-link,
     ethernet,
     pcap,
@@ -363,16 +364,18 @@ end;
 
 
 define module cidr
-  use common-dylan;
+  use dylan-extensions;
+  use common-dylan, exclude: { format-to-string };
   use ipv4, import: { ipv4-address, <ipv4-address> };
   use print;
   use format;
+  use format-out;
   use packetizer;
-  use streams;
   use common-extensions, exclude: { format-to-string };
 
   export <cidr>,
     cidr-network-address, cidr-netmask,
-    ip-in-cidr?, broadcast-address;
+    ip-in-cidr?, broadcast-address,
+    netmask-from-byte-vector;
 end;
 

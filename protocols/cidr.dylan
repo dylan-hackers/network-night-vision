@@ -55,3 +55,31 @@ define method broadcast-address (cidr :: <cidr>) => (res :: <ipv4-address>);
   end;
   res;
 end;
+define constant $dec-to-netmask = make(<vector>, size: 256, fill: #f);
+begin
+  $dec-to-netmask[255] := 7;
+  $dec-to-netmask[254] := 6;
+  $dec-to-netmask[248] := 5;
+  $dec-to-netmask[240] := 4;
+  $dec-to-netmask[224] := 3;
+  $dec-to-netmask[192] := 2;
+  $dec-to-netmask[128] := 1;
+  $dec-to-netmask[0] := 0;
+end;
+
+define function netmask-from-byte-vector (bv :: <collection>) => (res :: <integer>)
+  block (ret)
+    for (ele in bv, j from 0 by 8)
+      unless (ele = 255)
+        let off = $dec-to-netmask[ele];
+        unless (off)
+          format-out("Invalid netmask, returning %d! %=\n", j, ele);
+          ret(j);
+        end;
+        ret(j + off);
+      end;
+    end;
+    32;
+  end;
+end;
+

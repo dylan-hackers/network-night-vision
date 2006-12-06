@@ -777,7 +777,7 @@ define method prompt-for-interface
   (#key title = "Please specify interface", owner)
  => (interface-name :: false-or(<string>), promiscuous? :: <boolean>)
   let devices = find-all-devices();
-  let interfaces = make(<list-box>, items: devices);
+  let interfaces = make(<list-box>, items: map(curry(as, <string>), devices));
   let promiscuous? = make(<check-box>, items: #("promiscuous"), selection: #[0]);
   let interface-selection-dialog
     = make(<dialog-frame>,
