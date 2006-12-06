@@ -113,7 +113,7 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
                              frame :: <ethernet-frame>)
-  send(node.unix-interface, assemble-frame(frame).packet);
+  send(node.unix-interface, as(<byte-vector>, assemble-frame(frame).packet));
 end;
 
 define method toplevel (node :: <ethernet-interface>)
