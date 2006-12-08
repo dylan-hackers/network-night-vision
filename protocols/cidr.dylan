@@ -1,4 +1,6 @@
 module: cidr
+Author:    Andreas Bogk, Hannes Mehnert
+Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define class <cidr> (<object>)
   constant slot cidr-network-address :: <ipv4-address>,
@@ -6,7 +8,6 @@ define class <cidr> (<object>)
   constant slot cidr-netmask :: <integer>,
     required-init-keyword: netmask:;
 end class;
-
 
 define method ip-in-cidr? (cidr :: <cidr>, ipv4-address :: <ipv4-address>)
   let (bytes, bits) = truncate/(cidr.cidr-netmask, 8);

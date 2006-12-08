@@ -39,6 +39,14 @@ define module interfaces
               assemble-frame,
               packet,
               <stretchy-vector-subsequence> };
-  export <ethernet-interface>, interface-name, running?-setter, running?, find-all-devices;
+  export <ethernet-interface>,
+    interface-name,
+    running?-setter,
+    running?,
+    find-all-devices;
+
+  export <device>,
+    device-name,
+    device-cidrs;
 end;
 

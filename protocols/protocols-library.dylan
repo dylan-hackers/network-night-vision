@@ -13,6 +13,7 @@ define library protocols
     dhcp,
     prism2,
     dns,
+    rip,
     cidr;
 end;
 
@@ -362,6 +363,34 @@ define module dns
     text-data, text-data-setter;
 end;
 
+define module rip
+  use dylan;
+  use packetizer;
+  use ipv4, import: { <udp-frame>, <ipv4-address> };
+
+  export <rip-v1>, <rip-v2>,
+    command, command-setter,
+    version, version-setter,
+    routes, routes-setter;
+
+  export <rip-v1-route>, <rip-v2-route>,
+    address-family-identifier, address-family-identifier-setter,
+    route-ip-address, route-ip-address-setter,
+    metric, metric-setter,
+    route-tag, route-tag-setter,
+    subnet-mask, subnet-mask-setter,
+    next-hop, next-hop-setter;
+
+  export <rip-v2-authentication>,
+    authentication-id, authentication-id-setter,
+    authentication-type, authentication-type-setter,
+    authentication-value, authentication-value-setter;
+
+  export <rip-ng>,
+    <rip-ng-route>,
+    ipv6-prefix, ipv6-prefix-setter,
+    prefix-length, prefix-length-setter;
+end;
 
 define module cidr
   use dylan-extensions;
