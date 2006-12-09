@@ -384,7 +384,11 @@ define method counter ()
   *count*;
 end;
 
-define variable *debugging?* = #t;
+define function show-about-box (x)
+  start-dialog(make(<about-box>))
+end;
+
+define variable *debugging?* = #f;
 
 define method safe(func :: <function>)
   method(#rest args)
@@ -517,6 +521,8 @@ end;
 define command-table *file-command-table* (*global-command-table*)
   menu-item "Open pcap file..." = open-pcap-file;
   menu-item "Save to pcap file..." = save-pcap-file;
+  menu-item "About" = show-about-box;
+  menu-item "Exit" = exit-application;
 end;
 
 define command-table *interface-command-table* (*global-command-table*)
@@ -819,6 +825,21 @@ define method prompt-for-interface
   end;
 end;
 
+define constant $about-text = concatenate("Network Night Vision 0.0.1\n",
+                                          "(c) 2005, 2006 Andreas Bogk, Hannes Mehnert\n",
+                                          "All Rights Reserved. Free for non-commercial use.\n",
+                                          "\n",
+                                          "http://www.networknightvision.com/");
+
+define frame <about-box> (<dialog-frame>)
+  pane splash-screen-pane (frame)
+    make(<text-editor>, text: $about-text, read-only?: #t, lines: 5, columns: 50);
+  layout (frame)
+    frame.splash-screen-pane;
+  keyword title: = "About Network Night Vision 0.0.1";
+end;
+
+
 define method reinit-gui (frame :: <gui-sniffer-frame>)
   frame.first-packet-arrived := #f;
   *count* := 0;
@@ -872,7 +893,7 @@ end;
 begin
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
-  set-frame-size(gui-sniffer, 800, 600);
+  set-frame-size(gui-sniffer, 1024, 768);
   deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
   deuce/*editor-frame* := gui-sniffer;
   deuce/*buffer* := deuce/make-initial-buffer();
