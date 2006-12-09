@@ -87,7 +87,7 @@ define protocol stp-identifier (container-frame)
   field bridge-address :: <mac-address>;
 end;
 
-define protocol stp-frame (variably-typed-container-frame)
+define abstract protocol stp-frame (variably-typed-container-frame)
   field protocol-identifier :: <2byte-big-endian-unsigned-integer>;
   field protocol-version :: <unsigned-byte>;
   layering field bpdu-type :: <unsigned-byte>;
@@ -112,18 +112,18 @@ define protocol stp-topology-change-frame (stp-frame)
   summary "STP topology change notification";
 end;
 
-define protocol cdp-record (variably-typed-container-frame)
+define abstract protocol cdp-record (variably-typed-container-frame)
   length frame.cdp-length * 8;
   layering field cdp-type :: <2byte-big-endian-unsigned-integer>;
   field cdp-length :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame));
 end;
 
-define protocol cdp-unknown-record (cdp-record)
+define abstract protocol cdp-unknown-record (cdp-record)
   field cdp-value :: <raw-frame>;
 end;
 
-define protocol cdp-string-record (cdp-record)
+define abstract protocol cdp-string-record (cdp-record)
   field cdp-value :: <externally-delimited-string>;
 end;
 

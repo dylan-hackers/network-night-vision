@@ -693,8 +693,9 @@ end;
 
 define method get-field-size-aux (frame :: <container-frame>, field :: <repeated-field>)
   //XXX: refactor this whole crap
-  if (field-size(field.type))
-    field-size(field.type) * size(field.getter(frame))
+  let fs = field-size(field.type);
+  if (fs & fs ~= $unknown-at-compile-time)
+    fs * size(field.getter(frame))
   else
     reduce(\+, 0, map(frame-size, field.getter(frame)));
   end;

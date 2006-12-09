@@ -25,7 +25,7 @@ define protocol dhcp-message (container-frame)
     reached-end?: instance?(frame, <dhcp-end-option>);
 end;
 
-define protocol dhcp-option (variably-typed-container-frame)
+define abstract protocol dhcp-option (variably-typed-container-frame)
   layering field option-code :: <unsigned-byte>;
 end;
 
@@ -38,7 +38,7 @@ define protocol dhcp-end-option (dhcp-option)
   over <dhcp-option> 255;
 end;
 
-define protocol dhcp-option-with-data (dhcp-option)
+define abstract protocol dhcp-option-with-data (dhcp-option)
   length (frame.option-length + 2) * 8;
   field option-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame)) - 2;
@@ -54,7 +54,7 @@ define protocol dhcp-time-offset (dhcp-option-with-data)
   field time-offset :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define protocol dhcp-option-with-addresses (dhcp-option-with-data)
+define abstract protocol dhcp-option-with-addresses (dhcp-option-with-data)
   repeated field addresses :: <ipv4-address>, reached-end?: #f;
 end;
 
@@ -129,7 +129,7 @@ define protocol dhcp-extensions-path (dhcp-option-with-data)
   field extensions-pathname :: <externally-delimited-string>;
 end;
 
-define protocol dhcp-boolean-option (dhcp-option-with-data)
+define abstract protocol dhcp-boolean-option (dhcp-option-with-data)
   field option-enabled :: <unsigned-byte>
 end;
 define protocol dhcp-ip-forwarding-option (dhcp-boolean-option)

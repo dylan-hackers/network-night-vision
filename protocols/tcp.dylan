@@ -55,7 +55,7 @@ define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
             list("U", "A", "P", "R", "S", "F")))
 end;
 
-define protocol tcp-option (variably-typed-container-frame)
+define abstract protocol tcp-option (variably-typed-container-frame)
   layering field tcp-option-type :: <unsigned-byte>;
 end;
 
@@ -67,7 +67,7 @@ define protocol no-operation-option (tcp-option)
   over <tcp-option> 1
 end;
 
-define protocol tcp-option-with-data (tcp-option)
+define abstract protocol tcp-option-with-data (tcp-option)
   length frame.tcp-option-length * 8;
   field tcp-option-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame));

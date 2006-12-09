@@ -35,7 +35,7 @@ define macro protocol-module-definer
 end;
 
 define macro real-class-definer
-  { real-class-definer(?:name; ?superclasses:*; ?fields-aux:*) }
+  { real-class-definer(?attrs:*; ?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
       end;
       define inline method frame-name (frame :: subclass(?name)) => (res :: <string>)
@@ -90,7 +90,11 @@ define macro real-class-definer
          end;
       end;
       define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
-        static-end(last("$" ## ?name ## "-fields"));
+        if (?#"attrs" = #"abstract")
+          $unknown-at-compile-time;
+        else
+          static-end(last("$" ## ?name ## "-fields"));
+        end;
       end;
       define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
         let frame = apply(make, decoded-class(?name), rest);
@@ -472,15 +476,15 @@ define macro container-frame-constructor
 end;
 
 define macro protocol-definer
-    { define protocol ?:name (?superprotocol:name)
+    { define ?attrs:* protocol ?:name (?superprotocol:name)
         summary ?summary:* ;
         ?fields:*
       end } =>
       { summary-generator("<" ## ?name ## ">"; ?summary);
-        define protocol ?name (?superprotocol) ?fields end; }
+        define ?attrs protocol ?name (?superprotocol) ?fields end; }
 
 
-    { define protocol ?:name (container-frame) end } =>
+    { define ?attrs:* protocol ?:name (container-frame) end } =>
       { //protocol-module-definer(?name; container-frame; );
         define abstract class "<" ## ?name ## ">" (<container-frame>) end;
         define abstract class "<decoded-" ## ?name ## ">"
@@ -488,32 +492,32 @@ define macro protocol-definer
         end;
         gen-classes(?name; container-frame); }
 
-    { define protocol ?:name (?superprotocol:name)
+    { define ?attrs:* protocol ?:name (?superprotocol:name)
         over ?super:name ?magic:expression;
         ?fields:*
       end } =>
       { 
-        define protocol ?name (?superprotocol) ?fields end;
+        define ?attrs protocol ?name (?superprotocol) ?fields end;
         stack-protocol(?super, "<" ## ?name ## ">", ?magic);
       }
  
-    { define protocol ?:name (?superprotocol:name)
+    { define ?attrs:* protocol ?:name (?superprotocol:name)
         length ?container-frame-length:expression;
         ?fields:*
       end } =>
       { 
-        define protocol ?name (?superprotocol) ?fields end;
+        define ?attrs protocol ?name (?superprotocol) ?fields end;
         define inline method container-frame-size (?=frame :: "<" ## ?name ## ">") => (res :: <integer>)
           ?container-frame-length
         end;
       }
 
 
-    { define protocol ?:name (?superprotocol:name)
+    { define ?attrs:* protocol ?:name (?superprotocol:name)
         ?fields:*
       end } =>
       { //protocol-module-definer(?name; ?superprotocol; ?fields);
-        real-class-definer("<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
+        real-class-definer(?attrs; "<" ## ?name ## ">"; "<" ## ?superprotocol ## ">"; ?fields);
         decoded-class-definer("<decoded-" ## ?name ## ">";
                               "<" ## ?name ## ">", "<decoded-" ## ?superprotocol ## ">";
                               ?fields);

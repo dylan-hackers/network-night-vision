@@ -2,7 +2,7 @@ module: ipv4
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define protocol ip-option-frame (variably-typed-container-frame)
+define abstract protocol ip-option-frame (variably-typed-container-frame)
   field copy-flag :: <1bit-unsigned-integer>;
   layering field option-type :: <7bit-unsigned-integer>;
 end;

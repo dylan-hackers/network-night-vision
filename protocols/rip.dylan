@@ -2,7 +2,7 @@ module: rip
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define protocol rip (variably-typed-container-frame)
+define abstract protocol rip (variably-typed-container-frame)
   over <udp-frame> 520;
   field command :: <unsigned-byte>;
   layering field version :: <unsigned-byte>;

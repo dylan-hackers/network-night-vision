@@ -54,7 +54,7 @@ define method as (class == <domain-name>, string :: <string>)
   make(<domain-name>, fragment: map(curry(as, <label>), labels));
 end;
 
-define protocol domain-name-fragment (variably-typed-container-frame)
+define abstract protocol domain-name-fragment (variably-typed-container-frame)
   layering field type-code :: <2bit-unsigned-integer> = 0;
 end;
 
