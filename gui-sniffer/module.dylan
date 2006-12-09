@@ -35,7 +35,7 @@ define module gui-sniffer
   use ethernet, import: { <ethernet-frame> };
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
-  use ipv4, import: { <ipv4-frame>, <tcp-frame>, <udp-frame>, source-port, destination-port, acknowledgement-number };
+  use ipv4, import: { <ipv4-frame>, <tcp-frame>, <udp-frame>, source-port, destination-port, acknowledgement-number, sequence-number };
   // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
   use interfaces;

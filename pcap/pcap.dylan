@@ -129,7 +129,7 @@ define method find-all-devices () => (res :: <collection>)
   for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
     let cidrs = make(<stretchy-vector>);
     for (ele = device.addresses then ele.next, while: ele ~= null-pointer(<pcap-addr*>))
-      format-out("GOT as address %= ", ele.address.sa-family-value);
+//      format-out("GOT as address %= ", ele.address.sa-family-value);
       local method printme (x)
               for (f from 2 below 6)
                 format-out("%X ", sa-data-array(x, f));
@@ -161,7 +161,7 @@ define method find-all-devices () => (res :: <collection>)
               netmask-from-byte-vector(res);
             end;
 
-      format-out("\n");
+      //format-out("\n");
       add!(cidrs, concatenate(as(<string>, get-address(ele)), "/", integer-to-string(get-netmask(ele))));
     end;
 

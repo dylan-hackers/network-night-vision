@@ -132,7 +132,7 @@ define protocol cdp-device-id (cdp-string-record)
   summary "ID: %=", cdp-value;
 end;
 
-define protocol cdp-address (container-frame)
+define protocol cdp-address-frame (container-frame)
   field cdp-protocol-type :: <unsigned-byte>;
   field cdp-protocol-length :: <unsigned-byte>;
   field cdp-protocol :: <raw-frame>, length: frame.cdp-protocol-length * 8;
@@ -140,10 +140,10 @@ define protocol cdp-address (container-frame)
   field cdp-address :: <raw-frame>, length: frame.cdp-address-length * 8;
 end; 
 
-define protocol cdp-addresses (cdp-record)
+define protocol cdp-addresses-frame (cdp-record)
   over <cdp-record> #x2;
   field address-count :: <unsigned-byte>;
-  repeated field cdp-addresses :: <cdp-address>,
+  repeated field cdp-addresses :: <cdp-address-frame>,
     count: frame.address-count;
 end;
 
@@ -198,7 +198,7 @@ define protocol cdp-vtp-native-vlan-id (cdp-record)
   field cdp-native-vlan-id :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define protocol cdp-duplex (cdp-record)
+define protocol cdp-duplex-frame (cdp-record)
   over <cdp-record> #xb;
   summary "Duplex: %s", method(x) if (x.cdp-duplex = 0) "half" else "full" end end;
   field cdp-duplex :: <unsigned-byte>;
@@ -224,7 +224,7 @@ define protocol cdp-power (cdp-unknown-record)
   summary "Power: %=", cdp-value;
 end;
 
-define protocol cdp-mtu (cdp-record)
+define protocol cdp-mtu-frame (cdp-record)
   over <cdp-record> #x11;
   summary "MTU: %=", cdp-mtu;
   field cdp-mtu :: <big-endian-unsigned-integer-4byte>;

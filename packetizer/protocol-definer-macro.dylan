@@ -462,6 +462,15 @@ define macro summary-generator
          end; }
 end;
 
+define macro container-frame-constructor
+  { container-frame-constructor(?:name) }
+ =>
+  { define inline method ?name (#rest args)
+      apply(make, "<" ## ?name ## ">", args)
+    end
+  }
+end;
+
 define macro protocol-definer
     { define protocol ?:name (?superprotocol:name)
         summary ?summary:* ;
@@ -512,6 +521,7 @@ define macro protocol-definer
         frame-field-generator("<unparsed-" ## ?name ## ">";
                               field-count("<unparsed-" ## ?superprotocol ## ">");
                               ?fields);
+        container-frame-constructor(?name);
       }
 end;
 

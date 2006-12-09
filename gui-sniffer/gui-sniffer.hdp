@@ -12,6 +12,7 @@ c-header-files:	icons\open.ico
 	icons\save.ico
 	icons\play.ico
 	icons\stop.ico
+	icons\nnv.ico
 rc-files:	bitmaps.rc
 major-version:	1
 minor-version:	0

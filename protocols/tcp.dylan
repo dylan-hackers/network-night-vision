@@ -73,7 +73,7 @@ define protocol tcp-option-with-data (tcp-option)
     fixup: byte-offset(frame-size(frame));
 end;
 
-define protocol maximum-segment-size (tcp-option-with-data)
+define protocol maximum-segment-size-option (tcp-option-with-data)
   over <tcp-option> 2;
   field maximum-segment-size :: <2byte-big-endian-unsigned-integer>;
 end;

@@ -238,7 +238,8 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
     filter-packet-table(frame);
   end;
 end;
-define method filter-packet-table (frame :: <gui-sniffer-frame>)
+
+define function filter-packet-table (frame :: <gui-sniffer-frame>)
   let shown-packets
     = if (frame.filter-expression)
         choose-by(rcurry(matches?, frame.filter-expression),
@@ -256,7 +257,7 @@ define method filter-packet-table (frame :: <gui-sniffer-frame>)
   end;
 end;
 
-define method show-packet (frame :: <gui-sniffer-frame>)
+define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
   current-packet & show-hexdump(frame, current-packet.packet);
@@ -265,7 +266,7 @@ define method show-packet (frame :: <gui-sniffer-frame>)
 //  note-gadget-value-changed(window);
 end;
 
-define method show-packet-tree (frame :: <gui-sniffer-frame>, packet)
+define function show-packet-tree (frame :: <gui-sniffer-frame>, packet)
   frame.packet-tree-view.tree-control-roots
     := if (packet)
          add!(frame-root-generator(packet), packet);
@@ -364,7 +365,7 @@ define method find-frame-at-offset (frame :: <leaf-frame>, offset :: <integer>)
   frame;
 end;
 
-define method highlight-hex-dump (mframe :: <gui-sniffer-frame>)
+define function highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
@@ -469,7 +470,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
 
 
   pane sniffer-status-bar (frame)
-    make(<status-bar>, label: "GUI Sniffer");
+    make(<status-bar>, label: "Network Night Vision");
 
   pane open-button (frame)
     make(<push-button>, label: $icons["open"],
@@ -509,7 +510,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   tool-bar (frame) frame.sniffer-tool-bar;
   command-table (frame) *gui-sniffer-command-table*;
   status-bar (frame) frame.sniffer-status-bar;
-  keyword title: = "GUI Sniffer"
+  keyword title: = "Network Night Vision";
+  keyword icon: = $icons["nnv-small"];
 end;
 
 define command-table *file-command-table* (*global-command-table*)
@@ -534,28 +536,53 @@ end;
 define constant $transform-from-bv = compose(byte-vector-to-float-be, data);
 define constant $transform-to-bv = compose(big-endian-unsigned-integer-4byte, float-to-byte-vector-be);
 
+define inline function stack (#rest frames)
+  for (i from 1 below frames.size)
+    frames[i - 1].payload := frames[i]
+  end;
+  frames[0]
+end;
+
+define inline function ethernet-frame (#rest args)
+  apply(make, <ethernet-frame>, args)
+end;
+
+define inline function ipv4-frame (#rest args)
+  apply(make, <ipv4-frame>, args)
+end;
+
+define inline function tcp-frame (#rest args)
+  apply(make, <tcp-frame>, args)
+end;
+
 define method tcpkill (node :: <gui-sniffer-frame>);
   let data = current-packet(node);
   let incoming-ip = data.payload;
   let incoming-tcp = incoming-ip.payload;
   let sequence = $transform-from-bv(incoming-tcp.acknowledgement-number);
-  let tcp-frame = make(<tcp-frame>,
-                       source-port: incoming-tcp.destination-port,
-                       destination-port: incoming-tcp.source-port,
-                       rst: 1,
-                       sequence-number: $transform-to-bv(sequence),
-                       acknowledgement-number: $transform-to-bv(0.0s0));
-  let ip-frame = make(<ipv4-frame>,
-                      source-address: incoming-ip.destination-address,
-                      destination-address: incoming-ip.source-address,
-                      protocol: 6,
-                      payload: tcp-frame);
-  let ethernet-frame = make(<ethernet-frame>,
-                            source-address: data.destination-address,
-                            destination-address: data.source-address,
-                            type-code: #x800,
-                            payload: ip-frame);
-  push-data(node.the-output, ethernet-frame);
+  push-data
+    (node.the-output,
+     stack(ethernet-frame(source-address: data.destination-address,
+                          destination-address: data.source-address),
+           ipv4-frame(source-address: incoming-ip.destination-address,
+                        destination-address: incoming-ip.source-address),
+           tcp-frame(source-port: incoming-tcp.destination-port,
+                     destination-port: incoming-tcp.source-port,
+                     rst: 1,
+                     sequence-number: $transform-to-bv(sequence),
+                     acknowledgement-number: $transform-to-bv(0.0s0))));
+  push-data
+    (node.the-output,
+     stack(ethernet-frame(source-address: data.source-address,
+                          destination-address: data.destination-address),
+           ipv4-frame(source-address: incoming-ip.source-address,
+                        destination-address: incoming-ip.destination-address),
+           tcp-frame(source-port: incoming-tcp.source-port,
+                     destination-port: incoming-tcp.destination-port,
+                     rst: 1,
+                     sequence-number: $transform-to-bv($transform-from-bv(incoming-tcp.sequence-number) 
+                                                        + byte-offset(incoming-tcp.payload.frame-size)),
+                     acknowledgement-number: $transform-to-bv(0.0s0))));
 end;
 
 define command-table *popup-menu-command-table* (*global-command-table*)
@@ -829,14 +856,17 @@ end;
 define constant $icons = make(<string-table>);
 
 define function initialize-icons ()
-  local method load-and-register-item (name)
+  local method load-and-register-item (name, size)
     $icons[as-lowercase(name)]
-      := read-image-as(<win32-icon>, as(<byte-string>, name), #"icon", width: 16, height: 16);
+      := read-image-as(<win32-icon>, as(<byte-string>, name), #"icon", width: size, height: size);
   end;
-  load-and-register-item("PLAY");
-  load-and-register-item("OPEN");
-  load-and-register-item("SAVE");
-  load-and-register-item("STOP");
+  load-and-register-item("PLAY", 16);
+  load-and-register-item("OPEN", 16);
+  load-and-register-item("SAVE", 16);
+  load-and-register-item("STOP", 16);
+  load-and-register-item("NNV", 32);
+  $icons["nnv-small"]
+    := read-image-as(<win32-icon>, as(<byte-string>, "NNV"), #"small-icon");
 end;
 
 begin

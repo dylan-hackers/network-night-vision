@@ -49,7 +49,7 @@ end method hexdump;
 
 define method set-highlight (frame, start-offset, end-offset)
   let window :: <basic-window> = frame-window(frame);
-  let name = "hex view";
+  let name = "Network Night Vision";
   let editor = frame-editor(frame);
   let buffer = find-buffer(editor, name);
   if (buffer)
@@ -120,7 +120,7 @@ define method show-hexdump (frame :: <basic-editor-frame>,
   end;
 
   let window :: <basic-window> = frame-window(frame);
-  let name = "hex view";
+  let name = "Network Night Vision";
   let editor = frame-editor(frame);
   let buffer = find-buffer(editor, name)
                | make-empty-buffer(<simple-display-buffer>,
