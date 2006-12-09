@@ -21,7 +21,7 @@ define module interfaces
   use common-dylan;
   use c-ffi;
   use winsock2;
-  use format-out;
+  //use format-out;
   use standard-io;
   use subseq;
   use dylan-direct-c-ffi;

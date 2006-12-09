@@ -132,19 +132,19 @@ define method find-all-devices () => (res :: <collection>)
 //      format-out("GOT as address %= ", ele.address.sa-family-value);
       local method printme (x)
               for (f from 2 below 6)
-                format-out("%X ", sa-data-array(x, f));
+                //format-out("%X ", sa-data-array(x, f));
               end;
-              format-out(" ");
+              //format-out(" ");
             end;
       printme(ele.address);
       if (null-pointer(<sockaddr*>) ~= ele.netmask)
-        format-out("netmask "); printme(ele.netmask);
+       // format-out("netmask "); printme(ele.netmask);
       end;
       if (null-pointer(<sockaddr*>) ~= ele.broadcast-address)
-        format-out("broadcast-address "); printme(ele.broadcast-address);
+        //format-out("broadcast-address "); printme(ele.broadcast-address);
       end;
       if (null-pointer(<sockaddr*>) ~= ele.destination-address)
-        format-out("destination-address "); printme(ele.destination-address);
+        //format-out("destination-address "); printme(ele.destination-address);
       end;
       local method get-address (foo :: <pcap-addr*>)
               let res = make(<stretchy-vector-subsequence>, size: 4);
