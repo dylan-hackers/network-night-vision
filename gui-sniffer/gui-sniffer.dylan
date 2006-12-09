@@ -2,6 +2,7 @@ Module:    gui-sniffer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+define constant $packet-list-lock = make(<lock>);
 define method frame-children-predicate (frame :: <leaf-frame>)
   #f
 end;
@@ -240,20 +241,22 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
 end;
 
 define function filter-packet-table (frame :: <gui-sniffer-frame>)
-  let shown-packets
-    = if (frame.filter-expression)
-        choose-by(rcurry(matches?, frame.filter-expression),
-                  map(real-frame, frame.network-frames),
-                  frame.network-frames)
-      else
-        frame.network-frames
-      end;
-  unless (shown-packets = gadget-items(frame.packet-table))
-    gadget-items(frame.packet-table) := #();
-    do(method(x)
-         add-item(frame.packet-table, make-item(frame.packet-table, x))
-       end, shown-packets);
-    show-packet(frame);
+  with-lock($packet-list-lock)
+    let shown-packets
+      = if (frame.filter-expression)
+          choose-by(rcurry(matches?, frame.filter-expression),
+                    map(real-frame, frame.network-frames),
+                    frame.network-frames)
+        else
+          frame.network-frames
+        end;
+    unless (shown-packets = gadget-items(frame.packet-table))
+      gadget-items(frame.packet-table) := #();
+      do(method(x)
+           add-item(frame.packet-table, make-item(frame.packet-table, x))
+         end, shown-packets);
+      show-packet(frame);
+    end;
   end;
 end;
 
@@ -868,9 +871,11 @@ define method push-data-aux (input :: <push-input>,
   unless (node.first-packet-arrived)
     node.first-packet-arrived := frame-with-meta.receive-time;
   end;
-  add!(node.network-frames, frame-with-meta);
-  if (~ node.filter-expression | matches?(frame, node.filter-expression))
-    add-item(node.packet-table, make-item(node.packet-table, frame-with-meta))
+  with-lock($packet-list-lock)
+    add!(node.network-frames, frame-with-meta);
+    if (~ node.filter-expression | matches?(frame, node.filter-expression))
+      add-item(node.packet-table, make-item(node.packet-table, frame-with-meta))
+    end;
   end;
 end;
 
