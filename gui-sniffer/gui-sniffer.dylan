@@ -248,13 +248,10 @@ define function filter-packet-table (frame :: <gui-sniffer-frame>)
                     map(real-frame, frame.network-frames),
                     frame.network-frames)
         else
-          frame.network-frames
+          copy-sequence(frame.network-frames)
         end;
     unless (shown-packets = gadget-items(frame.packet-table))
-      gadget-items(frame.packet-table) := #();
-      do(method(x)
-           add-item(frame.packet-table, make-item(frame.packet-table, x))
-         end, shown-packets);
+      gadget-items(frame.packet-table) := shown-packets;
       show-packet(frame);
     end;
   end;
@@ -846,8 +843,10 @@ end;
 define method reinit-gui (frame :: <gui-sniffer-frame>)
   frame.first-packet-arrived := #f;
   *count* := 0;
-  frame.network-frames := make(<stretchy-vector>);
-  gadget-items(frame.packet-table) := #();
+  with-lock ($packet-list-lock)
+    frame.network-frames := make(<stretchy-vector>);
+    gadget-items(frame.packet-table) := #();
+  end;
   show-packet(frame);
 end;
 
