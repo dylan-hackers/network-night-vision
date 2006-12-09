@@ -4,6 +4,9 @@ OutFile "network-night-vision-setup-0.0.1.exe"
 InstallDir "$PROGRAMFILES\Network Night Vision"
 InstallDirRegKey HKLM "Software\Network Night Vision" "Install_Dir"
 SetCompressor /solid lzma
+
+
+
   !insertmacro MUI_PAGE_LICENSE "license.txt"
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_DIRECTORY
@@ -15,6 +18,16 @@ SetCompressor /solid lzma
 Section "Network Night Vision (required)"
   SectionIn RO
   SetOutPath $INSTDIR
+
+  ClearErrors
+  ReadRegStr $R0 HKLM "SOFTWARE\WinPcap" ""
+  IfErrors lbl_err
+  Goto lbl_go
+  lbl_err:
+    MessageBox MB_OK "WinPcap not installed. Please go to http://www.winpcap.org/ to download and install."
+    Abort
+  lbl_go:
+
   File "network-night-vision.exe"
   File "*.dll"
   File "license.txt"
