@@ -14,6 +14,8 @@ c-header-files:	icons\open.ico
 	icons\stop.ico
 	icons\nnv.ico
 rc-files:	bitmaps.rc
+Other-Files: license.txt
+	nnv-install.nsi
 major-version:	1
 minor-version:	0
 library-pack:	0
