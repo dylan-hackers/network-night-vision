@@ -38,7 +38,7 @@ define module packetizer
     <4bit-unsigned-integer>, <5bit-unsigned-integer>, <6bit-unsigned-integer>,
     <7bit-unsigned-integer>, <9bit-unsigned-integer>, <10bit-unsigned-integer>,
     <11bit-unsigned-integer>, <12bit-unsigned-integer>, <13bit-unsigned-integer>,
-    <14bit-unsigned-integer>, <15bit-unsigned-integer>;
+    <14bit-unsigned-integer>, <15bit-unsigned-integer>, <20bit-unsigned-integer>;
 
   export <variable-size-byte-vector>, <externally-delimited-string>,
     <raw-frame>;

@@ -23,9 +23,8 @@ define constant $filter-tokens
       token DOT = "\\.";
       token LPAREN = "\\(";
       token RPAREN = "\\)";
-      token COLON = ":";
 
-      token Name = "[a-zA-Z_0-9-<>]+",
+      token Name = "[a-zA-Z_0-9-:<>]+",
          semantic-value-function: extract-action;
 end;
 
@@ -39,10 +38,6 @@ define constant $filter-productions
   production value => [DOT value], action:
     method(p :: <simple-parser>, data, s, e)
         concatenate(".", p[1]);
-    end;
-  production value => [COLON value], action:
-    method(p :: <simple-parser>, data, s, e)
-        concatenate(":", p[1]);
     end;
 
   production value => [], action:
@@ -84,7 +79,7 @@ define constant $filter-productions
 
   production compound-filter => [filter], action:
     method(p :: <simple-parser>, data, s, e)
-        data.filter := p[0];
+        data.filter-result := p[0];
     end;
 end;
 
@@ -93,7 +88,7 @@ define constant $filter-automaton
                             #[#"compound-filter"]);
 
 define class <filter> (<object>)
-  slot filter :: <filter-expression>
+  slot filter-result :: <filter-expression>
 end;
 
 define function parse-filter (input :: <string>)
@@ -115,7 +110,7 @@ define function parse-filter (input :: <string>)
               partial?: #f);
   let end-position = scanner.scanner-source-position;
   simple-parser-consume-token(parser, 0, #"EOF", parser, end-position, end-position);
-  data.filter;
+  data.filter-result;
 end;
 
 define method print-object (filter :: <frame-present>, stream :: <stream>) => ();

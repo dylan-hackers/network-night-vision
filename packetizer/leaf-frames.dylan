@@ -114,6 +114,8 @@ define n-bit-unsigned-integer(<13bit-unsigned-integer>; 13) end;
 define n-bit-unsigned-integer(<14bit-unsigned-integer>; 14) end;
 define n-bit-unsigned-integer(<15bit-unsigned-integer>; 15) end;
 
+define n-bit-unsigned-integer(<20bit-unsigned-integer>; 20) end;
+
 define method parse-frame (frame-type :: subclass(<unsigned-integer-bit-frame>),
                            packet :: <byte-sequence>,
                            #key)
