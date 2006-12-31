@@ -3,6 +3,8 @@ files:	protocols-library
 	logical-link
 	ethernet
 	ipv4
+	ipv6
+	icmp
 	tcp
 	dhcp
 	dns

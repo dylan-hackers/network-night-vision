@@ -69,12 +69,6 @@ define method fixup! (frame :: <unparsed-ipv4-frame>,
   next-method();
 end;
 
-define method fixup! (frame :: <unparsed-icmp-frame>,
-                      #next next-method)
-  frame.checksum := calculate-checksum(frame.packet, frame.packet.size);
-  next-method();
-end;
-
 define protocol ipv4-frame (header-frame)
   summary "IP SRC %= DST %=", source-address, destination-address;
   over <ethernet-frame> #x800;
@@ -104,14 +98,6 @@ define protocol ipv4-frame (header-frame)
 end;
 
 
-define protocol icmp-frame (header-frame)
-  summary "ICMP type %= code %=", icmp-type, code;
-  over <ipv4-frame> 1;
-  field icmp-type :: <unsigned-byte>;
-  field code :: <unsigned-byte>;
-  field checksum :: <2byte-big-endian-unsigned-integer> = 0;
-  field payload :: <raw-frame>;
-end;
 
 define protocol udp-frame (header-frame)
   summary "UDP port %= -> %=", source-port, destination-port;

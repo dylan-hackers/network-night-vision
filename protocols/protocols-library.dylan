@@ -10,6 +10,9 @@ define library protocols
     ethernet,
     pcap,
     ipv4,
+    ipv6,
+    tcp,
+    icmp,
     dhcp,
     prism2,
     dns,
@@ -227,16 +230,51 @@ define module ipv4
     header-checksum, header-checksum-setter,
     options, options-setter;
 
-  export <icmp-frame>,
-    icmp-type, icmp-type-setter,
-    code, code-setter,
-    checksum, checksum-setter;
-
   export <udp-frame>,
     source-port, source-port-setter,
     destination-port, destination-port-setter,
     payload-size, payload-size-setter,
     checksum, checksum-setter;
+
+  export <arp-frame>,
+    mac-address-type, mac-address-type-setter,
+    protocol-address-type, protocol-address-type-setter,
+    mac-address-size, mac-address-size-setter,
+    protocol-address-size, protocol-address-size-setter,
+    operation, operation-setter,
+    source-mac-address, source-mac-address-setter,
+    source-ip-address, source-ip-address-setter,
+    target-mac-address, target-mac-address-setter,
+    target-ip-address, target-ip-address-setter;
+
+  export calculate-checksum;
+end;
+
+define module ipv6
+  use common-dylan, exclude: { format-to-string };
+  use packetizer;
+  use streams-protocol;
+  use format;
+
+  use ethernet, import: { <ethernet-frame>, <mac-address> };
+  use logical-link, import: { <link-control> };
+
+  export <ipv6-frame>;
+end;
+
+define module tcp
+  use common-dylan, exclude: { format-to-string };
+  use packetizer;
+  use streams-protocol;
+  use format;
+  use ipv4, import: { <ipv4-frame>, <ipv4-address>, calculate-checksum };
+  use ipv6, import: { <ipv6-frame> };
+
+  export <pseudo-header>,
+    reserved, reserved-setter,
+    protocol, protocol-setter,
+    segment-length, segment-length-setter,
+    pseudo-header-data, pseudo-header-data-setter;
 
   export <tcp-frame>,
     source-port, source-port-setter,
@@ -255,25 +293,23 @@ define module ipv4
     checksum, checksum-setter,
     urgent-pointer, urgent-pointer-setter,
     options-and-padding, options-and-padding-setter;
-
-  export <pseudo-header>,
-    reserved, reserved-setter,
-    protocol, protocol-setter,
-    segment-length, segment-length-setter,
-    pseudo-header-data, pseudo-header-data-setter;
-
-  export <arp-frame>,
-    mac-address-type, mac-address-type-setter,
-    protocol-address-type, protocol-address-type-setter,
-    mac-address-size, mac-address-size-setter,
-    protocol-address-size, protocol-address-size-setter,
-    operation, operation-setter,
-    source-mac-address, source-mac-address-setter,
-    source-ip-address, source-ip-address-setter,
-    target-mac-address, target-mac-address-setter,
-    target-ip-address, target-ip-address-setter;
 end;
 
+define module icmp
+  use common-dylan, exclude: { format-to-string };
+  use packetizer;
+  use streams-protocol;
+  use format;
+
+  use ipv4, import: { <ipv4-frame>, calculate-checksum };
+  use ipv6, import: { <ipv6-frame> };
+
+  export <icmp-frame>,
+    icmp-type, icmp-type-setter,
+    code, code-setter,
+    checksum, checksum-setter;
+
+end;
 define module dhcp
   use common-dylan;
   use packetizer;

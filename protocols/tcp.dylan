@@ -1,10 +1,11 @@
-module: ipv4
+module: tcp
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define protocol tcp-frame (header-frame)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   over <ipv4-frame> 6;
+  over <ipv6-frame> 6;
   field source-port :: <2byte-big-endian-unsigned-integer>;
   field destination-port :: <2byte-big-endian-unsigned-integer>;
   field sequence-number :: <big-endian-unsigned-integer-4byte>;
