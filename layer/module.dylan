@@ -16,10 +16,11 @@ define module layer
   use vector-table;
   use byte-vector;
   use date, import: {<date>, current-date };
-  use tcp;
+  use tcp-state-machine;
   use simple-random;
   use streams;
   use ipv4;
+  use tcp;
   use ethernet;
   use dns, exclude: { ipv4-address };
   use cidr;

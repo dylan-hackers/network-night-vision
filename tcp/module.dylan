@@ -3,7 +3,7 @@ Synopsis:  A brief description of the project.
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2006,  All rights reserved.
 
-define module tcp
+define module tcp-state-machine
   use common-dylan, exclude: { close };
   use threads;
   use format-out;
@@ -19,4 +19,4 @@ define module tcp
 
   export <tcp-events>, state-transition, process-event;
 
-end module tcp;
+end module tcp-state-machine;
