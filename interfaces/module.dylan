@@ -13,6 +13,7 @@ define module interfaces
   use functional-dylan, import: { <byte-character> };
   use dylan-extensions, import: { <byte> };
   use unix-sockets, exclude: { send, connect };
+  use sockets, import: { interruptible-system-call };
   use C-FFI;
   use dylan-direct-c-ffi;
   use flow;

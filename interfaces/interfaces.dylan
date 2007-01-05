@@ -68,13 +68,16 @@ define method receive (interface :: <interface>)
   => (buffer)
   let buffer = make(<buffer>, size: $ethernet-buffer-size);
   local method unix-receive ()
-            let read-bytes = unix-recv-buffer(interface.unix-file-descriptor,
-                                              buffer-offset(buffer, 0),
-                                              $ethernet-buffer-size,
-                                              0);
+          let fd = interface.unix-file-descriptor;
+          let read-bytes =
+            interruptible-system-call(unix-recv-buffer(fd,
+                                                       buffer-offset(buffer, 0),
+                                                       $ethernet-buffer-size,
+                                                       0));
             if (read-bytes == -1)
               //Only want to catch $EINTR, but getting mps assertion failures
-              unix-receive();
+              //this is now done via interruptible-system-call macro
+              #f;
             else
               subsequence(buffer, end: read-bytes);
             end if;
