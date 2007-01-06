@@ -5,7 +5,7 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 define sealed class <vector-table> (<table>)
 end class;
 
-define method table-protocol (table :: <vector-table>)
+define method table-protocol (my-table :: <vector-table>)
  => (test-function :: <function>, hash-function :: <function>)
   values(method (x, y) x = y end, vector-hash);
 end method table-protocol; 

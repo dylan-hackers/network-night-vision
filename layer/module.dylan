@@ -21,6 +21,7 @@ define module layer
   use streams;
   use ipv4;
   use tcp;
+  use icmp;
   use ethernet;
   use dns, exclude: { ipv4-address };
   use cidr;
