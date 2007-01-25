@@ -8,7 +8,7 @@ end;
   
 define protocol string-to-key (variably-typed-container-frame)
   layering field type :: <unsigned-byte>;
-  field hash-algorithm :: <unsigned-byte> = 0;
+  field hash-algorithm :: <hash-algorithm>;
 end;
 
 define protocol simple-string-to-key (string-to-key)
@@ -23,7 +23,7 @@ end;
 define protocol iterated-and-salted-string-to-key (string-to-key)
   over <string-to-key> 3;
   field salt-value :: <raw-frame>, static-length: 8 * 8;
-  field salt-count :: <unsigned-byte> = 0;
+  field salt-count :: <unsigned-byte>;
 end;
 
 
@@ -92,7 +92,7 @@ define protocol public-key-encrypted-session-key-packet (container-frame)
   over <openpgp-packet-header> 1;
   field version-number :: <unsigned-byte> = 3;
   field public-key-id :: <public-key-id>;
-  field public-key-algorithm :: <unsigned-byte>;
+  field public-key-algorithm :: <public-key-algorithm>;
   field encrypted-session-key :: <raw-frame>; // <- mpi?!
 end;
 
@@ -104,11 +104,11 @@ end;
 define protocol version3-signature-packet (signature-packet)
   over <signature-packet> 3;
   field hash-length :: <unsigned-byte> = 5;
-  field signature-type :: <unsigned-byte> = 1;
-  field creation-time :: <4byte-timestamp>;
+  field signature-type :: <signature-type>;
+  field creation-time :: <unix-time>;
   field signer-key-id :: <public-key-id>;
-  field public-key-algorithm :: <unsigned-byte>;
-  field hash-algorithm :: <unsigned-byte>;
+  field public-key-algorithm :: <public-key-algorithm>;
+  field hash-algorithm :: <hash-algorithm>;
   field left-signed-hash-value :: <2byte-big-endian-unsigned-integer>;
   repeated field signature :: <multi-precision-integer>;
 end;
@@ -121,12 +121,12 @@ end;
 
 define protocol version4-signature-packet (signature-packet)
   over <signature-packet> 4;
-  field signature-type :: <unsigned-byte>;
-  field public-key-algorithm :: <unsigned-byte>;
-  field hash-algorithm :: <unsigned-byte>;
-  repeated field hashed-subpackets;
+  field signature-type :: <signature-type>;
+  field public-key-algorithm :: <public-key-algorithm>;
+  field hash-algorithm :: <hash-algorithm>;
+  repeated field hashed-subpackets :: <signature-subpacket>;
   field unhashed-packet-size :: <2byte-big-endian-unsigned-integer>;
-  repeated field unhashed-subpackets,
+  repeated field unhashed-subpackets :: <signature-subpacket>,
     length: frame.unhashed-packet-size * 8;
   field left-signed-hash-value :: <2byte-big-endian-unsigned-integer>;
   repeated field signature :: <multi-precision-integer>;
@@ -146,6 +146,10 @@ define protocol boolean-signature-subpacket (signature-subpacket)
   field value? :: <unsigned-byte>;
 end;
 
+define protocol time-signature-subpacket (signature-subpacket)
+  field timestamp :: <unix-time>;
+end;
+
 //   Bit 7 of the subpacket type is the "critical" bit.  If set, it
 //   denotes that the subpacket is one that is critical for the evaluator
 //   of the signature to recognize.  If a subpacket is encountered that is
@@ -153,14 +157,12 @@ end;
 //   evaluator SHOULD consider the signature to be in error.
 
 
-define protocol signature-creation-time (signature-subpacket)
+define protocol signature-creation-time (time-signature-subpacket)
   over <signature-subpacket> 2;
-  field creation-time :: <unix-time>;
 end;
 
-define protocol signature-expiration-time (signature-subpacket)
+define protocol signature-expiration-time (time-signature-subpacket)
   over <signature-subpacket> 3;
-  field expiration-time :: <unix-time>;
 end;
 
 define protocol exportable-certification (boolean-signature-subpacket)
@@ -182,7 +184,7 @@ define protocol revocable (boolean-signature-subpacket)
   over <signature-subpacket> 7;
 end;
 
-define protocol key-expiration-time (signature-subpacket)
+define protocol key-expiration-time (time-signature-subpacket)
   over <signature-subpacket> 9;
 end;
 
@@ -192,7 +194,7 @@ end;
 
 define protocol preferred-symmetric-algorithms (signature-subpacket)
   over <signature-subpacket> 11;
-  repeated field algorithms :: <unsigned-byte>;
+  repeated field algorithms :: <symmetric-cipher>;
 end;
 
 define protocol revocation-key (signature-subpacket)
@@ -218,12 +220,12 @@ end;
 
 define protocol preferred-hash-algorithms (signature-subpacket)
   over <signature-subpacket> 21;
-  repeated field algorithms :: <unsigned-byte>;
+  repeated field algorithms :: <hash-algorithm>;
 end;
 
 define protocol preferred-compression-algorithms (signature-subpacket)
   over <signature-subpacket> 22;
-  repeated field algorithms :: <unsigned-byte>;
+  repeated field algorithms :: <compression-algorithm>;
 end;
 
 define protocol key-server-preferences (signature-subpacket)
@@ -247,7 +249,16 @@ end;
 
 define protocol key-flags (signature-subpacket)
   over <signature-subpacket> 27;
-  repeated field flags :: <unsigned-byte>;
+  repeated field flags :: <key-usage>;
+end;
+
+define enum-field key-usage (enum-frame)
+  1 => #"certify other keys";
+  2 => #"sign data";
+  4 => #"encrypt communication";
+  8 => #"encrypt storage";
+  #x10 => #"split up by secret-sharing";
+  #x80 => #"possession of more than one person";
 end;
 
 define protocol signers-user-id (signature-subpacket)
@@ -257,14 +268,22 @@ end;
 
 define protocol reason-for-revocation (signature-subpacket)
   over <signature-subpacket> 29;
-  field revocation-code :: <unsigned-byte>;
+  field revocation-code :: <revocation-code>;
   field reason-string :: <ascii-string>;
+end;
+
+define enum-field revocation-code (enum-frame)
+  0 => #"no reason specified";
+  1 => #"key superceded";
+  2 => #"key compromised";
+  3 => #"key no longer used";
+  #x20 => #"user id no longer valid"
 end;
 
 define protocol symmetric-key-encrypted-session-key-packet (container-frame)
   over <openpgp-packet-header> 3;
   field version-number :: <unsigned-byte> = 4;
-  field symmetric-algorithm :: <symmetric-algorithm>;
+  field symmetric-algorithm :: <symmetric-cipher>;
   field string-to-key-specifier :: <??>;
   optional field encrypted-session-key :: <string-to-key>;
 end;
@@ -360,3 +379,59 @@ define protocol secret-key-packet (container-frame)
   field checksum :: <2byte-big-endian-unsigned-integer>;
 end;
 
+define enum-frame signature-type (enum-frame)
+  0 => #"binary document";
+  1 => #"canonical text document";
+  2 => #"standalone signature";
+  #x10 => #"generic certification of a user id and public key";
+  #x11 => #"persona certification of a user id and public key";
+  #x12 => #"casual certification of a user id and public key";
+  #x13 => #"positive certification of a user id and public key";
+  #x18 => #"subkey binding signature";
+  #x1f => #"signature directly on key";
+  #x20 => #"key revocation signature";
+  #x28 => #"subkey revocation signature";
+  #x30 => #"certification revocation signature";
+  #x40 => #"timestamp signature";
+end;
+
+define enum-frame public-key-algorithm (enum-frame)
+  1 => #"rsa encrypt or sign";
+  2 => #"rsa encrypt";
+  3 => #"rsa sign";
+  16 => #"elgamal encrypt";
+  17 => #"dsa";
+  18 => #"ecc";
+  19 => #"ecdsa";
+  20 => #"elgamal encrypt or sign";
+  21 => #"diffie-hellman";
+end;
+
+define enum-frame symmetric-cipher (enum-frame)
+  0 => #"unencrypted";
+  1 => #"IDEA";
+  2 => #"3DES-EDE";
+  3 => #"CAST5";
+  4 => #"blowfish-128";
+  5 => #"SAFER-SK128";
+  6 => #"DES-SK";
+  7 => #"AES-128";
+  8 => #"AES-192";
+  9 => #"AES-256";
+end;
+
+define enum-frame compression-algorithm (enum-frame)
+  0 => #"uncompressed";
+  1 => #"zip";
+  2 => #"zlib";
+end;
+
+define enum-frame hash-algorithm (enum-frame)
+  1 => #"md5";
+  2 => #"sha1";
+  3 => #"ripemd160";
+  4 => #"sha256";
+  5 => #"md2";
+  6 => #"tiger192";
+  7 => #"haval-5-160";
+end;
