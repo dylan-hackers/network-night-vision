@@ -3,7 +3,7 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define argument-parser <sniffer-argument-parser> ()
-  synopsis print-usage,
+  synopsis print-synopsis,
     usage: "sniffer [options]",
     description: "Capture and display packets from a network interface.";
   option verbose?, "Verbose output, print whole packet",
@@ -23,7 +23,7 @@ end;
 define function main()
   let parser = make(<sniffer-argument-parser>);
   unless(parse-arguments(parser, application-arguments()))
-    print-usage(parser, *standard-output*);
+    print-synopsis(parser, *standard-output*);
     exit-application(0);
   end;
   let input-stream = if (parser.read-pcap)
