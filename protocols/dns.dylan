@@ -2,7 +2,6 @@ module: dns
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-
 define protocol dns-frame (container-frame)
   over <udp-frame> 53;
   summary "DNS ID=%=, %= questions, %= answers",
@@ -33,7 +32,6 @@ define protocol dns-frame (container-frame)
   repeated field additional-records :: <dns-resource-record>,
     count: frame.additional-count;
 end;
-
 
 define protocol domain-name (container-frame)
   summary "%s", curry(as, <string>);
@@ -119,34 +117,32 @@ define protocol dns-question (container-frame)
   field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
-define protocol dns-resource-record (container-frame)
+define abstract protocol dns-resource-record (variably-typed-container-frame)
+  length frame.rdlength * 8 + 80 + frame.domainname.frame-size;
   field domainname :: <domain-name>;
   layering field rr-type :: <2byte-big-endian-unsigned-integer>;
   field rr-class :: <2byte-big-endian-unsigned-integer> = 1;
   field ttl :: <big-endian-unsigned-integer-4byte>;
   field rdlength :: <2byte-big-endian-unsigned-integer>,
     fixup: frame.rdata.frame-size.byte-offset;
-  variably-typed-field rdata,
-    type-function: payload-type(frame),
-    length: frame.rdlength * 8;
 end;
 
-define protocol a-host-address (container-frame)
+define protocol a-host-address (dns-resource-record)
   over <dns-resource-record> 1;
   field ipv4-address :: <ipv4-address>;
 end;
 
-define protocol name-server (container-frame)
+define protocol name-server (dns-resource-record)
   over <dns-resource-record> 2;
   field ns-name :: <domain-name>;
 end;
 
-define protocol canonical-name (container-frame)
+define protocol canonical-name (dns-resource-record)
   over <dns-resource-record> 5;
   field cname :: <domain-name>;
 end;
 
-define protocol start-of-authority (container-frame)
+define protocol start-of-authority (dns-resource-record)
   over <dns-resource-record> 6;
   field nameserver :: <domain-name>;
   field hostmaster :: <domain-name>;
@@ -157,7 +153,7 @@ define protocol start-of-authority (container-frame)
   field minimum :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define protocol domain-name-pointer (container-frame)
+define protocol domain-name-pointer (dns-resource-record)
   over <dns-resource-record> 12;
   field ptr-name :: <domain-name>;
 end;
@@ -168,7 +164,7 @@ define protocol character-string (container-frame)
     length: frame.data-length * 8;
 end;
 
-define protocol host-information (container-frame)
+define protocol host-information (dns-resource-record)
   over <dns-resource-record> 13;
   field cpu :: <character-string>;
   field operating-system :: <character-string>; 
@@ -179,13 +175,13 @@ define method as (class == <string>, frame :: <character-string>)
   as(<string>, frame.string-data);
 end;
 
-define protocol mail-exchange (container-frame)
+define protocol mail-exchange (dns-resource-record)
   over <dns-resource-record> 15;
   field preference :: <2byte-big-endian-unsigned-integer>;
   field exchange :: <domain-name>;
 end;
 
-define protocol text-strings (container-frame)
+define protocol text-strings (dns-resource-record)
   over <dns-resource-record> 16;
   field text-data :: <character-string>;
 end;
