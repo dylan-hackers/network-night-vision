@@ -227,13 +227,22 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
   let filter-string = gadget-value(frame.filter-field);
   let old = frame.filter-expression;
   if (filter-string.size > 0)
-    frame.filter-expression := parse-filter(filter-string);
+    frame.filter-expression := 
+      block ()
+        gadget-label(frame.sniffer-status-bar) := "Applying packet filter";
+        parse-filter(filter-string);
+      exception (c :: <error>)
+        gadget-label(frame.sniffer-status-bar) := "Syntax error in filter expression";
+        #f
+      end;
+        
     if (old ~= frame.filter-expression & every?(curry(\~=, filter-string), frame.filter-history))
       frame.filter-history := add!(frame.filter-history, filter-string);
       gadget-items(frame.filter-field) := frame.filter-history;
     end;
   else
-    frame.filter-expression := #f
+    frame.filter-expression := #f;
+    gadget-label(frame.sniffer-status-bar) := "Clearing packet filter";
   end;
   if (old ~= frame.filter-expression)
     filter-packet-table(frame);
@@ -825,8 +834,8 @@ define method prompt-for-interface
   end;
 end;
 
-define constant $about-text = concatenate("Network Night Vision 0.0.1\n",
-                                          "(c) 2005, 2006 Andreas Bogk, Hannes Mehnert\n",
+define constant $about-text = concatenate("Network Night Vision 0.0.2\n",
+                                          "(c) 2005 - 2007 Andreas Bogk, Hannes Mehnert\n",
                                           "All Rights Reserved. Free for non-commercial use.\n",
                                           "\n",
                                           "http://www.networknightvision.com/");
