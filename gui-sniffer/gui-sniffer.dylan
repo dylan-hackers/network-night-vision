@@ -292,11 +292,10 @@ define method find-frame-field (frame :: <container-frame>, search :: type-union
         ret(ff)
       end;
       if (instance?(ff.value, <collection>))
-        for (ele in ff.value, i from 0)
-          if (ele == search)
-            ret(ff.frame-field-list[i])
-          end;
-        end;
+        let framefield = choose-by(curry(\=, search),
+                                   ff.value,
+                                   ff.frame-field-list);
+        if (framefield.size = 1) ret(framefield[0]) end;
       end;
     end;
     #f;
@@ -397,7 +396,7 @@ define function show-about-box (x)
   start-dialog(make(<about-box>))
 end;
 
-define variable *debugging?* = #f;
+define variable *debugging?* = #t;
 
 define method safe(func :: <function>)
   method(#rest args)
@@ -580,7 +579,7 @@ define method tcpkill (node :: <gui-sniffer-frame>);
      stack(ethernet-frame(source-address: data.destination-address,
                           destination-address: data.source-address),
            ipv4-frame(source-address: incoming-ip.destination-address,
-                        destination-address: incoming-ip.source-address),
+                      destination-address: incoming-ip.source-address),
            tcp-frame(source-port: incoming-tcp.destination-port,
                      destination-port: incoming-tcp.source-port,
                      rst: 1,
