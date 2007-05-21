@@ -513,7 +513,7 @@ end;
 
 define method assemble-frame-into (frame :: <unparsed-container-frame>,
                                    to-packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
-  copy-bytes(frame.packet, 0, to-packet, 0, frame.packet.size);
+  copy-bytes(to-packet, 0, frame.packet, 0, frame.packet.size);
   frame.packet.size * 8;
 end;
 

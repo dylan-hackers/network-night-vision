@@ -208,7 +208,7 @@ end;
 
 define method assemble-frame-into (frame :: <fixed-size-byte-vector-frame>,
                                    packet :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
-  copy-bytes(frame.data, 0, packet, 0, byte-offset(frame-size(frame)));
+  copy-bytes(packet, 0, frame.data, 0, byte-offset(frame-size(frame)));
   frame-size(frame)
 end;
 
@@ -426,7 +426,7 @@ end;
 
 define method assemble-frame-into (frame :: <variable-size-byte-vector>,
                                    packet :: <stretchy-byte-vector-subsequence>) => (res :: <integer>)
-  copy-bytes(frame.data, 0, packet, 0, frame.data.size);
+  copy-bytes(packet, 0, frame.data, 0, frame.data.size);
   frame-size(frame)
 end;
 
@@ -436,7 +436,7 @@ end;
 define method as (class == <string>, frame :: <externally-delimited-string>)
  => (res :: <string>)
   let res = make(<string>, size: byte-offset(frame-size(frame)));
-  copy-bytes(frame.data, 0, res, 0, byte-offset(frame-size(frame)));
+  copy-bytes(res, 0, frame.data, 0, byte-offset(frame-size(frame)));
   res;
 end;
 
@@ -444,7 +444,7 @@ define method as (class == <externally-delimited-string>, string :: <string>)
  => (res :: <externally-delimited-string>)
   let res = make(<externally-delimited-string>,
                  data: make(<byte-sequence>, capacity: string.size));
-  copy-bytes(string, 0, res.data, 0, string.size);
+  copy-bytes(res.data, 0, string, 0, string.size);
   res;
 end;
 
