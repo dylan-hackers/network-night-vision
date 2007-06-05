@@ -471,6 +471,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
 
   pane packet-hex-dump (frame)
+    make(<label>, label: "insert hexdump here");
+/*
     make(<deuce-pane>,
          frame: frame,
          read-only?: #t,
@@ -479,22 +481,22 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          columns: 100,
          scroll-bars: #"vertical",
          text-style: $text-style);
-
+*/
 
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "Network Night Vision");
 
   pane open-button (frame)
-    make(<push-button>, label: $icons["open"],
+    make(<push-button>, label: "open",
          activate-callback: method(x) open-pcap-file(frame) end);
   pane save-button (frame)
-    make(<push-button>, label: $icons["save"],
+    make(<push-button>, label: "save",
          activate-callback: method(x) save-pcap-file(frame) end);
   pane play-button (frame)
-    make(<push-button>, label: $icons["play"],
+    make(<push-button>, label: "play",
          activate-callback: method(x) open-interface(frame) end);
   pane stop-button (frame)
-    make(<push-button>, label: $icons["stop"],
+    make(<push-button>, label: "stop",
          activate-callback: method(x) close-interface(frame) end);
     
   pane sniffer-tool-bar (frame)
@@ -523,7 +525,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   command-table (frame) *gui-sniffer-command-table*;
   status-bar (frame) frame.sniffer-status-bar;
   keyword title: = "Network Night Vision";
-  keyword icon: = $icons["nnv-small"];
+  //keyword icon: = $icons["nnv-small"];
 end;
 
 define command-table *file-command-table* (*global-command-table*)
@@ -889,6 +891,7 @@ end;
 define constant $icons = make(<string-table>);
 
 define function initialize-icons ()
+/*
   local method load-and-register-item (name, size)
     $icons[as-lowercase(name)]
       := read-image-as(<win32-icon>, as(<byte-string>, name), #"icon", width: size, height: size);
@@ -900,20 +903,23 @@ define function initialize-icons ()
   load-and-register-item("NNV", 32);
   $icons["nnv-small"]
     := read-image-as(<win32-icon>, as(<byte-string>, "NNV"), #"small-icon");
+*/
 end;
 
-begin
+define function main()
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
   set-frame-size(gui-sniffer, 1024, 768);
-  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
-  deuce/*editor-frame* := gui-sniffer;
-  deuce/*buffer* := deuce/make-initial-buffer();
-  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
+//  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
+//  deuce/*editor-frame* := gui-sniffer;
+//  deuce/*buffer* := deuce/make-initial-buffer();
+//  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
   start-frame(gui-sniffer);
 end;
+
+main()
 
 
 
