@@ -20,5 +20,6 @@ define module interfaces
   use packetizer, import: { parse-frame, assemble-frame, packet };
   use ethernet, import: { <ethernet-frame> };
 
-  export <ethernet-interface>, interface-name;
+  export <ethernet-interface>, interface-name, find-all-devices, device-name,
+    running?, running?-setter;
 end module interfaces;

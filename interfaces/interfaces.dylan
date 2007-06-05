@@ -45,6 +45,10 @@ define method initialize
    end if;
 end method initialize;
 
+define method int-close (int :: <interface>)
+  close(int.unix-file-descriptor);
+end;
+
 define method up (interface :: <interface>)
  => ()
   with-stack-structure (ifreq :: <ifreq*>)
@@ -63,6 +67,25 @@ define method up (interface :: <interface>)
     end if;
   end with-stack-structure;
 end method;
+
+define method find-all-devices () => (res :: <collection>)
+  let packet-socket = socket($PF-PACKET, $SOCK-RAW, htons($ETH-P-ALL));
+  let res = make(<stretchy-vector>);
+  with-stack-structure (ifreq :: <ifreq*>)
+    for (i from 0 below 256)
+      ifreq.ifr-ifindex := i;
+      if (ioctl(packet-socket, $SIOCGIFNAME, ifreq) >= 0)
+        add!(res, ifreq.ifr-name);
+      end;
+    end;
+  end;
+  close(packet-socket);
+  res;
+end;
+
+define method device-name (a :: <string>) => (res :: <string>)
+  a;
+end;
 
 define method receive (interface :: <interface>)
   => (buffer)
@@ -105,6 +128,7 @@ end function;
 define class <ethernet-interface> (<filter>)
   slot unix-interface :: <interface>;
   slot interface-name :: <string>, required-init-keyword: name:;
+  slot running? :: <boolean> = #t;
 end;
 
 define method initialize (node :: <ethernet-interface>,
@@ -120,9 +144,10 @@ define method push-data-aux (input :: <push-input>,
 end;
 
 define method toplevel (node :: <ethernet-interface>)
-  while(#t)
+  while(node.running?)
     let packet = receive(node.unix-interface);
     let frame = parse-frame(<ethernet-frame>, packet);
     push-data(node.the-output, frame);
   end while;
+  int-close(node.unix-interface);
 end;
