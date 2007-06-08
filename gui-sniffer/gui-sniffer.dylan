@@ -224,7 +224,7 @@ end;
 
 define generic apply-filter (frame :: <gui-sniffer-frame>);
 define method apply-filter (frame :: <gui-sniffer-frame>)
-  let filter-string = gadget-value(frame.filter-field);
+  let filter-string = ""; //gadget-value(frame.filter-field);
   let old = frame.filter-expression;
   if (filter-string.size > 0)
     frame.filter-expression := 
@@ -238,7 +238,7 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
         
     if (old ~= frame.filter-expression & every?(curry(\~=, filter-string), frame.filter-history))
       frame.filter-history := add!(frame.filter-history, filter-string);
-      gadget-items(frame.filter-field) := frame.filter-history;
+//      gadget-items(frame.filter-field) := frame.filter-history;
     end;
   else
     frame.filter-expression := #f;
@@ -270,18 +270,18 @@ define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
   current-packet & show-hexdump(frame, current-packet.packet);
-  redisplay-window(frame.packet-hex-dump);
+//  redisplay-window(frame.packet-hex-dump);
 //  note-gadget-text-changed(window);
 //  note-gadget-value-changed(window);
 end;
 
 define function show-packet-tree (frame :: <gui-sniffer-frame>, packet)
-  frame.packet-tree-view.tree-control-roots
+/*  frame.packet-tree-view.tree-control-roots
     := if (packet)
          add!(frame-root-generator(packet), packet);
        else
          #[]
-       end;
+       end; */
 end;
 
 define method find-frame-field (frame :: <container-frame>, search :: type-union(<container-frame>, <raw-frame>))
@@ -374,15 +374,15 @@ define method find-frame-at-offset (frame :: <leaf-frame>, offset :: <integer>)
 end;
 
 define function highlight-hex-dump (mframe :: <gui-sniffer-frame>)
-  let packet = mframe.packet-table.gadget-value;
+/*  let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
 
   let start-highlight = compute-absolute-offset(selected-packet, packet.real-frame);
   let end-highlight = start-highlight + compute-length(selected-packet);
-
-  set-highlight(mframe, start-highlight, end-highlight);
-  redisplay-window(mframe.packet-hex-dump);
+*/
+  //set-highlight(mframe, start-highlight, end-highlight);
+  //redisplay-window(mframe.packet-hex-dump);
 
 end;
 
@@ -432,7 +432,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   slot ethernet-interface = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
   slot filter-history :: <list> = make(<list>);
-
+/*
   pane filter-field (frame)
     make(<combo-box>,
          label: "Filter expression",
@@ -446,7 +446,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
       make(<label>, label: "Filter: ");
       frame.filter-field;
     end;
-
+*/
   pane packet-table (frame)
     make(<table-control>,
          headings: #("No", "Time", "Source", "Destination", "Protocol", "Info"),
@@ -462,6 +462,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          popup-menu-callback: display-popup-menu,
          value-changed-callback: safe-p(method(x) show-packet(frame) end));
 
+/*
   pane packet-tree-view (frame)
     make(<tree-control>,
          label-key: safe(frame-print-label),
@@ -471,8 +472,6 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
 
   pane packet-hex-dump (frame)
-    make(<label>, label: "insert hexdump here");
-/*
     make(<deuce-pane>,
          frame: frame,
          read-only?: #t,
@@ -496,7 +495,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
     make(<push-button>, label: "play",
          activate-callback: method(x) open-interface(frame) end);
   pane stop-button (frame)
-    make(<push-button>, label: "stop",
+    make(<push-button>, label: "stop", enabled?: #f,
          activate-callback: method(x) close-interface(frame) end);
     
   pane sniffer-tool-bar (frame)
@@ -512,13 +511,13 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                 end);
 
   layout (frame) vertically()
-                   frame.filter-pane;
+//                   frame.filter-pane;
                    make(<column-splitter>,
-                        children: vector(frame.packet-table,
+                        children: vector(frame.packet-table /*,
                                          frame.packet-tree-view,
                                          scrolling (scroll-bars: #"both")
                                            frame.packet-hex-dump
-                                         end));
+                                         end */ ));
                  end;
 
   tool-bar (frame) frame.sniffer-tool-bar;
@@ -643,7 +642,7 @@ define function filter-by (filter-method :: <function>, frame :: <gui-sniffer-fr
                                   value: filter-method(layer),
                                   field: field);
   filter-packet-table(frame);
-  gadget-value(frame.filter-field) := filter;
+//  gadget-value(frame.filter-field) := filter;
 end;
 
 define method find-decent-layer(filter-method :: <function>, frame :: <header-frame>)
@@ -666,7 +665,7 @@ define method follow-connection (frame :: <gui-sniffer-frame>)
   let current-packet = frame.packet-table.gadget-value;
   if (current-packet) current-packet := real-frame(current-packet) end;
   let filters = create-connection-filter(current-packet);
-  gadget-value(frame.filter-field) := filters;
+//  gadget-value(frame.filter-field) := filters;
   apply-filter(frame);
   let packets = map(real-frame, frame.packet-table.gadget-items);
   let payloads = map(method(x) real-payload(x).data end, packets);
@@ -785,6 +784,7 @@ end;
 define method open-interface (frame :: <gui-sniffer-frame>)
   let (interface-name, promiscuous?) = prompt-for-interface(owner: frame);
   if (interface-name)
+    format-out("Listening on interface %=\n", interface-name);
     let interface = make(<ethernet-interface>,
                          name: interface-name,
                          promiscuous?: promiscuous?);
@@ -801,6 +801,7 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     command-enabled?(close-interface, frame) := #t;
     gadget-enabled?(frame.stop-button) := #t;
   end;
+  format-out("finished open interface\n");
 end;
 
 define method close-interface (frame :: <gui-sniffer-frame>)
