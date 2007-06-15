@@ -18,7 +18,7 @@ define module gui-sniffer
   use dylan-extensions, import: { debug-name };
   use threads;
   use duim, exclude: { <frame>, frame-size };
-  use win32-duim;
+//  use win32-duim;
   use deuce;
   use duim-deuce;
   use format;

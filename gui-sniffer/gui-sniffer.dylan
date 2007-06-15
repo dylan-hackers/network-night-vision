@@ -269,19 +269,19 @@ end;
 define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
-  current-packet & show-hexdump(frame, current-packet.packet);
+//  current-packet & show-hexdump(frame, current-packet.packet);
 //  redisplay-window(frame.packet-hex-dump);
 //  note-gadget-text-changed(window);
 //  note-gadget-value-changed(window);
 end;
 
 define function show-packet-tree (frame :: <gui-sniffer-frame>, packet)
-/*  frame.packet-tree-view.tree-control-roots
+  frame.packet-tree-view.tree-control-roots
     := if (packet)
          add!(frame-root-generator(packet), packet);
        else
          #[]
-       end; */
+       end;
 end;
 
 define method find-frame-field (frame :: <container-frame>, search :: type-union(<container-frame>, <raw-frame>))
@@ -462,15 +462,16 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          popup-menu-callback: display-popup-menu,
          value-changed-callback: safe-p(method(x) show-packet(frame) end));
 
-/*
+
   pane packet-tree-view (frame)
     make(<tree-control>,
+         roots: #[],
          label-key: safe(frame-print-label),
          children-generator: safe(frame-children-generator),
          children-predicate: safe-p(frame-children-predicate),
-         text-style: $text-style,
-         value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
-
+         text-style: $text-style); //,
+         //value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
+/*
   pane packet-hex-dump (frame)
     make(<deuce-pane>,
          frame: frame,
@@ -513,8 +514,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   layout (frame) vertically()
 //                   frame.filter-pane;
                    make(<column-splitter>,
-                        children: vector(frame.packet-table /*,
-                                         frame.packet-tree-view,
+                        children: vector(frame.packet-table,
+                                         frame.packet-tree-view /*,
                                          scrolling (scroll-bars: #"both")
                                            frame.packet-hex-dump
                                          end */ ));
