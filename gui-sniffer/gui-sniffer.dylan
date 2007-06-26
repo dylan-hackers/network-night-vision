@@ -224,7 +224,7 @@ end;
 
 define generic apply-filter (frame :: <gui-sniffer-frame>);
 define method apply-filter (frame :: <gui-sniffer-frame>)
-  let filter-string = ""; //gadget-value(frame.filter-field);
+  let filter-string = gadget-value(frame.filter-field);
   let old = frame.filter-expression;
   if (filter-string.size > 0)
     frame.filter-expression := 
@@ -238,7 +238,7 @@ define method apply-filter (frame :: <gui-sniffer-frame>)
         
     if (old ~= frame.filter-expression & every?(curry(\~=, filter-string), frame.filter-history))
       frame.filter-history := add!(frame.filter-history, filter-string);
-//      gadget-items(frame.filter-field) := frame.filter-history;
+      gadget-items(frame.filter-field) := frame.filter-history;
     end;
   else
     frame.filter-expression := #f;
@@ -432,7 +432,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   slot ethernet-interface = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
   slot filter-history :: <list> = make(<list>);
-/*
+
   pane filter-field (frame)
     make(<combo-box>,
          label: "Filter expression",
@@ -446,7 +446,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
       make(<label>, label: "Filter: ");
       frame.filter-field;
     end;
-*/
+
   pane packet-table (frame)
     make(<table-control>,
          headings: #("No", "Time", "Source", "Destination", "Protocol", "Info"),
@@ -512,7 +512,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                 end);
 
   layout (frame) vertically()
-//                   frame.filter-pane;
+                   frame.filter-pane;
                    make(<column-splitter>,
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view /*,
