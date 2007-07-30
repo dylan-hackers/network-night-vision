@@ -270,9 +270,15 @@ define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
 //  current-packet & show-hexdump(frame, current-packet.packet);
+  current-packet & show-packet-hexdump(frame, current-packet);
 //  redisplay-window(frame.packet-hex-dump);
 //  note-gadget-text-changed(window);
 //  note-gadget-value-changed(window);
+end;
+
+define function show-packet-hexdump
+    (frame :: <gui-sniffer-frame>, network-packet)
+  frame.packet-hex-dump.gadget-text := hexdump(network-packet.packet);
 end;
 
 define function show-packet-tree (frame :: <gui-sniffer-frame>, packet)
@@ -470,10 +476,10 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          children-generator: safe(frame-children-generator),
          children-predicate: safe-p(frame-children-predicate),
          text-style: $text-style); //,
-         //value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
-/*
+//         value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
+
   pane packet-hex-dump (frame)
-    make(<deuce-pane>,
+/*    make(<deuce-pane>,
          frame: frame,
          read-only?: #t,
          tab-stop?: #t,
@@ -482,6 +488,13 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          scroll-bars: #"vertical",
          text-style: $text-style);
 */
+       make(<text-editor>,
+            read-only?: #t,
+            tab-stop?: #t,
+            lines: 20,
+            columns: 100,
+//            scroll-bars: #"vertical",
+            text-style: make(<text-style>, family: #"fix"));
 
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "Network Night Vision");
@@ -515,10 +528,11 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                    frame.filter-pane;
                    make(<column-splitter>,
                         children: vector(frame.packet-table,
-                                         frame.packet-tree-view /*,
-                                         scrolling (scroll-bars: #"both")
+                                         frame.packet-tree-view,
+                                         //scrolling (scroll-bars: #"both")
                                            frame.packet-hex-dump
-                                         end */ ));
+                                         //end
+                                         ));
                  end;
 
   tool-bar (frame) frame.sniffer-tool-bar;
@@ -609,7 +623,7 @@ define command-table *popup-menu-command-table* (*global-command-table*)
   menu-item "Kill TCP Connection" = tcpkill;
 end;
 
-define method display-popup-menu (sheet, object, #key x, y)
+define method display-popup-menu (sheet, target, #key x, y)
   let frame = sheet.sheet-frame;
   let menu = make-menu-from-command-table-menu
                (command-table-menu(*popup-menu-command-table*),
@@ -837,11 +851,12 @@ define method prompt-for-interface
   end;
 end;
 
-define constant $about-text = concatenate("Network Night Vision 0.0.2\n",
-                                          "(c) 2005 - 2007 Andreas Bogk, Hannes Mehnert\n",
-                                          "All Rights Reserved. Free for non-commercial use.\n",
-                                          "\n",
-                                          "http://www.networknightvision.com/");
+define constant $about-text
+  = concatenate("Network Night Vision 0.0.2\n",
+                "(c) 2005 - 2007 Andreas Bogk, Hannes Mehnert\n",
+                "All Rights Reserved. Free for non-commercial use.\n",
+                "\n",
+                "http://www.networknightvision.com/");
 
 define frame <about-box> (<dialog-frame>)
   pane splash-screen-pane (frame)
