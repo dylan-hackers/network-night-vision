@@ -36,9 +36,11 @@ define module gui-sniffer
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
   use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port, acknowledgement-number, sequence-number };
+  use icmp, import: { <icmp-frame> };
   use tcp;
   use ipv6;
   // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
   use interfaces;
+  use layer;
 end module gui-sniffer;

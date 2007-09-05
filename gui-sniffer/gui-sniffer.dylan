@@ -435,7 +435,9 @@ define constant $text-style = make(<text-style>, family: #"fix", size: 8);
 define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <filter>)
   slot network-frames :: <stretchy-vector> = make(<stretchy-vector>);
   slot filter-expression = #f;
-  slot ethernet-interface = #f;
+  slot ethernet-layer = #f;
+  slot ip-layer = #f;
+  slot listening-socket = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
   slot filter-history :: <list> = make(<list>);
 
@@ -615,12 +617,20 @@ define method tcpkill (node :: <gui-sniffer-frame>);
                      acknowledgement-number: $transform-to-bv(0.0s0))));
 end;
 
+define method ping-source (node :: <gui-sniffer-frame>)
+  let data = current-packet(node);
+  let icmp = make(<icmp-frame>, code: 0, icmp-type: 8,
+                  payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
+  send(node.ip-layer, data.payload.source-address, icmp);
+end;
+
 define command-table *popup-menu-command-table* (*global-command-table*)
   menu-item "Filter Packet-Source" = filter-source;
   menu-item "Filter Packet-Destination" = filter-destination; 
   menu-item "Follow Connection" = follow-connection;
   menu-item "Re-inject Packet" = reinject-packet;
   menu-item "Kill TCP Connection" = tcpkill;
+  menu-item "Ping Source" = ping-source;
 end;
 
 define method display-popup-menu (sheet, target, #key x, y)
@@ -800,14 +810,15 @@ define method open-interface (frame :: <gui-sniffer-frame>)
   let (interface-name, promiscuous?) = prompt-for-interface(owner: frame);
   if (interface-name)
     format-out("Listening on interface %=\n", interface-name);
-    let interface = make(<ethernet-interface>,
-                         name: interface-name,
-                         promiscuous?: promiscuous?);
-    connect(interface, frame);
-    connect(frame, interface);
+    let ethernet-layer
+      = build-ethernet-layer(interface-name, promiscuous?: promiscuous?);
+    let ethernet-socket = create-raw-socket(ethernet-layer);
+    connect(ethernet-socket, frame);
+    connect(frame, ethernet-socket);
+    frame.ip-layer := build-ip-layer(ethernet-layer);
     reinit-gui(frame);
-    make(<thread>, function: curry(toplevel, interface));
-    frame.ethernet-interface := interface;
+    frame.ethernet-layer := ethernet-layer;
+    frame.listening-socket := ethernet-socket;
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
     command-enabled?(open-pcap-file, frame) := #f;
     gadget-enabled?(frame.open-button) := #f;
@@ -820,10 +831,11 @@ define method open-interface (frame :: <gui-sniffer-frame>)
 end;
 
 define method close-interface (frame :: <gui-sniffer-frame>)
-  frame.ethernet-interface.running? := #f;
+  frame.ethernet-layer.ethernet-interface.running? := #f;
   gadget-label(frame.sniffer-status-bar) := "Stopped capturing";
-  disconnect(frame.ethernet-interface, frame);
-  disconnect(frame, frame.ethernet-interface);
+  disconnect(frame.listening-socket, frame);
+  disconnect(frame, frame.listening-socket);
+  frame.listening-socket := #f;
   command-enabled?(open-pcap-file, frame) := #t;
   gadget-enabled?(frame.open-button) := #t;
   command-enabled?(open-interface, frame) := #t;

@@ -23,5 +23,6 @@ define module network-flow
     <pcap-file-reader>,
     <pcap-file-writer>,
     <malformed-packet-writer>,
-    <fan-out>, <fan-in>;
+    <fan-out>, <fan-in>,
+    create-input, create-output;
 end module network-flow;

@@ -36,9 +36,14 @@ define module layer
     <arp-handler>,
     register-route,
     init-arp-handler,
-    init-ip-layer,
     decapsulator,
     create-socket,
+    create-raw-socket,
+    build-ethernet-layer,
+    build-ip-layer,
     send-socket,
     send;
+
+  export <udp-layer>,
+    <tcp-layer>;
 end module layer;

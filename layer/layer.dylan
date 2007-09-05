@@ -46,6 +46,7 @@ define open generic sockets (object :: <layer>) => (res :: <collection>);
 
 define abstract class <layer> (<object>)
   constant slot fan-in :: <fan-in> = make(<fan-in>);
+  constant slot fan-out :: <fan-out> = make(<fan-out>);
   constant slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
   constant slot sockets :: <collection> = make(<stretchy-vector>);
 end;
@@ -56,6 +57,41 @@ define open generic decapsulator (object :: <socket>) => (res :: <decapsulator>)
 define open generic completer (object :: <socket>) => (res :: <completer>);
 define open generic completer-setter (value :: <completer>, object :: <socket>) => (res :: <completer>);
 
+define class <raw-socket> (<object>)
+  constant slot socket-layer :: <layer>, required-init-keyword: layer:;
+end;
+
+define method connect (socket :: <raw-socket>, input :: <push-input>)
+  connect(socket.socket-layer.fan-out, input);
+end;
+
+define method connect (socket :: <raw-socket>, input :: <single-push-input-node>)
+  connect(socket.socket-layer.fan-out, input.the-input);
+end;
+
+define method disconnect (socket :: <raw-socket>, input :: <push-input>)
+  disconnect(socket.socket-layer.fan-out, input);
+end;
+
+define method disconnect (socket :: <raw-socket>, input :: <single-push-input-node>)
+  disconnect(socket.socket-layer.fan-out, input.the-input);
+end;
+
+define method connect (node :: <single-push-output-node>, socket :: <raw-socket>)
+  connect(node.the-output, socket.socket-layer.fan-in);
+end;
+
+define method connect (node :: <push-output>, socket :: <raw-socket>)
+  connect(node, socket.socket-layer.fan-in);
+end;
+
+define method disconnect (node :: <push-output>, socket :: <raw-socket>)
+  disconnect(node, socket.socket-layer.fan-in);
+end;
+
+define method disconnect (node :: <single-push-output-node>, socket :: <raw-socket>)
+  disconnect(node.the-output, socket.socket-layer.fan-in);
+end;
 define abstract class <socket> (<object>)
   constant slot decapsulator :: <decapsulator> = make(<decapsulator>);
   slot demultiplexer-output;
@@ -80,7 +116,8 @@ end;
 define method initialize (layer :: <ethernet-layer>,
                           #rest rest, #key, #all-keys);
   connect(layer.fan-in, layer.ethernet-interface);
-  connect(layer.ethernet-interface, layer.demultiplexer);
+  connect(layer.ethernet-interface, layer.fan-out);
+  connect(layer.fan-out, layer.demultiplexer);
 end;
 
 define open generic ethernet-type-code (object :: <ethernet-socket>) => (res :: <integer>);
@@ -113,6 +150,10 @@ define method create-socket (layer :: <ethernet-layer>,
   socket;
 end;
 
+define method create-raw-socket (layer :: <ethernet-layer>)
+ => (socket :: <raw-socket>)
+  make(<raw-socket>, layer: layer);
+end;
 define method send (socket :: <ethernet-socket>, destination :: <mac-address>, payload :: <container-frame>);
   let ethernet-frame = make(<ethernet-frame>,
                             destination-address: destination,
@@ -314,6 +355,7 @@ define class <ip-layer> (<layer>)
   slot default-ip-address :: <ipv4-address>;
   constant slot routes = make(<stretchy-vector>);
   constant slot reassembler = make(<ip-reassembler>);
+  slot raw-input;
 end;
 
 define class <route> (<object>)
@@ -343,7 +385,7 @@ define method initialize (ip-layer :: <ip-layer>,
                  closure: method(x)
                             let (adapter, next-hop)
                               = find-adapter-for-forwarding(ip-layer, x.destination-address);
-                            let mtu = find-mtu-for-destination(adapter, x.destination-address) * 8;
+                            /* let mtu = find-mtu-for-destination(adapter, x.destination-address) * 8;
                             let full-payload = assemble-frame(x.payload).packet;
                             let data-size = frame-size(x.payload);
                             if (mtu < data-size)
@@ -363,11 +405,12 @@ define method initialize (ip-layer :: <ip-layer>,
                                                                               length: modulo(data-size, mtu)));
                             x.total-length := #f;
                             let ip-frame = assemble-frame(x);
-                            fixup!(ip-frame);
-                            send(adapter, next-hop, ip-frame);
+                            fixup!(ip-frame); */
+                            send(adapter, next-hop, x);
                           end);
   connect(ip-layer.fan-in, cls);
   connect(ip-layer.reassembler, ip-layer.demultiplexer);
+  ip-layer.raw-input := create-input(ip-layer.fan-in);
 end;
 
 define method find-mtu-for-destination (adapter :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>)
@@ -417,6 +460,13 @@ define method find-adapter-for-forwarding (ip-layer :: <ip-layer>, destination-a
   end;
 end;
 
+define method send (ip-layer :: <ip-layer>, destination :: <ipv4-address>, payload :: <container-frame>)
+  let frame = make(<ipv4-frame>,
+                   destination-address: destination,
+                   source-address: ip-layer.default-ip-address,
+                   payload: payload);
+  push-data-aux(ip-layer.raw-input, ip-layer.fan-in, frame);
+end;
 define open generic ip-protocol (object :: <ip-socket>) => (res :: <integer>);
 define class <ip-socket> (<socket>)
   constant slot ip-protocol :: <integer>, init-keyword: protocol:;
@@ -616,8 +666,9 @@ define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-a
   end;
 end;
 
+/* dead code?
 define function init-arp-handler (#key mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"),
-                                  ip-address :: <ipv4-address> = ipv4-address("23.23.23.23"),
+                                  ip-address :: <ipv4-address> = ipv4-address("192.168.0.69"),
                                   netmask :: <integer> = 24,
                                   interface-name :: <string> = "eth0");
   let interface = make(<ethernet-interface>, name: interface-name);
@@ -641,13 +692,22 @@ define function init-arp-handler (#key mac-address :: <mac-address> = mac-addres
   send-gratitious-arp(arp-handler, ip-address);
   ethernet-layer;
 end;
+*/
 
-define function init-ip-layer (#key mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"),
-                               ip-address :: <ipv4-address> = ipv4-address("23.23.23.23"),
-                               netmask :: <integer> = 24,
-                               interface-name :: <string> = "eth0")
-  let int = make(<ethernet-interface>, name: interface-name);
+define function build-ethernet-layer (interface-name :: <string>,
+                                      #key promiscuous? :: <boolean>,
+                                           mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00"));
+  let int = make(<ethernet-interface>, name: interface-name, promiscuous?: promiscuous?);
   let ethernet-layer = make(<ethernet-layer>, ethernet-interface: int, default-mac-address: mac-address);
+  make(<thread>, function: curry(toplevel, int));
+  ethernet-layer;
+end;
+                                    
+
+define function build-ip-layer (ethernet-layer,
+                               #key ip-address :: <ipv4-address> = ipv4-address("192.168.0.69"),
+                               default-gateway :: <ipv4-address> = ipv4-address("192.168.0.1"),
+                               netmask :: <integer> = 24)
   let arp-handler = make(<arp-handler>);
   let ip-layer = make(<ip-layer>);
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
@@ -656,12 +716,18 @@ define function init-ip-layer (#key mac-address :: <mac-address> = mac-address("
                               ip-layer: ip-layer,
                               ipv4-address: ip-address,
                               netmask: netmask);
+  register-route(ip-layer, make(<next-hop-route>,
+                                next-hop: default-gateway,
+                                cidr: make(<cidr>, network-address: ipv4-address("0.0.0.0"), netmask: 0)));
   send-gratitious-arp(arp-handler, ip-address);
-  let icmp-handler = make(<icmp-handler>);
-  let icmp-over-ip = make(<icmp-over-ip-adapter>,
-                          ip-layer: ip-layer,
-                          icmp-handler: icmp-handler);
-  make(<thread>, function: curry(toplevel, int));
+  //let icmp-handler = make(<icmp-handler>);
+  //let icmp-over-ip = make(<icmp-over-ip-adapter>,
+  //                        ip-layer: ip-layer,
+  //                        icmp-handler: icmp-handler);
   values(ip-layer, ip-over-ethernet);
 end;
+
+
+
+
 

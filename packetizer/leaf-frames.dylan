@@ -465,8 +465,10 @@ end;
 define method read-frame (type == <raw-frame>,
                           string :: <string>)
  => (res)
-  make(<raw-frame>,
-       data: copy-sequence(string));
+  let res = make(<raw-frame>,
+                 data: make(<byte-sequence>, capacity: string.size));
+  copy-bytes(res.data, 0, string, 0, string.size);
+  res;
 end;
 
 

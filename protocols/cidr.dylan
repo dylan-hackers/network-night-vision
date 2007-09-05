@@ -3,7 +3,8 @@ Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 define class <cidr> (<object>)
-  constant slot cidr-network-address :: <ipv4-address>,
+  constant slot cidr-network-address,
+    //<ipv4-address>, but somehow this confuses the compiler (runtime)
     required-init-keyword: network-address:;
   constant slot cidr-netmask :: <integer>,
     required-init-keyword: netmask:;
