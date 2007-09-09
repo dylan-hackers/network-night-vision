@@ -141,6 +141,9 @@ define method do-execute-command (context :: <nnv-context>, command :: <nnvhelp-
   format(stream, "Yeah, right!\n");
 end;
 
+define constant <ipv4-address> = <string>;
+define constant ipv4-address = identity;
+
 define method parse-next-argument
     (context :: <nnv-context>, type == <ipv4-address>,
      text :: <string>,
@@ -174,6 +177,7 @@ define command-group nnv
     (summary: "Network Night Vision commands",
      documentation: "The set of commands provided by Network Night Vision.")
   command nnvhelp;
+  command ping;
   group basic;
 end command-group;
 
