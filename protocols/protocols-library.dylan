@@ -304,7 +304,7 @@ define module icmp
   use ipv4, import: { <ipv4-frame>, calculate-checksum };
   use ipv6, import: { <ipv6-frame> };
 
-  export <icmp-frame>,
+  export <icmp-frame>, icmp-frame,
     icmp-type, icmp-type-setter,
     code, code-setter,
     checksum, checksum-setter;

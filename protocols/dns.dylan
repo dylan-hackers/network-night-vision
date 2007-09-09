@@ -124,7 +124,7 @@ define abstract protocol dns-resource-record (variably-typed-container-frame)
   field rr-class :: <2byte-big-endian-unsigned-integer> = 1;
   field ttl :: <big-endian-unsigned-integer-4byte>;
   field rdlength :: <2byte-big-endian-unsigned-integer>,
-    fixup: frame.rdata.frame-size.byte-offset;
+    fixup: frame.frame-size.byte-offset - 10 - frame.domainname.frame-size.byte-offset;
 end;
 
 define protocol a-host-address (dns-resource-record)
