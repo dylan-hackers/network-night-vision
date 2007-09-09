@@ -497,6 +497,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
             columns: 100,
 //            scroll-bars: #"vertical",
             text-style: make(<text-style>, family: #"fix"));
+  pane nnv-shell (frame)
+    make-nnv-shell-pane();
 
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "Network Night Vision");
@@ -532,7 +534,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
                                          //scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump
+                                           frame.packet-hex-dump,
+                                           frame.nnv-shell
                                          //end
                                          ));
                  end;
@@ -619,8 +622,8 @@ end;
 
 define method ping-source (node :: <gui-sniffer-frame>)
   let data = current-packet(node);
-  let icmp = make(<icmp-frame>, code: 0, icmp-type: 8,
-                  payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
+  let icmp = icmp-frame(code: 0, icmp-type: 8,
+                        payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
   send(node.ip-layer, data.payload.source-address, icmp);
 end;
 
@@ -690,7 +693,7 @@ define method follow-connection (frame :: <gui-sniffer-frame>)
   let current-packet = frame.packet-table.gadget-value;
   if (current-packet) current-packet := real-frame(current-packet) end;
   let filters = create-connection-filter(current-packet);
-//  gadget-value(frame.filter-field) := filters;
+  gadget-value(frame.filter-field) := filters;
   apply-filter(frame);
   let packets = map(real-frame, frame.packet-table.gadget-items);
   let payloads = map(method(x) real-payload(x).data end, packets);

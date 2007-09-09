@@ -4,6 +4,7 @@ library:	gui-sniffer
 files:	library
 	module
 	hex-view
+	command-line
 	gui-sniffer
 base-address:	0x63FE0000
 start-function:	main

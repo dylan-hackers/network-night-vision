@@ -11,6 +11,8 @@ define library gui-sniffer
   use duim-deuce;
   use io;
   use system;
+  use commands;
+  use environment-commands;
   use packetizer;
   use flow;
   use network-flow;

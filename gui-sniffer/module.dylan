@@ -13,6 +13,21 @@ define module hex-view
   export show-hexdump, set-highlight, hexdump;
 end;
 
+define module command-line
+  use common-dylan, exclude: { format-to-string };
+  use streams;
+  use format;
+  use format-out;
+  use deuce;
+  use deuce-internals;
+  use duim-deuce-internals;
+  use threads;
+  use commands;
+  use command-lines;
+
+  export make-nnv-shell-pane;
+end;
+
 define module gui-sniffer
   use common-dylan, exclude: { format-to-string };
   use dylan-extensions, import: { debug-name };
@@ -31,12 +46,13 @@ define module gui-sniffer
   use packet-filter;
   use network-flow;
   use flow;
+  use command-line;
   use hex-view;
   use ethernet, import: { <ethernet-frame> };
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
   use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port, acknowledgement-number, sequence-number };
-  use icmp, import: { <icmp-frame> };
+  use icmp, import: { <icmp-frame>, icmp-frame };
   use tcp;
   use ipv6;
   // Add binding exports here.
