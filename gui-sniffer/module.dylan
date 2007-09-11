@@ -25,7 +25,7 @@ define module command-line
   use commands;
   use command-lines;
 
-  export make-nnv-shell-pane;
+  export make-nnv-shell-pane, command-line-server, nnv-context, nnv-context-setter, <nnv-context>;
 end;
 
 define module gui-sniffer
@@ -47,11 +47,14 @@ define module gui-sniffer
   use network-flow;
   use flow;
   use command-line;
+  use commands;
+  use command-lines;
   use hex-view;
   use ethernet, import: { <ethernet-frame> };
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
-  use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port, acknowledgement-number, sequence-number };
+  use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port,
+                      acknowledgement-number, sequence-number, ipv4-address, <ipv4-address> };
   use icmp, import: { <icmp-frame>, icmp-frame };
   use tcp;
   use ipv6;

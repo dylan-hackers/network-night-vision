@@ -106,7 +106,8 @@ end function;
 
 
 define class <nnv-context> (<server-context>)
-  keyword banner: = "Network Night Vision"
+  keyword banner: = "Network Night Vision";
+  slot nnv-context;
 end;
 
 define method make-command-line-server
@@ -126,74 +127,13 @@ define method make-command-line-server
 end method make-command-line-server;
 
 
-define class <nnvhelp-command> (<basic-command>)
-end;
-
-
-define command-line nnvhelp => <nnvhelp-command>
-    (summary: "Help",
-     documentation: "You expected more help, right?")
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <nnvhelp-command>)
- => ()
-  let stream = context.context-server.server-output-stream;
-  format(stream, "Yeah, right!\n");
-end;
-
-define constant <ipv4-address> = <string>;
-define constant ipv4-address = identity;
-
-define method parse-next-argument
-    (context :: <nnv-context>, type == <ipv4-address>,
-     text :: <string>,
-     #key start :: <integer> = 0, end: stop = #f)
- => (value :: <ipv4-address>, next-index :: <integer>)
-  let (name, next-index)
-    = parse-next-word(text, start: start, end: stop);
-  if (name)
-    values(ipv4-address(name), next-index)
-  else
-    parse-error("Missing argument.")
-  end
-end;
-
-define class <ping-command> (<basic-command>)
-  constant slot %target :: <ipv4-address>, required-init-keyword: target:;
-end;
-
-define command-line ping => <ping-command>
-    (summary: "Ping host.",
-     documentation: "Sends an ICMP Echo Request to the specified target address.")
-  argument target :: <ipv4-address> = "target host address";
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <ping-command>)
-  let target = command.%target;
-  // ping!!1!  
-end;
-
-define command-group nnv
-    (summary: "Network Night Vision commands",
-     documentation: "The set of commands provided by Network Night Vision.")
-  command nnvhelp;
-  command ping;
-  group basic;
-end command-group;
-
-define method context-command-group
-    (context :: <nnv-context>) => (group :: <command-group>)
-  $nnv-command-group
-end method context-command-group;
-
-define method context-command-prefix
-    (context :: <nnv-context>) => (prefix :: <character>)
-  '>'
-end method context-command-prefix;
 
 
 
  
+
+
+
 
 
 
