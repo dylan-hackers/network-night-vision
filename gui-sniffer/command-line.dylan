@@ -82,7 +82,8 @@ end;
 
 define function make-nnv-shell-pane
     (#rest initargs,
-     #key class = <nnv-shell-gadget>,
+     #key context,
+          class = <nnv-shell-gadget>,
           frame, buffer, #all-keys)
  => (window :: <nnv-shell-gadget>)
   let window = apply(make, class, initargs);
@@ -94,8 +95,9 @@ define function make-nnv-shell-pane
              direction: #"output");
     let server
       = make-command-line-server
-        (input-stream: stream,	// ignored, so this is safe!
-        output-stream: stream);
+        (real-context: context,
+         input-stream: stream,	// ignored, so this is safe!
+         output-stream: stream);
     window.command-line-server := server;
     dynamic-bind (*buffer* = buffer)
       select-buffer(window, buffer)
@@ -107,17 +109,20 @@ end function;
 
 define class <nnv-context> (<server-context>)
   keyword banner: = "Network Night Vision";
-  slot nnv-context;
+  slot nnv-context, init-keyword: nnv-context:;
 end;
 
 define method make-command-line-server
-    (#key banner :: false-or(<string>) = #f,
+    (#key real-context,
+          banner :: false-or(<string>) = #f,
           input-stream :: <stream>,
           output-stream :: <stream>,
           echo-input? :: <boolean> = #f,
           profile-commands? :: <boolean> = #f)
  => (server :: <command-line-server>)
-  let context = make(<nnv-context>, banner: banner);
+  let context = make(<nnv-context>,
+                     banner: banner,
+                     nnv-context: real-context);
   make(<command-line-server>,
        context:           context,
        input-stream:      input-stream,

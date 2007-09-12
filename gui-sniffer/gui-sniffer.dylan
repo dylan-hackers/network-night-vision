@@ -498,7 +498,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
 //            scroll-bars: #"vertical",
             text-style: make(<text-style>, family: #"fix"));
   pane nnv-shell (frame)
-    make-nnv-shell-pane();
+    make-nnv-shell-pane(context: frame);
 
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "Network Night Vision");
@@ -1009,7 +1009,6 @@ end method context-command-prefix;
 define function main()
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
-  gui-sniffer.nnv-shell.command-line-server.server-context.nnv-context := gui-sniffer;
   set-frame-size(gui-sniffer, 1024, 768);
 //  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
 //  deuce/*editor-frame* := gui-sniffer;
