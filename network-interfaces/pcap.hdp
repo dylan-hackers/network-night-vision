@@ -1,4 +1,4 @@
 library: network-interfaces
-files: library
+files: pcap-library
 	pcap
 c-libraries: -lpcap

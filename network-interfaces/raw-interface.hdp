@@ -1,4 +1,4 @@
 library:	network-interfaces
-files:	library
-	interfaces
+files:	raw-interface-library
+	raw-interface
 compilation-mode: loose
