@@ -15,3 +15,25 @@ define library network-interfaces
 
   export network-interfaces;
 end library network-interfaces;
+
+define module network-interfaces
+  use common-dylan, exclude: { format-to-string, close };
+  use dylan-extensions;
+  use common-extensions, exclude: { format-to-string, close };
+  use format-out, exclude: { close };
+  use subseq;
+  use format;
+  use standard-io;
+  use functional-dylan, import: { <byte-character> };
+  use dylan-extensions, import: { <byte> };
+  use unix-sockets, exclude: { send, connect };
+  use sockets, import: { interruptible-system-call };
+  use C-FFI;
+  use dylan-direct-c-ffi;
+  use flow;
+  use packetizer, import: { parse-frame, assemble-frame, packet };
+  use ethernet, import: { <ethernet-frame> };
+
+  export <ethernet-interface>, interface-name, find-all-devices, device-name,
+    running?, running?-setter;
+end module network-interfaces;

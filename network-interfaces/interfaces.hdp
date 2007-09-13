@@ -1,5 +1,4 @@
 library:	network-interfaces
 files:	library
-	module
 	interfaces
 compilation-mode: loose
