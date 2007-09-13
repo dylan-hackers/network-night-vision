@@ -9,7 +9,7 @@ define library layer
   use flow;
   use packetizer;
   use timer;
-  use interfaces;
+  use network-interfaces;
   use vector-table;
   use system, import: { date };
   use tcp-state-machine;

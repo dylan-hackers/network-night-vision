@@ -1,4 +1,4 @@
-module: interfaces
+module: network-interfaces
 author: Andreas Bogk, Hannes Mehnert
 copyright: (c) 2006, All rights reserved. Free for non-commercial user
 

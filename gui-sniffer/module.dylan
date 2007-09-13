@@ -60,6 +60,6 @@ define module gui-sniffer
   use ipv6;
   // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
-  use interfaces;
+  use network-interfaces;
   use layer;
 end module gui-sniffer;

@@ -2,7 +2,7 @@ Module:    dylan-user
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define module interfaces
+define module network-interfaces
   use common-dylan, exclude: { format-to-string, close };
   use dylan-extensions;
   use common-extensions, exclude: { format-to-string, close };
@@ -22,4 +22,4 @@ define module interfaces
 
   export <ethernet-interface>, interface-name, find-all-devices, device-name,
     running?, running?-setter;
-end module interfaces;
+end module network-interfaces;

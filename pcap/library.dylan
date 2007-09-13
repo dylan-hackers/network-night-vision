@@ -2,7 +2,7 @@ module: dylan-user
 author: Andreas Bogk, Hannes Mehnert
 copyright: (c) 2006, All rights reserved. Free for non-commercial user
 
-define library interfaces
+define library network-interfaces
   use common-dylan;
   use c-ffi;
   use io;
@@ -14,10 +14,10 @@ define library interfaces
 
   use protocols, import: { ethernet, ipv4, cidr };
 
-  export interfaces;
+  export network-interfaces;
 end;
 
-define module interfaces
+define module network-interfaces
   use common-dylan;
   use c-ffi;
   use winsock2;

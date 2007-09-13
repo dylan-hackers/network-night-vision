@@ -2,7 +2,7 @@ Module:    dylan-user
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define library interfaces
+define library network-interfaces
   use common-dylan;
   use functional-dylan;
   use network;
@@ -13,5 +13,5 @@ define library interfaces
   use packetizer;
   use protocols, import: { ethernet };
 
-  export interfaces;
-end library interfaces;
+  export network-interfaces;
+end library network-interfaces;

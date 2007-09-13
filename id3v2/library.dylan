@@ -9,7 +9,6 @@ define library id3v2
   use flow;
   use network-flow;
   use system;
-  use interfaces;
   use packetizer;
 
   export id3v2;
@@ -25,7 +24,6 @@ define module id3v2
   use flow;
   use network-flow;
   use command-line-parser;
-  use interfaces;
   use packetizer;
 	
   export <id3v2-reader>, <id3v2-tag>;

@@ -9,7 +9,6 @@ define library id3v2-test
   use flow;
   use network-flow;
   use system;
-  use interfaces;
   use id3v2;
 end;
 
@@ -22,6 +21,5 @@ define module id3v2-test
   use flow;
   use network-flow;
   use command-line-parser;
-  use interfaces;
   use id3v2;
 end;

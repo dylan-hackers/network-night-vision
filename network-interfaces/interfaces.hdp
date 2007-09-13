@@ -1,4 +1,4 @@
-library:	interfaces
+library:	network-interfaces
 files:	library
 	module
 	interfaces

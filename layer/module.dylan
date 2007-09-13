@@ -12,7 +12,7 @@ define module layer
   use packetizer;
   use timer;
   use flow;
-  use interfaces;
+  use network-interfaces;
   use vector-table;
   use byte-vector;
   use date, import: {<date>, current-date };
