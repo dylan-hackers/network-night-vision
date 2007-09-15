@@ -122,21 +122,6 @@ define macro real-class-definer
                getter: ?name,
                setter: ?name ## "-setter",
                ?args), ... }
-   { repeated field ?:name \:: ?field-type:name, ?args:*; ... }
-     => { make(<repeated-field>,
-               name: ?#"name",
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter",
-               ?args), ... }
-   { repeated field ?:name \:: ?field-type:name = ?init:expression, ?args:*; ... }
-     => { make(<repeated-field>,
-               name: ?#"name",
-               init-value: ?init,
-               type: ?field-type,
-               getter: ?name,
-               setter: ?name ## "-setter",
-               ?args), ... }
    { ?attributes:* field ?:name \:: ?field-type:name; ... }
      => { make(?attributes,
                name: ?#"name",
@@ -169,6 +154,7 @@ define macro real-class-definer
   attributes:
     { } => { <single-field> }
     { layering } => { <layering-field> }
+    { repeated } => { <repeated-field> }
 
   args: //FIXME: better types, not <frame>!
     { } => { }
@@ -460,9 +446,8 @@ define macro summary-generator
     { summary-generator(?type:name; ?summary-string:expression, ?summary-getters:*) }
     => { define method summary (frame :: ?type) => (result :: <string>);
            apply(format-to-string,
-                 ?summary-string, 
-                 map(method(x) frame.x end,
-                     list(?summary-getters)));
+                 ?summary-string,
+                 map(rcurry(apply, list(frame)), list(?summary-getters)));
          end; }
 end;
 
