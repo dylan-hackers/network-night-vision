@@ -2,7 +2,20 @@ module: dns
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-define protocol dns-frame (container-frame)
+define abstract class <container-frame-with-metadata> (<container-frame>)
+  constant slot index-table :: <table> = make(<table>);
+  constant slot symbol-table :: <string-table> = make(<string-table>);
+end;
+
+define abstract class <decoded-container-frame-with-metadata>
+ (<container-frame-with-metadata>, <decoded-container-frame>)
+end;
+
+define abstract class <unparsed-container-frame-with-metadata>
+ (<container-frame-with-metadata>, <unparsed-container-frame>)
+end;
+
+define protocol dns-frame (container-frame-with-metadata)
   over <udp-frame> 53;
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
@@ -31,6 +44,28 @@ define protocol dns-frame (container-frame)
     count: frame.name-server-count;
   repeated field additional-records :: <dns-resource-record>,
     count: frame.additional-count;
+end;
+
+define method assemble-frame-into
+ (frame :: <domain-name>, packet :: <stretchy-byte-vector-subsequence>)
+ => (res :: <integer>)
+  //assumption: frame.parent.parent is the <dns-frame>!
+  let name-table = frame.parent.parent.symbol-table;
+  let offset = 0;
+  local method encode-fragments (frags :: <collection>) => (res :: <integer>)
+          let strings = map(curry(as, <string>), frags);
+          let name =  reduce1(method(a, b) concatenate(a, ".", b) end, strings);
+          let offset = element(name-table, name, default: #f);
+          if (offset)
+            assemble-frame-into(make(<label-offset>, offset: offset), packet);
+          else
+            name-table[name] := packet.start-index + offset;
+            offset := offset + assemble-frame-into(frags[0], packet);
+            encode-fragments(subsequence(frags, start: 1));
+          end;
+        end;
+  encode-fragments(frame.fragment);
+  offset;
 end;
 
 define protocol domain-name (container-frame)

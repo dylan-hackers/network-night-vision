@@ -11,7 +11,9 @@ define protocol tcp-frame (header-frame)
   field sequence-number :: <big-endian-unsigned-integer-4byte>;
   field acknowledgement-number :: <big-endian-unsigned-integer-4byte>;
   field data-offset :: <4bit-unsigned-integer>,
-   fixup: ceiling/(20 + byte-offset(reduce(method(x, y) frame-size(y) + x end, 0, frame.options-and-padding)), 4);
+   fixup: ceiling/(20 + byte-offset(reduce(method(x, y)
+                                               frame-size(y) + x
+                                           end, 0, frame.options-and-padding)), 4);
   field reserved :: <6bit-unsigned-integer> = 0;
   field urg :: <1bit-unsigned-integer> = 0;
   field ack :: <1bit-unsigned-integer> = 0;
@@ -22,7 +24,8 @@ define protocol tcp-frame (header-frame)
   field window :: <2byte-big-endian-unsigned-integer> = 0;
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   field urgent-pointer :: <2byte-big-endian-unsigned-integer> = 0;
-  repeated field options-and-padding :: <tcp-option>, reached-end?: instance?(frame, <end-of-option>);
+  repeated field options-and-padding :: <tcp-option>,
+    reached-end?: instance?(frame, <end-of-option>);
   field payload :: <raw-frame> = make(<raw-frame>, data: make(<stretchy-byte-vector-subsequence>)),
     start: frame.data-offset * 4 * 8;
 end;
