@@ -104,8 +104,9 @@ define method parse-frame
 end;
 
 
-define generic assemble-frame-into (frame :: <frame>,
-                                    packet :: <stretchy-vector-subsequence>) => (length :: <integer>);
+define open generic assemble-frame-into
+    (frame :: <frame>, packet :: <stretchy-vector-subsequence>)
+ => (length :: <integer>);
 
 define generic assemble-frame
   (frame :: <frame>) => (packet /* :: <vector> */);

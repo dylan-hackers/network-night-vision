@@ -17,6 +17,7 @@ define module packetizer
   export <stretchy-vector-subsequence>,
     <stretchy-byte-vector-subsequence>,
     subsequence,
+    start-index,
     <out-of-bound-error>,
     encode-integer, decode-integer;
 
@@ -85,6 +86,7 @@ define module packetizer
     <leaf-frame>,
     parse-frame,
     assemble-frame,
+    assemble-frame-into,
     assemble-frame!,
     copy-frame,
     assemble-frame-as,
