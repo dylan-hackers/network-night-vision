@@ -13,6 +13,7 @@ define method push-data-aux (input :: <push-input>,
       if (message-type-frame.message-type = 2)
         node.offer := frame;
         process-event(node, #"receive-offer");
+        process-event(node, #"send-request");
       end;
     end;
   end;
@@ -21,7 +22,7 @@ define method push-data-aux (input :: <push-input>,
     if (frame.operation = 2)
       if (message-type-frame.message-type = 5) //ack
         process-event(node, #"receive-ack");
-        format-out("received ack %=\n", frame);
+        format-out("received ack %s\n", as(<string>, frame));
       elseif (message-type-frame.message-type = 6) //nak
         process-event(node, #"receive-nak")
       end
@@ -73,22 +74,23 @@ define method state-transition (state :: <dhcp-client-state>,
                     dhcp-options: list(make(<dhcp-message-type-option>,
                                             message-type: 3),
                                        make(<dhcp-requested-ip-address-option>,
-                                            requested-ip: offer.your-ip-address),
+                                            requested-ip: state.offer.your-ip-address),
                                        make(<dhcp-server-identifier-option>,
-                                            selected-server: server-option.server-ip-address)));
+                                            selected-server: server-option.selected-server)));
   send(state.send-socket, $broadcast-address, packet);
 //
 end;
 
 
 define method main()
-  let eth = build-ethernet-layer("ath0", promiscuous?: #t);
+  let eth = build-ethernet-layer("Intel", promiscuous?: #t);
   let ip-layer = build-ip-layer(eth);
   let udp = make(<udp-layer>, ip-layer: ip-layer);
-  let socket = create-socket(udp, 67);
+  let socket = create-socket(udp, 67, client-port: 68);
   let dhcp = make(<dhcp-client>, send-socket: socket);
   connect(socket.decapsulator, dhcp);
   process-event(dhcp, #"send-discover");
+  sleep(10000);
 end;
 
 //main();

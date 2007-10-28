@@ -180,13 +180,13 @@ define class <ip-over-ethernet-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot ethernet-layer :: <ethernet-layer>, required-init-keyword: ethernet:;
   constant slot arp-handler :: <arp-handler>, required-init-keyword: arp:;
-  constant slot v4-address :: <ipv4-address>, required-init-keyword: ipv4-address:;
-  constant slot netmask :: <integer>, required-init-keyword: netmask:;
+  slot v4-address :: <ipv4-address>, required-init-keyword: ipv4-address:;
+  slot netmask :: <integer>, required-init-keyword: netmask:;
   slot ip-send-socket :: <ethernet-socket>;
 end;
 
 define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-address>, payload :: <container-frame>);
-  if (broadcast-address(make(<cidr>, network-address: socket.v4-address, netmask: socket.netmask)) = destination)
+  if (destination = broadcast-address(make(<cidr>, network-address: socket.v4-address, netmask: socket.netmask)))
     send(socket.ip-send-socket, $broadcast-ethernet-address, payload);
   else
     let arp-entry = element(socket.arp-handler.arp-table, destination, default: #f);
@@ -241,11 +241,12 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
 
   ip-over-ethernet.arp-handler.send-socket := arp-socket;
 
-  ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
-    := make(<advertised-arp-entry>,
-            ip-address: ip-over-ethernet.v4-address,
-            mac-address: ip-over-ethernet.ethernet-layer.default-mac-address);
-
+  unless (ip-over-ethernet.v4-address = ipv4-address("0.0.0.0"))
+    ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
+      := make(<advertised-arp-entry>,
+              ip-address: ip-over-ethernet.v4-address,
+              mac-address: ip-over-ethernet.ethernet-layer.default-mac-address);
+  end;
 
   let ip-socket = create-socket(ip-over-ethernet.ethernet-layer, #x800);
   let ip-broadcast-socket = create-socket(ip-over-ethernet.ethernet-layer,
@@ -386,7 +387,8 @@ define method initialize (ip-layer :: <ip-layer>,
                             let (adapter, next-hop)
                               = find-adapter-for-forwarding(ip-layer, x.destination-address);
                             /* let mtu = find-mtu-for-destination(adapter, x.destination-address) * 8;
-                            let full-payload = assemble-frame(x.payload).packet;
+                            let unparsed-ip = assemble-frame(x);
+                            let full-payload = unparsed-ip.payload.packet;
                             let data-size = frame-size(x.payload);
                             if (mtu < data-size)
                               x.more-fragments := 1;
@@ -403,9 +405,9 @@ define method initialize (ip-layer :: <ip-layer>,
                             x.payload := parse-frame(<raw-frame>, subsequence(full-payload,
                                                                               start: x.fragment-offset * 8 * 8,
                                                                               length: modulo(data-size, mtu)));
-                            x.total-length := #f;
-                            let ip-frame = assemble-frame(x);
-                            fixup!(ip-frame); */
+                            x.total-length := #f; */
+                            //let ip-frame = assemble-frame(x);
+                            //fixup!(ip-frame);
                             send(adapter, next-hop, x);
                           end);
   connect(ip-layer.fan-in, cls);
@@ -488,8 +490,12 @@ define method create-socket (ip-layer :: <ip-layer>,
                            template-frame: template-frame);
   socket.demultiplexer-output
     := create-output-for-filter(ip-layer.demultiplexer,
-                                format-to-string("(ipv4.destination-address = %s) & (ipv4.protocol = %s)",
-                                                 source-address, protocol));
+                                if (source-address = ipv4-address("0.0.0.0"))
+                                  format-to-string("ipv4.protocol = %s", protocol);
+                                else
+                                  format-to-string("(ipv4.destination-address = %s) & (ipv4.protocol = %s)",
+                                                   source-address, protocol)
+                                end);
   connect(socket.demultiplexer-output, socket.decapsulator);
   connect(socket.completer, ip-layer.fan-in);
   socket;
@@ -705,9 +711,9 @@ end;
                                     
 
 define function build-ip-layer (ethernet-layer,
-                               #key ip-address :: <ipv4-address> = ipv4-address("192.168.0.69"),
-                               default-gateway :: <ipv4-address> = ipv4-address("192.168.0.1"),
-                               netmask :: <integer> = 24)
+                               #key ip-address :: false-or(<ipv4-address>),
+                               default-gateway :: false-or(<ipv4-address>),
+                               netmask :: <integer> = 0)
   let arp-handler = make(<arp-handler>);
   arp-handler.arp-table[ipv4-address("255.255.255.255")]
     := make(<static-arp-entry>,
@@ -718,12 +724,16 @@ define function build-ip-layer (ethernet-layer,
                               ethernet: ethernet-layer,
                               arp: arp-handler,
                               ip-layer: ip-layer,
-                              ipv4-address: ip-address,
+                              ipv4-address: ip-address | ipv4-address("0.0.0.0"),
                               netmask: netmask);
-  register-route(ip-layer, make(<next-hop-route>,
-                                next-hop: default-gateway,
-                                cidr: make(<cidr>, network-address: ipv4-address("0.0.0.0"), netmask: 0)));
-  send-gratitious-arp(arp-handler, ip-address);
+  if (default-gateway)
+    register-route(ip-layer, make(<next-hop-route>,
+                                  next-hop: default-gateway,
+                                  cidr: make(<cidr>, network-address: ipv4-address("0.0.0.0"), netmask: 0)));
+  end;
+  if (ip-address)
+    send-gratitious-arp(arp-handler, ip-address);
+  end;
   //let icmp-handler = make(<icmp-handler>);
   //let icmp-over-ip = make(<icmp-over-ip-adapter>,
   //                        ip-layer: ip-layer,

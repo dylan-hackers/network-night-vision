@@ -313,7 +313,7 @@ end;
 define module dhcp
   use common-dylan;
   use packetizer;
-  use ipv4, import: { <ipv4-address>, <udp-frame>, ipv4-address };
+  use ipv4, import: { <ipv4-address>, <udp-frame>, ipv4-address, operation };
   export <dhcp-message>,
     <dhcp-message-type-option>,
     <dhcp-requested-ip-address-option>,
@@ -321,7 +321,8 @@ define module dhcp
     message-type,
     dhcp-options,
     your-ip-address,
-    server-ip-address;
+    server-ip-address,
+    selected-server;
 end;
 
 define module dns

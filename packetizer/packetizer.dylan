@@ -486,13 +486,6 @@ define method assemble-frame-into (frame :: <container-frame>,
     end;
     let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset));
     frame.concrete-frame-fields[field.index].%start-offset := offset;
-    if (instance?(field.getter(frame), <decoded-container-frame>))
-      let unparsed = make(unparsed-class(field.getter(frame).object-class),
-                          cache: field.getter(frame),
-                          packet: subsequence(packet, start: offset, length: length),
-                          parent: frame);
-      field.setter(unparsed, frame);
-    end;
     if (field.dynamic-end)
       let real-frame-end = field.dynamic-end(frame);
       if (real-frame-end ~= length)
@@ -502,10 +495,21 @@ define method assemble-frame-into (frame :: <container-frame>,
       end;
       length := real-frame-end;
     end;
+    if ((field.static-length ~= $unknown-at-compile-time) & (field.static-length + offset ~= length))
+      length := offset + field.static-length;
+    end;
     if ((field.static-end ~= $unknown-at-compile-time) & (field.static-end ~= length))
       //format-out("Need static padding at end of %s : %d ~= %d\n",
       //           field.field-name, field.static-end, length);
-      offset := field.static-end;
+      length := field.static-end;
+    end;
+    frame.concrete-frame-fields[field.index].%end-offset := length;
+    if (instance?(field.getter(frame), <decoded-container-frame>))
+      let unparsed = make(unparsed-class(field.getter(frame).object-class),
+                          cache: field.getter(frame),
+                          packet: subsequence(packet, start: offset, length: length),
+                          parent: frame);
+      field.setter(unparsed, frame);
     end;
     offset := length;
   end;
@@ -713,7 +717,11 @@ define method get-field-size-aux-aux (frame :: <frame>,
                                       field :: <single-field>,
                                       frame-type :: subclass(<variable-size-untranslated-frame>))
  => (res :: <integer>)
-  frame-size(field.getter(frame))
+  if (field.static-length ~= $unknown-at-compile-time)
+    field.static-length
+  else
+    frame-size(field.getter(frame))
+  end
 end;
 
 define method get-field-size-aux-aux (frame :: <frame>,

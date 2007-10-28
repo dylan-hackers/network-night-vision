@@ -14,28 +14,42 @@ define method initialize (layer :: <udp-layer>,
 end;
 
 define class <udp-socket> (<socket>)
-  constant slot listen-port :: <integer>, required-init-keyword: port:;
-  constant slot listen-address :: false-or(<ipv4-address>), init-keyword: address:;
+  constant slot udp-layer :: <udp-layer>, required-init-keyword: layer:;
+  constant slot server-port :: <integer>, required-init-keyword: server-port:;
+  constant slot client-port :: <integer>, required-init-keyword: client-port:;
+  constant slot client-address :: false-or(<ipv4-address>), init-keyword: client-address:;
+  constant slot server-address :: false-or(<ipv4-address>), init-keyword: server-address:;
 end;
 
-define method create-socket (layer :: <udp-layer>, port :: <integer>, #key address)
+define method create-socket (layer :: <udp-layer>,
+                             server-port :: <integer>,
+                             #key client-port,
+                                  client-address,
+                                  server-address)
  => (socket :: <udp-socket>)
-  let socket = make(<udp-socket>, port: port, address: address);
-  let template-frame = make(<udp-frame>, source-port: port);
-  socket.completer := make(<completer>, template-frame: template-frame);
+  let cport = client-port | random(2 ^ 16 - 1);
+  let socket = make(<udp-socket>,
+                    client-port: cport,
+                    server-port: server-port,
+                    client-address: client-address,
+                    server-address: server-address,
+                    layer: layer);
   socket.demultiplexer-output
     := create-output-for-filter(layer.demultiplexer,
-                                format-to-string("udp.destination-port = %d", port));
+                                format-to-string("udp.destination-port = %d", cport));
   connect(socket.demultiplexer-output, socket.decapsulator);
-  connect(socket.completer, layer.fan-in);
   socket;
 end;
 
 define method send (socket :: <udp-socket>,
                     destination :: <ipv4-address>,
                     payload :: <container-frame>);
-  //push-data-aux(socket.completer.the-input, socket.completer, payload)
-end;                                  
+  let udp = make(<udp-frame>,
+                 payload: payload,
+                 source-port: socket.client-port,
+                 destination-port: socket.server-port);
+  send(socket.udp-layer.ip-send-socket, destination, udp);
+end;
 
 define function udp-begin()
   let ip-layer = init-ip-layer();

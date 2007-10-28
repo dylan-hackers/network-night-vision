@@ -17,7 +17,7 @@ define module packetizer
   export <stretchy-vector-subsequence>,
     <stretchy-byte-vector-subsequence>,
     subsequence,
-    start-index,
+    start-index, end-index,
     <out-of-bound-error>,
     encode-integer, decode-integer;
 

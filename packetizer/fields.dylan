@@ -104,7 +104,11 @@ define class <layering-field> (<single-field>)
 end;
 
 define method static-field-size (field :: <single-field>) => (res :: <integer-or-unknown>)
-  field.type.field-size
+  if (field.static-length ~= $unknown-at-compile-time)
+    field.static-length
+  else
+    field.type.field-size
+  end
 end;
 
 define class <variably-typed-field> (<field>)
