@@ -31,7 +31,10 @@ define method create-socket (layer :: <udp-layer>, port :: <integer>, #key addre
   socket;
 end;
 
-define method send (socket :: <udp-socket>, destination :: <ipv4-address>, payload :: <container-frame>);
+define method send (socket :: <udp-socket>,
+                    destination :: <ipv4-address>,
+                    payload :: <container-frame>);
+  //push-data-aux(socket.completer.the-input, socket.completer, payload)
 end;                                  
 
 define function udp-begin()

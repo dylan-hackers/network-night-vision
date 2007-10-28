@@ -13,7 +13,9 @@ define library layer
   use vector-table;
   use system, import: { date };
   use tcp-state-machine;
+  use state-machine;
   use protocols;
+  use dhcp-state-machine;
 
   // Add any more module exports here.
   export layer;

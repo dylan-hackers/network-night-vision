@@ -17,9 +17,12 @@ define module layer
   use byte-vector;
   use date, import: {<date>, current-date };
   use tcp-state-machine;
+  use state-machine;
   use simple-random;
   use streams;
   use ipv4;
+  use dhcp;
+  use dhcp-state-machine;
   use tcp;
   use icmp;
   use ethernet;
