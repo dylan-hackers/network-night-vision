@@ -31,53 +31,57 @@ define method initialize (layer :: <tcp-layer>,
                           #next next-method, #rest rest, #key, #all-keys)
   next-method();
   let socket = create-socket(layer.ip-layer, 6);
-  let cls-node = make(<closure-node>,
-                      closure: method(x)
-                                 let id = generate-id(x);
-                                 let connection = element(layer.connection-tracking, id, default: #f);
-                                 if (connection)
-                                   process-data(connection, x);
-                                 elseif (x.syn = 1)
-                                   let socket = find-listener-socket(layer.sockets, x.destination-port);
-                                   if (socket)
-                                     let connection = make(<tcp-connection>,
-                                                           tcp-layer: layer,
-                                                           acknowledgement-number: $transform-from-bv(x.sequence-number),
-                                                           source-port: x.destination-port,
-                                                           destination-port: x.source-port,
-                                                           source-address: x.parent.destination-address,
-                                                           destination-address: x.parent.source-address);
-                                     layer.connection-tracking[id] := connection;
-                                     passive-open(connection);
-                                     with-lock (socket.listener-lock)
-                                       push-last(socket.connections, connection);
-                                       release(socket.notification);
-                                     end;
-                                     process-data(connection, x);
-                                   else
-                                     let ack = $transform-from-bv(x.sequence-number);
-                                     send(layer.ip-send-socket,
-                                          x.parent.source-address,
-                                          make(<tcp-frame>,
-                                               source-port: x.destination-port,
-                                               destination-port: x.source-port,
-                                               ack: 1, rst: 1,
-                                               acknowledgement-number: $transform-to-bv(ack + 1),
-                                               sequence-number: $transform-to-bv(0.0s0)));
-                                   end;
-                                 else
-                                   let ack = $transform-from-bv(x.sequence-number);
-                                   send(layer.ip-send-socket,
-                                        x.parent.source-address,
-                                        make(<tcp-frame>,
-                                             source-port: x.destination-port,
-                                             destination-port: x.source-port,
-                                             ack: 1, rst: 1,
-                                             acknowledgement-number: $transform-to-bv(ack + 1),
-                                             sequence-number: $transform-to-bv(0.0s0)));
-                                 end;
-                               end);
-                                 
+  let cls-node
+    = make(<closure-node>,
+           closure: method(x)
+                        let id = generate-id(x);
+                        let connection
+                          = element(layer.connection-tracking, id, default: #f);
+                        if (connection)
+                          process-data(connection, x);
+                        elseif (x.syn = 1)
+                          let socket
+                            = find-listener-socket(layer.sockets, x.destination-port);
+                          if (socket)
+                            let connection
+                              = make(<tcp-connection>,
+                                     tcp-layer: layer,
+                                     acknowledgement-number: $transform-from-bv(x.sequence-number),
+                                     source-port: x.destination-port,
+                                     destination-port: x.source-port,
+                                     source-address: x.parent.destination-address,
+                                     destination-address: x.parent.source-address);
+                            layer.connection-tracking[id] := connection;
+                            passive-open(connection);
+                            with-lock (socket.listener-lock)
+                              push-last(socket.connections, connection);
+                              release(socket.notification);
+                            end;
+                            process-data(connection, x);
+                          else
+                            let ack = $transform-from-bv(x.sequence-number);
+                            send(layer.ip-send-socket,
+                                 x.parent.source-address,
+                                 make(<tcp-frame>,
+                                      source-port: x.destination-port,
+                                      destination-port: x.source-port,
+                                      ack: 1, rst: 1,
+                                      acknowledgement-number: $transform-to-bv(ack + 1),
+                                      sequence-number: $transform-to-bv(0.0s0)));
+                          end;
+                        else
+                          let ack = $transform-from-bv(x.sequence-number);
+                          send(layer.ip-send-socket,
+                               x.parent.source-address,
+                               make(<tcp-frame>,
+                                    source-port: x.destination-port,
+                                    destination-port: x.source-port,
+                                    ack: 1, rst: 1,
+                                    acknowledgement-number: $transform-to-bv(ack + 1),
+                                    sequence-number: $transform-to-bv(0.0s0)));
+                        end;
+                    end);
+
   connect(socket.decapsulator, cls-node);
   layer.ip-send-socket := socket;
 end;
