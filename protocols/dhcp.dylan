@@ -10,17 +10,24 @@ define protocol dhcp-message (container-frame)
   field hardware-address-length :: <unsigned-byte> = 6;
   field hops :: <unsigned-byte> = 0;
   field transaction-id :: <big-endian-unsigned-integer-4byte>;
-  field seconds-since-address-acquisition :: <2byte-big-endian-unsigned-integer>;
-  field broadcast-flag :: <1bit-unsigned-integer>;
+  field seconds-since-address-acquisition
+    :: <2byte-big-endian-unsigned-integer> = 0;
+  field broadcast-flag :: <1bit-unsigned-integer> = 0;
   field reserved :: <15bit-unsigned-integer> = 0;
-  field client-ip-address :: <ipv4-address>;
-  field your-ip-address :: <ipv4-address>;
-  field server-ip-address :: <ipv4-address>;
-  field relay-agent-ip-address :: <ipv4-address>;
-  field client-hardware-address :: <raw-frame>, static-length: 16 * 8;
-  field server-name :: <externally-delimited-string>, static-length: 64 * 8;
-  field boot-file-name :: <externally-delimited-string>, static-length: 128 * 8;
-  field magic-cookie :: <big-endian-unsigned-integer-4byte>; //#x63 #x82 #x53 #x63
+  field client-ip-address :: <ipv4-address> = ipv4-address("0.0.0.0");
+  field your-ip-address :: <ipv4-address> = ipv4-address("0.0.0.0");
+  field server-ip-address :: <ipv4-address> = ipv4-address("0.0.0.0");
+  field relay-agent-ip-address :: <ipv4-address> = ipv4-address("0.0.0.0");
+  field client-hardware-address :: <raw-frame> = $empty-raw-frame,
+    static-length: 16 * 8;
+  field server-name :: <externally-delimited-string>
+    = $empty-externally-delimited-string,
+    static-length: 64 * 8;
+  field boot-file-name :: <externally-delimited-string>
+    = $empty-externally-delimited-string,
+    static-length: 128 * 8;
+  field magic-cookie :: <big-endian-unsigned-integer-4byte>
+    = big-endian-unsigned-integer-4byte(#(#x63, #x82, #x53, #x63));
   repeated field dhcp-options :: <dhcp-option>,
     reached-end?: instance?(frame, <dhcp-end-option>);
 end;

@@ -709,6 +709,10 @@ define function build-ip-layer (ethernet-layer,
                                default-gateway :: <ipv4-address> = ipv4-address("192.168.0.1"),
                                netmask :: <integer> = 24)
   let arp-handler = make(<arp-handler>);
+  arp-handler.arp-table[ipv4-address("255.255.255.255")]
+    := make(<static-arp-entry>,
+            ip-address: ipv4-address("255.255.255.255"),
+            mac-address: mac-address("00:00:00:00:00:00"));
   let ip-layer = make(<ip-layer>);
   let ip-over-ethernet = make(<ip-over-ethernet-adapter>,
                               ethernet: ethernet-layer,
@@ -726,8 +730,3 @@ define function build-ip-layer (ethernet-layer,
   //                        icmp-handler: icmp-handler);
   values(ip-layer, ip-over-ethernet);
 end;
-
-
-
-
-

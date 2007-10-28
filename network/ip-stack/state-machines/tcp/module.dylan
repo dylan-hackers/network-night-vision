@@ -9,6 +9,7 @@ define module tcp-state-machine
   use format-out;
   use standard-io;
   use streams, import: { read-line };
+  use state-machine;
 
   export <tcp-dingens>, state, lock;
 
@@ -17,6 +18,6 @@ define module tcp-state-machine
     <fin-wait1>, <fin-wait2>, <closing>,
     <time-wait>, <close-wait>, <last-ack>;
 
-  export <tcp-events>, state-transition, process-event;
+  export <tcp-events>;
 
 end module tcp-state-machine;

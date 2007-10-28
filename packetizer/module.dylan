@@ -43,6 +43,8 @@ define module packetizer
 
   export <variable-size-byte-vector>, <externally-delimited-string>,
     <raw-frame>;
+  
+  export $empty-externally-delimited-string, $empty-raw-frame;
 
   //XXX: evil hacks
   export float-to-byte-vector-le, byte-vector-to-float-le,

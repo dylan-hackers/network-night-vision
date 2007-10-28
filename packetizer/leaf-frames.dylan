@@ -433,6 +433,9 @@ end;
 define class <externally-delimited-string> (<variable-size-byte-vector>)
 end;
 
+define constant $empty-externally-delimited-string
+  = make(<externally-delimited-string>, data: make(<byte-sequence>, capacity: 0));
+
 define method as (class == <string>, frame :: <externally-delimited-string>)
  => (res :: <string>)
   let res = make(<string>, size: byte-offset(frame-size(frame)));
@@ -451,6 +454,9 @@ end;
 
 define class <raw-frame> (<variable-size-byte-vector>)
 end;
+
+define constant $empty-raw-frame
+  = make(<raw-frame>, data: make(<byte-sequence>, capacity: 0));
 
 define method as (class == <string>, frame :: <raw-frame>) => (res :: <string>)
   let out-stream = make(<string-stream>, direction: #"output");
