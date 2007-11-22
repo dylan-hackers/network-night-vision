@@ -380,15 +380,16 @@ define method find-frame-at-offset (frame :: <leaf-frame>, offset :: <integer>)
 end;
 
 define function highlight-hex-dump (mframe :: <gui-sniffer-frame>)
-/*  let packet = mframe.packet-table.gadget-value;
+  format-out("FOOOOOOO\n");
+  let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
 
   let start-highlight = compute-absolute-offset(selected-packet, packet.real-frame);
   let end-highlight = start-highlight + compute-length(selected-packet);
-*/
-  //set-highlight(mframe, start-highlight, end-highlight);
-  //redisplay-window(mframe.packet-hex-dump);
+  format-out("start highlight %d end highlight %d\n", start-highlight, end-highlight);
+  set-highlight(mframe, start-highlight, end-highlight);
+  redisplay-window(mframe.packet-hex-dump);
 
 end;
 
@@ -477,11 +478,11 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          label-key: safe(frame-print-label),
          children-generator: safe(frame-children-generator),
          children-predicate: safe-p(frame-children-predicate),
-         text-style: $text-style); //,
-//         value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
+         text-style: $text-style,
+         value-changed-callback: safe-p(method(x) highlight-hex-dump(frame) end));
 
   pane packet-hex-dump (frame)
-/*    make(<deuce-pane>,
+    make(<deuce-pane>,
          frame: frame,
          read-only?: #t,
          tab-stop?: #t,
@@ -489,14 +490,14 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          columns: 100,
          scroll-bars: #"vertical",
          text-style: $text-style);
-*/
+/*
        make(<text-editor>,
             read-only?: #t,
             tab-stop?: #t,
             lines: 20,
             columns: 100,
 //            scroll-bars: #"vertical",
-            text-style: make(<text-style>, family: #"fix"));
+            text-style: make(<text-style>, family: #"fix")); */
   pane nnv-shell (frame)
     make-nnv-shell-pane(context: frame);
 
@@ -534,8 +535,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
                                          //scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump,
-                                           frame.nnv-shell
+                                           frame.packet-hex-dump
+//                                           frame.nnv-shell
                                          //end
                                          ));
                  end;
@@ -1010,10 +1011,10 @@ define function main()
   initialize-icons();
   let gui-sniffer = make(<gui-sniffer-frame>);
   set-frame-size(gui-sniffer, 1024, 768);
-//  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
-//  deuce/*editor-frame* := gui-sniffer;
-//  deuce/*buffer* := deuce/make-initial-buffer();
-//  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
+  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
+  deuce/*editor-frame* := gui-sniffer;
+  deuce/*buffer* := deuce/make-initial-buffer();
+  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
   start-frame(gui-sniffer);
