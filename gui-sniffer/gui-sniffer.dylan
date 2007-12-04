@@ -269,11 +269,8 @@ end;
 define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
-//  current-packet & show-hexdump(frame, current-packet.packet);
-  current-packet & show-packet-hexdump(frame, current-packet);
-//  redisplay-window(frame.packet-hex-dump);
-//  note-gadget-text-changed(window);
-//  note-gadget-value-changed(window);
+  current-packet & show-hexdump(frame, current-packet.packet);
+  redisplay-window(frame.packet-hex-dump);
 end;
 
 define function show-packet-hexdump
@@ -421,12 +418,15 @@ end;
 
 define method safe-p(func :: <function>)
   method(#rest args)
-    block()
+    block(return)
+      let handler <error> = method(condition, next-handler)
+                              if(*debugging?*)
+                                next-handler()
+                              else
+                                return()
+                              end;
+                            end;
       apply(func, args)
-    exception (e :: <error>)
-      if(*debugging?*)
-        break()
-      end
     end
   end
 end;
@@ -1013,7 +1013,7 @@ define function main()
   set-frame-size(gui-sniffer, 1024, 768);
   deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
   deuce/*editor-frame* := gui-sniffer;
-  deuce/*buffer* := deuce/make-initial-buffer();
+  deuce/*buffer* := deuce/make-initial-buffer(); //empty-buffer(<non-file-buffer>, name: "Network Night Vision", editor: frame-editor(gui-sniffer));
   deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
