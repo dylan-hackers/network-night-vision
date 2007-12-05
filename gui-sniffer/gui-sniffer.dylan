@@ -404,14 +404,16 @@ define variable *debugging?* = #t;
 
 define method safe(func :: <function>)
   method(#rest args)
-    block()
+    block(return)
+      let handler <error>
+        = method(condition, next-handler)
+              if (*debugging?*)
+                next-handler()
+              else
+                return("broken")
+              end;
+          end;
       apply(func, args)
-    exception (e :: <error>)
-      if(*debugging?*)
-        break()
-      else
-        "broken"
-      end
     end
   end
 end;
@@ -419,13 +421,14 @@ end;
 define method safe-p(func :: <function>)
   method(#rest args)
     block(return)
-      let handler <error> = method(condition, next-handler)
-                              if(*debugging?*)
-                                next-handler()
-                              else
-                                return()
-                              end;
-                            end;
+      let handler <error>
+        = method(condition, next-handler)
+              if(*debugging?*)
+                next-handler()
+              else
+                return()
+              end;
+          end;
       apply(func, args)
     end
   end
@@ -1013,7 +1016,7 @@ define function main()
   set-frame-size(gui-sniffer, 1024, 768);
   deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
   deuce/*editor-frame* := gui-sniffer;
-  deuce/*buffer* := deuce/make-initial-buffer(); //empty-buffer(<non-file-buffer>, name: "Network Night Vision", editor: frame-editor(gui-sniffer));
+  deuce/*buffer* := deuce/make-initial-buffer();
   deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
