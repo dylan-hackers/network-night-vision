@@ -6,6 +6,8 @@ files:	library
 	hex-view
 	command-line
 	gui-sniffer
+	commands
+	main
 base-address:	0x63FE0000
 start-function:	main
 linker-options:	$(guilflags)

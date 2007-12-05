@@ -538,8 +538,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
                                          //scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump
-//                                           frame.nnv-shell
+                                           frame.packet-hex-dump,
+                                           frame.nnv-shell
                                          //end
                                          ));
                  end;
@@ -822,7 +822,7 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     let ethernet-socket = create-raw-socket(ethernet-layer);
     connect(ethernet-socket, frame);
     connect(frame, ethernet-socket);
-    frame.ip-layer := build-ip-layer(ethernet-layer);
+    frame.ip-layer := build-ip-layer(ethernet-layer, ip-address: ipv4-address("192.168.0.69"));
     reinit-gui(frame);
     frame.ethernet-layer := ethernet-layer;
     frame.listening-socket := ethernet-socket;
@@ -942,88 +942,9 @@ define function initialize-icons ()
 */
 end;
 
-define class <nnvhelp-command> (<basic-command>)
-end;
 
 
-define command-line nnvhelp => <nnvhelp-command>
-    (summary: "Help",
-     documentation: "You expected more help, right?")
-end;
 
-define method do-execute-command (context :: <nnv-context>, command :: <nnvhelp-command>)
- => ()
-  let stream = context.context-server.server-output-stream;
-  format(stream, "Yeah, right!\n");
-end;
-
-define method parse-next-argument
-    (context :: <nnv-context>, type == <ipv4-address>,
-     text :: <string>,
-     #key start :: <integer> = 0, end: stop = #f)
- => (value :: <ipv4-address>, next-index :: <integer>)
-   block (return)
-     let (name, next-index)
-       = parse-next-word(text, start: start, end: stop);
-     if (name)
-       values(ipv4-address(name), next-index)
-     else
-       parse-error("Missing argument.")
-     end
-   exception (e :: <condition>)
-     parse-error("Not a valid target.")
-   end;
-end;
-
-define class <ping-command> (<basic-command>)
-  constant slot %target :: <ipv4-address>, required-init-keyword: target:;
-end;
-
-define command-line ping => <ping-command>
-    (summary: "Ping host.",
-     documentation: "Sends an ICMP Echo Request to the specified target address.")
-  argument target :: <ipv4-address> = "target host address";
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <ping-command>)
-  let target = command.%target;
-  let icmp = icmp-frame(code: 0, icmp-type: 8,
-                        payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
-  send(context.nnv-context.ip-layer, target, icmp);
-end;
-
-define command-group nnv
-    (summary: "Network Night Vision commands",
-     documentation: "The set of commands provided by Network Night Vision.")
-  command nnvhelp;
-  command ping;
-  group basic;
-end command-group;
-
-define method context-command-group
-    (context :: <nnv-context>) => (group :: <command-group>)
-  $nnv-command-group
-end method context-command-group;
-
-define method context-command-prefix
-    (context :: <nnv-context>) => (prefix :: <character>)
-  '>'
-end method context-command-prefix;
-
-define function main()
-  initialize-icons();
-  let gui-sniffer = make(<gui-sniffer-frame>);
-  set-frame-size(gui-sniffer, 1024, 768);
-  deuce/frame-window(gui-sniffer) := gui-sniffer.packet-hex-dump;
-  deuce/*editor-frame* := gui-sniffer;
-  deuce/*buffer* := deuce/make-initial-buffer();
-  deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
-  command-enabled?(close-interface, gui-sniffer) := #f;
-  gadget-enabled?(gui-sniffer.stop-button) := #f;
-  start-frame(gui-sniffer);
-end;
-
-main()
 
 
 
