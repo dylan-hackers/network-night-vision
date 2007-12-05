@@ -131,7 +131,61 @@ define method make-command-line-server
        profile-commands?: profile-commands?)
 end method make-command-line-server;
 
+//--- Need a more modular way to do this (says the comment I copy&pasted...)
+define constant $prompt-image-offset :: <integer> =  4;
 
+define sealed method display-line
+    (line :: <text-line>, mode :: <nnv-shell-mode>, window :: <basic-window>,
+     x :: <integer>, y :: <integer>,
+     #key start: _start = 0, end: _end = line-length(line), align-y = #"top") => ()
+  let section = line-section(line);
+  let image = case
+		~shell-section?(section) =>
+		  #f;
+		line == section-start-line(section) =>
+		  $prompt-arrow;
+		line == section-output-line(section) =>
+		  $values-arrow;
+		otherwise =>
+		  #f;
+	      end;
+  when (image & _start = 0)	// no icon on continuation lines
+    let image-y = if (align-y == #"top") y else y - $prompt-image-height + 2 end;
+    draw-image(window, standard-images(window, image), x, image-y + $prompt-image-offset)
+  end;
+  next-method(line, mode, window, x + $prompt-image-width, y,
+	      start: _start, end: _end, align-y: align-y)
+end method display-line;
+
+define sealed method line-size
+    (line :: <text-line>, mode :: <nnv-shell-mode>, window :: <basic-window>,
+     #key start: _start, end: _end)
+ => (width :: <integer>, height :: <integer>, baseline :: <integer>)
+  ignore(_start, _end);
+  let (width, height, baseline) = next-method();
+  values(width + $prompt-image-width, height, baseline)
+end method line-size;
+
+define sealed method position->index
+    (line :: <text-line>, mode :: <nnv-shell-mode>, window :: <basic-window>,
+     x :: <integer>)
+ => (index :: <integer>)
+  let x = x - $prompt-image-width;
+  if (x < 0) 0 else next-method(line, mode, window, x) end
+end method position->index;
+
+define sealed method index->position
+    (line :: <text-line>, mode :: <nnv-shell-mode>, window :: <basic-window>,
+     index :: <integer>)
+ => (x :: <integer>)
+  next-method(line, mode, window, index)
+end method index->position;
+
+define sealed method line-margin
+    (line :: <text-line>, mode :: <nnv-shell-mode>, window :: <basic-window>)
+ => (margin :: <integer>)
+  $prompt-image-width
+end method line-margin;
 
 
 

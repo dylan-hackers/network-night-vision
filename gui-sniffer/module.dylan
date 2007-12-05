@@ -38,6 +38,7 @@ define module gui-sniffer
   use duim-deuce;
   use format;
   use format-out;
+  use standard-io;
   use streams;
   use date;
   use file-system;

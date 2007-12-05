@@ -10,6 +10,10 @@ define function main()
   deuce/select-buffer(frame-window(gui-sniffer), deuce/*buffer*);
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
+  frame-mapped?(gui-sniffer) := #t;
+  *standard-output* := gui-sniffer.nnv-shell-pane.command-line-server.server-output-stream;
+  write(*standard-output*, $about-text);
+  new-line(*standard-output*);
   start-frame(gui-sniffer);
 end;
 

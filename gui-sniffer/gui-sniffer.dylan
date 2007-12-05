@@ -377,7 +377,6 @@ define method find-frame-at-offset (frame :: <leaf-frame>, offset :: <integer>)
 end;
 
 define function highlight-hex-dump (mframe :: <gui-sniffer-frame>)
-  format-out("FOOOOOOO\n");
   let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
   let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
@@ -537,10 +536,12 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                    make(<column-splitter>,
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
-                                         //scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump,
+                                         scrolling (scroll-bars: #"both")
+                                           frame.packet-hex-dump
+                                         end,
+                                         scrolling (scroll-bars: #"both")
                                            frame.nnv-shell
-                                         //end
+                                         end
                                          ));
                  end;
 
@@ -882,7 +883,7 @@ define frame <about-box> (<dialog-frame>)
     make(<text-editor>, text: $about-text, read-only?: #t, lines: 5, columns: 50);
   layout (frame)
     frame.splash-screen-pane;
-  keyword title: = "About Network Night Vision 0.0.1";
+  keyword title: = "About Network Night Vision 0.0.2";
 end;
 
 
@@ -919,7 +920,11 @@ define method push-data-aux (input :: <push-input>,
   with-lock($packet-list-lock)
     add!(node.network-frames, frame-with-meta);
     if (~ node.filter-expression | matches?(frame, node.filter-expression))
-      add-item(node.packet-table, make-item(node.packet-table, frame-with-meta))
+      add-item(node.packet-table, make-item(node.packet-table, frame-with-meta));
+      // if (always-scroll)
+      let (left, top, right, bottom) = box-edges(node.packet-table);
+      let (x, y) = scroll-position(node.packet-table);
+      set-scroll-position(node.packet-table, x, bottom); 
     end;
   end;
 end;
