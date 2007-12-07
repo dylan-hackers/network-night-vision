@@ -14,7 +14,7 @@ define method parse-next-argument
        parse-error("Missing argument.")
      end
    exception (e :: <condition>)
-     parse-error("Not a valid target.")
+     parse-error("Not a valid IP address.")
    end;
 end;
 
@@ -32,8 +32,22 @@ define method parse-next-argument
        parse-error("Missing argument.")
      end
    exception (e :: <condition>)
-     parse-error("Not a valid target.")
+     parse-error("Not a valid CIDR.")
    end;
+end;
+
+define method parse-next-argument
+    (context :: <nnv-context>, type == <filter-expression>,
+     text :: <string>,
+     #key start :: <integer> = 0, end: stop = #f)
+ => (value :: <filter-expression>, next-index :: <integer>)
+  block (return)
+    let (filter-string, next-index)
+      = parse-next-word(text, start: start, end: stop, separators: #['\n']);
+     values(parse-filter(filter-string), next-index)
+  exception (e :: <condition>)
+    parse-error("Not a valid filter expression.")
+  end;
 end;
 
 define class <ping-command> (<basic-command>)
@@ -149,6 +163,35 @@ define method do-execute-command (context :: <nnv-context>, command :: <add-rout
   add-next-hop-route(context.nnv-context.ip-layer, command.%gateway, command.%network);
 end;
 
+define class <delete-route-command> (<basic-command>)
+  constant slot %network :: <cidr>, required-init-keyword: network:;
+end;
+
+define command-line delete-route => <delete-route-command>
+  (summary: "Delete route.",
+   documentation: "Deletes route from forwarding table")
+  argument network :: <cidr> = "Network";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <delete-route-command>)
+  delete-route(context.nnv-context.ip-layer, command.%network);
+end;
+
+define class <filter-command> (<basic-command>)
+  constant slot %filter-expression :: <filter-expression>, required-init-keyword: expression:;
+end;
+
+define command-line filter => <filter-command>
+  (summary: "Set filter for packet display",
+   documentation:  "Sets the filter for display of packets in top pane")
+  argument expression :: <filter-expression> = "The filter to apply"
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <filter-command>)
+  context.nnv-context.filter-field.gadget-value := format-to-string("%=", command.%filter-expression);
+  apply-filter(context.nnv-context);
+end;
+
 define command-group nnv
     (summary: "Network Night Vision commands",
      documentation: "The set of commands provided by Network Night Vision.")
@@ -156,8 +199,10 @@ define command-group nnv
   command dhcp-client;
   command set-ip-address;
   command add-route;
+  command delete-route;
   command show-arp-table;
   command show-forwarding-table;
+  command filter;
   group basic;
   group property;
 end command-group;
