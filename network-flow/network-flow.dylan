@@ -59,13 +59,16 @@ define method push-data-aux (input :: <push-input>,
 end;
 
 define open class <fan-in> (<single-push-output-node>)
-  slot inputs :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot inputs :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot %lock :: <lock> = make(<lock>);
 end;
 
 define method create-input
   (fan-in :: <fan-in>)
   let res = make(<push-input>, node: fan-in);
-  add!(fan-in.inputs, res);
+  with-lock(fan-in.%lock)
+    add!(fan-in.inputs, res);
+  end;
   res;
 end;
 
@@ -76,7 +79,9 @@ end;
 define method disconnect (output :: <object>, fan-in :: <fan-in>)
   let in = output.connected-input;
   disconnect(output, in);
-  remove!(fan-in.inputs, in);
+  with-lock(fan-in.%lock)
+    remove!(fan-in.inputs, in);
+  end
 end;
 
 define method push-data-aux (input :: <push-input>,
@@ -85,13 +90,16 @@ define method push-data-aux (input :: <push-input>,
   push-data(node.the-output, frame);
 end;
 define class <fan-out> (<single-push-input-node>)
-  slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot %lock :: <lock> = make(<lock>);
 end;
 
 define method create-output
  (fan-out :: <fan-out>)
   let res = make(<push-output>, node: fan-out);
-  add!(fan-out.outputs, res);
+  with-lock(fan-out.%lock)
+    add!(fan-out.outputs, res);
+  end;
   res;
 end;
 
@@ -102,12 +110,18 @@ end;
 define method disconnect (fan-out :: <fan-out>, input :: <object>)
   let out = input.connected-output;
   disconnect(out, input);
-  remove!(fan-out.outputs, out);
+  with-lock(fan-out.%lock)
+    remove!(fan-out.outputs, out);
+  end;
 end;
 define method push-data-aux (input :: <push-input>,
                              node :: <fan-out>,
                              frame :: <frame>)
-  for (output in node.outputs)
+  let the-outputs =
+    with-lock(node.%lock)
+      copy-sequence(node.outputs)
+    end;
+  for (output in the-outputs)
     push-data(output, frame)
   end;
 end;
@@ -119,6 +133,7 @@ end;
 
 define class <demultiplexer> (<single-push-input-node>)
   slot outputs :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot %lock :: <lock> = make(<lock>);
 end;
 
 define method create-output-for-filter
@@ -133,14 +148,28 @@ define method create-output-for-filter
   let output = make(<filtered-push-output>,
                     frame-filter: filter,
                     node: demux);
-  add!(demux.outputs, output);
+  with-lock(demux.%lock)
+    add!(demux.outputs, output);
+  end;
   output
+end;
+
+define method remove-output
+  (demux :: <demultiplexer>, filter-output :: <filtered-push-output>)
+ => ();
+  with-lock(demux.%lock)
+    remove!(demux.outputs, filter-output);
+  end;
 end;
 
 define method push-data-aux (input :: <push-input>,
                              node :: <demultiplexer>,
                              frame :: <frame>)
-  for (output in node.outputs)
+  let the-outputs =
+    with-lock(node.%lock)
+      copy-sequence(node.outputs)
+    end;
+  for (output in the-outputs)
     if(matches?(frame, output.frame-filter))
       push-data(output, frame)
     end

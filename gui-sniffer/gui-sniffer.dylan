@@ -440,6 +440,8 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   slot filter-expression = #f;
   slot ethernet-layer = #f;
   slot ip-layer = #f;
+  slot ip-over-ethernet-adapter = #f;
+  slot udp-layer = #f;
   slot listening-socket = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
   slot filter-history :: <list> = make(<list>);
@@ -817,14 +819,17 @@ end;
 define method open-interface (frame :: <gui-sniffer-frame>)
   let (interface-name, promiscuous?) = prompt-for-interface(owner: frame);
   if (interface-name)
+    reinit-gui(frame);
     format-out("Listening on interface %=\n", interface-name);
     let ethernet-layer
       = build-ethernet-layer(interface-name, promiscuous?: promiscuous?);
     let ethernet-socket = create-raw-socket(ethernet-layer);
     connect(ethernet-socket, frame);
     connect(frame, ethernet-socket);
-    frame.ip-layer := build-ip-layer(ethernet-layer, ip-address: ipv4-address("192.168.0.69"));
-    reinit-gui(frame);
+    let (layer, adapter) = build-ip-layer(ethernet-layer);
+    frame.ip-layer := layer;
+    frame.ip-over-ethernet-adapter := adapter;
+    frame.udp-layer := build-udp-layer(frame.ip-layer);
     frame.ethernet-layer := ethernet-layer;
     frame.listening-socket := ethernet-socket;
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);

@@ -2,6 +2,7 @@ module: layer
 
 define class <dhcp-client> (<filter>, <dhcp-client-state>)
   slot send-socket, init-keyword: send-socket:;
+  slot received-response-callback = identity, init-keyword: response-callback:;
 end;
 
 define method push-data-aux (input :: <push-input>,
@@ -22,7 +23,8 @@ define method push-data-aux (input :: <push-input>,
     if (frame.operation = 2)
       if (message-type-frame.message-type = 5) //ack
         process-event(node, #"receive-ack");
-        format-out("received ack %s\n", as(<string>, frame));
+        node.received-response-callback(frame);
+        //format-out("received ack %s\n", as(<string>, frame));
       elseif (message-type-frame.message-type = 6) //nak
         process-event(node, #"receive-nak")
       end

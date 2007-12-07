@@ -57,6 +57,8 @@ define module gui-sniffer
   use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port,
                       acknowledgement-number, sequence-number, ipv4-address, <ipv4-address> };
   use icmp, import: { <icmp-frame>, icmp-frame };
+  use dhcp, import: { <dhcp-message>, <dhcp-subnet-mask>, <dhcp-router-option>, subnet-mask, addresses, your-ip-address };
+  use cidr;
   use tcp;
   use ipv6;
   // Add binding exports here.

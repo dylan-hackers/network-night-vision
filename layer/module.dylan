@@ -17,7 +17,7 @@ define module layer
   use byte-vector;
   use date, import: {<date>, current-date };
   use tcp-state-machine;
-  use state-machine;
+  use state-machine, export: { process-event };
   use simple-random;
   use streams;
   use ipv4;
@@ -28,12 +28,16 @@ define module layer
   use ethernet;
   use dns, exclude: { ipv4-address };
   use cidr;
+  use print;
   // Add binding exports here.
 
   export <ethernet-layer>,
     ethernet-interface,
     <ip-over-ethernet-adapter>,
+    arp-handler,
+    print-arp-table,
     <ip-layer>,
+    print-forwarding-table,
     <icmp-handler>,
     <icmp-over-ip-adapter>,
     <arp-handler>,
@@ -45,8 +49,14 @@ define module layer
     build-ethernet-layer,
     build-ip-layer,
     send-socket,
-    send;
+    send,
+    set-ip-address,
+    delete-route,
+    add-next-hop-route,
+    demultiplexer; // HACK: remove me!
 
-  export <udp-layer>,
+  export <udp-layer>, build-udp-layer,
     <tcp-layer>;
+
+  export <dhcp-client>, find-option;
 end module layer;

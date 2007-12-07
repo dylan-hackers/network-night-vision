@@ -10,6 +10,23 @@ define class <cidr> (<object>)
     required-init-keyword: netmask:;
 end class;
 
+define method base-network-address (cidr :: <cidr>)
+ => (ip-address :: <ipv4-address>)
+  let (bytes, bits) = truncate/(cidr.cidr-netmask, 8);
+  let data-vector = make(<vector>, size: 4, fill: 0);
+  for (i from 0 below bytes)
+    data-vector[i] := cidr.cidr-network-address.data[i];
+  end;
+  if ((bytes < 4) & (bits > 0))
+    let mask = logand(#xff, ash(#xff, 8 - bits));
+    data-vector[bytes] := logand(mask, cidr.cidr-network-address.data[bytes]);
+  end;
+  parse-frame(<ipv4-address>, data-vector)
+end;
+
+define method \= (a :: <cidr>, b :: <cidr>) => (res :: <boolean>)
+  (a.cidr-netmask == b.cidr-netmask) & (base-network-address(a) = base-network-address(b))
+end;
 define method ip-in-cidr? (cidr :: <cidr>, ipv4-address :: <ipv4-address>)
   let (bytes, bits) = truncate/(cidr.cidr-netmask, 8);
   block(ret)
@@ -38,12 +55,17 @@ define method as (class == <string>, cidr :: <cidr>)
               integer-to-string(cidr.cidr-netmask));
 end;
 
-define method as (class == <cidr>, string :: <string>)
+define method as(class == <cidr>, string :: <string>)
  => (res :: <cidr>)
-  let (ip, mask) = apply(values, split(string, '/'));
-  make(<cidr>,
-       network-address: ipv4-address(ip),
-       netmask: string-to-integer(mask));
+  let address-and-mask = split(string, '/');
+  unless (address-and-mask.size = 2)
+    signal(make(<error>, error: "CIDR syntax wrong IP/Netmask[prefixlen]"));
+  end;
+  let network-address = address-and-mask[0];
+  let netmask = address-and-mask[1];
+  network-address := ipv4-address(network-address);
+  netmask := string-to-integer(netmask);
+  make(<cidr>, network-address: network-address, netmask: netmask)
 end;
 
 define method broadcast-address (cidr :: <cidr>) => (res :: <ipv4-address>);

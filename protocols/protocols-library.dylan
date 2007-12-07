@@ -318,6 +318,10 @@ define module dhcp
     <dhcp-message-type-option>,
     <dhcp-requested-ip-address-option>,
     <dhcp-server-identifier-option>,
+    <dhcp-subnet-mask>,
+    <dhcp-router-option>,
+    subnet-mask,
+    addresses,
     message-type,
     dhcp-options,
     your-ip-address,
@@ -448,6 +452,7 @@ define module cidr
   use common-extensions, exclude: { format-to-string };
 
   export <cidr>,
+    base-network-address,
     cidr-network-address, cidr-netmask,
     ip-in-cidr?, broadcast-address,
     netmask-from-byte-vector;

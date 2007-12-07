@@ -22,9 +22,10 @@ define method do-process-shell-input
      #key window = frame-window(*editor-frame*)) => ()
   let text = as(<string>, section);
   let bp = line-end(section-end-line(section));
-  queue-redisplay(window, $display-text);
   shell-execute-code(window, text, bp);
-  move-point!(bp, window: window)
+  move-point!(bp, window: window);
+  queue-redisplay(window, $display-text);
+  redisplay-window(window);
 end method do-process-shell-input;
 
 define method shell-execute-code
@@ -90,8 +91,9 @@ define function make-nnv-shell-pane
   dynamic-bind (*editor-frame* = window)
     let buffer = buffer | make-shell();
     let stream
-      = make(<interval-stream>,
+      = make(<repainting-interval-stream>,
              interval: buffer,
+             window: window,
              direction: #"output");
     let server
       = make-command-line-server

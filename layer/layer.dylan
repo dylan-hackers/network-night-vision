@@ -201,7 +201,8 @@ define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-a
           let from-addr = arp-handler.send-socket.listen-address;
           let from-ip = find-key(arp-handler.arp-table,
                                  method(x)
-                                   x.arp-mac-address = from-addr
+                                   instance?(x, <known-arp-entry>) &
+                                     (x.arp-mac-address = from-addr)
                                  end);
           let arp-request = make(<arp-frame>,
                                  operation: 1,
@@ -228,6 +229,25 @@ end;
 
 define constant $broadcast-ethernet-address = mac-address("ff:ff:ff:ff:ff:ff");
 
+define function set-ip-address (ip-over-ethernet :: <ip-over-ethernet-adapter>, address :: <ipv4-address>, netmas :: <integer>)
+  unregister-adapter(ip-over-ethernet.ip-layer, ip-over-ethernet);
+  remove-key!(ip-over-ethernet.arp-handler.arp-table, ip-over-ethernet.v4-address);
+  ip-over-ethernet.v4-address := address;
+  ip-over-ethernet.netmask := netmas;
+  reconfigure-ip-address(ip-over-ethernet);
+end;
+
+define function reconfigure-ip-address (ip-over-ethernet :: <ip-over-ethernet-adapter>)
+  unless (ip-over-ethernet.v4-address = ipv4-address("0.0.0.0"))
+    ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
+      := make(<advertised-arp-entry>,
+              ip-address: ip-over-ethernet.v4-address,
+              mac-address: ip-over-ethernet.ethernet-layer.default-mac-address);
+  end;
+  register-adapter(ip-over-ethernet.ip-layer, ip-over-ethernet);
+  ip-over-ethernet.ip-layer.default-ip-address := ip-over-ethernet.v4-address;
+end;
+
 define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
                           #rest rest, #key, #all-keys);
   let arp-socket = create-socket(ip-over-ethernet.ethernet-layer, #x806);
@@ -241,12 +261,6 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
 
   ip-over-ethernet.arp-handler.send-socket := arp-socket;
 
-  unless (ip-over-ethernet.v4-address = ipv4-address("0.0.0.0"))
-    ip-over-ethernet.arp-handler.arp-table[ip-over-ethernet.v4-address]
-      := make(<advertised-arp-entry>,
-              ip-address: ip-over-ethernet.v4-address,
-              mac-address: ip-over-ethernet.ethernet-layer.default-mac-address);
-  end;
 
   let ip-socket = create-socket(ip-over-ethernet.ethernet-layer, #x800);
   let ip-broadcast-socket = create-socket(ip-over-ethernet.ethernet-layer,
@@ -258,9 +272,7 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
   connect(ip-socket.decapsulator, ipv4-fan-in);
   connect(ip-broadcast-socket.decapsulator, ipv4-fan-in);
   connect(ipv4-fan-in, ip-over-ethernet.ip-layer.reassembler);
-
-  register-adapter(ip-over-ethernet.ip-layer, ip-over-ethernet);
-  ip-over-ethernet.ip-layer.default-ip-address := ip-over-ethernet.v4-address;
+  reconfigure-ip-address(ip-over-ethernet);
 end; 
 
 
@@ -369,11 +381,23 @@ define class <next-hop-route> (<route>)
   constant slot next-hop :: <ipv4-address>, required-init-keyword: next-hop:;
 end;
 
+define method print-object (object :: <next-hop-route>, stream :: <stream>) => ()
+  format(stream, "%= -> %s", object.cidr, object.next-hop);
+end;
 define generic adapter (object :: <connected-route>) => (res :: <adapter>);
 define class <connected-route> (<route>)
   constant slot adapter :: <adapter>, required-init-keyword: adapter:;
 end;
 
+define method print-object (object :: <connected-route>, stream :: <stream>) => ()
+  format(stream, "%= -> %=", object.cidr, object.adapter);
+end;
+
+define function print-forwarding-table (stream :: <stream>, ip-layer :: <ip-layer>)
+  for (route in ip-layer.routes)
+    format(stream, "%=\n", route);
+  end;
+end;
 define method register-route (ip :: <ip-layer>, route :: <route>)
   add!(ip.routes, route);
   sort!(ip.routes, test: method(x, y) x.cidr.cidr-netmask > y.cidr.cidr-netmask end)
@@ -431,6 +455,9 @@ end;
 
 define method unregister-adapter (ip :: <ip-layer>,
                                   adapter :: <adapter>)
+  //unregister-route
+  let my-cidr = make(<cidr>, netmask: adapter.netmask, network-address: adapter.v4-address);
+  delete-route(ip, my-cidr);
   remove!(ip.adapters, adapter);
 end;
 
@@ -583,6 +610,26 @@ end;
 define class <advertised-arp-entry> (<static-arp-entry>)
 end;
 
+define method print-object (object :: <outstanding-arp-request>, stream :: <stream>) => ()
+  format(stream, "? %s", object.ip-address);
+end;
+
+define method print-object (object :: <static-arp-entry>, stream :: <stream>) => ()
+  format(stream, "S %s %s", object.ip-address, object.arp-mac-address);
+end;
+
+define method print-object (object :: <advertised-arp-entry>, stream :: <stream>) => ()
+  format(stream, "A %s %s", object.ip-address, object.arp-mac-address);
+end;
+define method print-object (object :: <dynamic-arp-entry>, stream :: <stream>) => ()
+  format(stream, "D %s %s", object.ip-address, object.arp-mac-address);
+end;
+
+define function print-arp-table (stream :: <stream>, arp-handler :: <arp-handler>)
+  for (arp in arp-handler.arp-table)
+    format(stream, "%=\n", arp);
+  end;
+end;
 define open generic arp-timestamp (object :: <dynamic-arp-entry>) => (res :: <date>);
 define class <dynamic-arp-entry> (<known-arp-entry>)
   constant slot arp-timestamp :: <date> = current-date()
@@ -709,6 +756,16 @@ define function build-ethernet-layer (interface-name :: <string>,
   ethernet-layer;
 end;
                                     
+define function add-next-hop-route (ip-layer :: <ip-layer>, next-hop :: <ipv4-address>, cidr :: <cidr>)
+  register-route(ip-layer, make(<next-hop-route>,
+                                next-hop: next-hop,
+                                cidr: cidr));
+end;
+
+define function delete-route (ip-layer :: <ip-layer>, mycidr :: <cidr>)
+  let route = choose(method(x) x.cidr = mycidr end, ip-layer.routes);
+  do(curry(remove!, ip-layer.routes), route);
+end;
 
 define function build-ip-layer (ethernet-layer,
                                #key ip-address :: false-or(<ipv4-address>),
@@ -726,10 +783,9 @@ define function build-ip-layer (ethernet-layer,
                               ip-layer: ip-layer,
                               ipv4-address: ip-address | ipv4-address("0.0.0.0"),
                               netmask: netmask);
+
   if (default-gateway)
-    register-route(ip-layer, make(<next-hop-route>,
-                                  next-hop: default-gateway,
-                                  cidr: make(<cidr>, network-address: ipv4-address("0.0.0.0"), netmask: 0)));
+    add-next-hop-route(ip-layer, default-gateway, make(<cidr>, network-address: ipv4-address("0.0.0.0"), netmask: 0));
   end;
   if (ip-address)
     send-gratitious-arp(arp-handler, ip-address);
@@ -740,3 +796,4 @@ define function build-ip-layer (ethernet-layer,
   //                        icmp-handler: icmp-handler);
   values(ip-layer, ip-over-ethernet);
 end;
+

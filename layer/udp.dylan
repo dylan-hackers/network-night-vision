@@ -51,6 +51,10 @@ define method send (socket :: <udp-socket>,
   send(socket.udp-layer.ip-send-socket, destination, udp);
 end;
 
+define function build-udp-layer (ip-layer :: <ip-layer>)
+  make(<udp-layer>, ip-layer: ip-layer)
+end;
+
 define function udp-begin()
   let ip-layer = init-ip-layer();
   let udp = make(<udp-layer>, ip-layer: ip-layer);
