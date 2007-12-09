@@ -72,6 +72,14 @@ define method connect (socket :: <raw-socket>, input :: <single-push-input-node>
   connect(socket.socket-layer.fan-out, input.the-input);
 end;
 
+define method disconnect (false == #f, object :: <object>)
+  // catch-all: already disconnected
+end;
+
+define method disconnect (object :: <object>, false == #f)
+  // catch-all: already disconnected
+end;
+
 define method disconnect (socket :: <raw-socket>, input :: <push-input>)
   disconnect(socket.socket-layer.fan-out, input);
 end;
@@ -155,7 +163,7 @@ end;
 define method close-socket (socket :: <filter-socket>) => ();
   disconnect(socket.decapsulator.the-output, socket.decapsulator.the-output.connected-input);
   disconnect(socket.demultiplexer-output, socket.decapsulator.the-input);
-  disconnect(socket.completer.the-output, socket.completer.the-output.conected-input);
+  disconnect(socket.completer.the-output, socket.completer.the-output.connected-input);
   disconnect(socket.completer.the-input.connected-output, socket.completer.the-input);
 end;  
 

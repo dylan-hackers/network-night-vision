@@ -19,4 +19,5 @@ define library gui-sniffer
   use protocols;
   use network-interfaces;
   use layer;
+  use timer;
 end library gui-sniffer;

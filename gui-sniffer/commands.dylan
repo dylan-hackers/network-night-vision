@@ -66,9 +66,16 @@ define method do-execute-command (context :: <nnv-context>, command :: <ping-com
   let socket = create-filter-socket(context.nnv-context.ip-layer,
                                     list(protocol: 1, source-address: target),
                                     #());
+  let timer = make(<timer>,
+                   in: 10,
+                   event: method()
+                            format(stream, "Timeout waiting for response from %s\n", target);
+                            close-socket(socket);
+                          end);
   let response-handler = make(<closure-node>, 
                               closure: method(packet :: <icmp-frame>)
                                          format(stream, "Host %s is alive\n", target);
+                                         cancel(timer);
                                          close-socket(socket);
                                        end);
   connect(socket, response-handler);
@@ -96,7 +103,7 @@ define method do-execute-command (context :: <nnv-context>, command :: <dhcp-cli
           let default-cidr = as(<cidr>, "0.0.0.0/0");
           delete-route(context.nnv-context.ip-layer, default-cidr);
           add-next-hop-route(context.nnv-context.ip-layer, router, default-cidr);
-          //format(context.context-server.server-output-stream, "received ack %s\n", as(<string>, frame));
+          format(context.context-server.server-output-stream, "IP address configured from DHCP to %s\n", ip);
         end;
   let dhcp = make(<dhcp-client>, send-socket: socket, response-callback: set-ip);
   connect(socket.decapsulator, dhcp);

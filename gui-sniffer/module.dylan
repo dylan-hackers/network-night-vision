@@ -61,8 +61,8 @@ define module gui-sniffer
   use cidr;
   use tcp;
   use ipv6;
-  // Add binding exports here.
   use deuce-internals, prefix: "deuce/";
   use network-interfaces;
   use layer;
+  use timer;
 end module gui-sniffer;
