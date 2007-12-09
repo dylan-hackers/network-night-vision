@@ -10,6 +10,7 @@ define module layer
   use threads;
   use network-flow;
   use packetizer;
+  use packet-filter;
   use timer;
   use flow;
   use network-interfaces;
@@ -45,15 +46,16 @@ define module layer
     init-arp-handler,
     decapsulator,
     create-socket,
+    create-filter-socket,
     create-raw-socket,
+    close-socket,
     build-ethernet-layer,
     build-ip-layer,
     send-socket,
     send,
     set-ip-address,
     delete-route,
-    add-next-hop-route,
-    demultiplexer; // HACK: remove me!
+    add-next-hop-route;
 
   export <udp-layer>, build-udp-layer,
     <tcp-layer>;

@@ -137,6 +137,41 @@ define method print-filter (filter :: <not-expression>, stream :: <stream>) => (
   format(stream, "~ (%=)", filter.expression);
 end;
 
+define function build-field-equals-filter (frame-type :: type-union(<string>, <symbol>, subclass(<container-frame>)),
+                                           field-name :: type-union(<string>, <symbol>),
+                                           value)
+ => (filter :: <field-equals>)
+  if (instance?(frame-type, <symbol>))
+    frame-type := as(<string>, frame-type)
+  end;
+  unless (instance?(frame-type, <string>))
+    frame-type := frame-type.frame-name;
+  end;
+  if (instance?(field-name, <symbol>))
+    field-name := as(<string>, field-name)
+  end;
+  let (field, frame-name) = find-protocol-field(frame-type, field-name);
+  unless (instance?(value, high-level-type(field.type)))
+    value := read-frame(field.type, value);
+  end;
+  make(<field-equals>,
+       frame: as(<symbol>, frame-name),
+       name: as(<symbol>, field-name),
+       value: value,
+       field: field);
+end;
+
+define function build-frame-filter (frame-type :: type-union(<string>, <symbol>, subclass(<container-frame>)),
+                                    #rest keyword-value-pairs)
+ => (filter :: <filter-expression>)
+  let filters = make(<stretchy-vector>);
+  for(i from 0 below keyword-value-pairs.size by 2)
+    add!(filters, build-field-equals-filter(frame-type, keyword-value-pairs[i], keyword-value-pairs[i + 1]));
+  end;
+  
+  reduce1(method (x, y) make(<and-expression>, left: x, right: y) end, filters);
+end;
+
 define function test-filter()
   format-out("%=\n",
              parse-filter("(ip.source-address = 23.23.23.23) & ((tcp.source-port = 23) & (foo))"));

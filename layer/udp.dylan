@@ -13,6 +13,11 @@ define method initialize (layer :: <udp-layer>,
   layer.ip-send-socket := socket;
 end;
 
+define method frame-type-for-layer (layer :: <udp-layer>)
+ => (type == <udp-frame>)
+ <udp-frame>
+end;
+
 define class <udp-socket> (<socket>)
   constant slot udp-layer :: <udp-layer>, required-init-keyword: layer:;
   constant slot server-port :: <integer>, required-init-keyword: server-port:;

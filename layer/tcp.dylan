@@ -12,6 +12,11 @@ define class <tcp-layer> (<layer>)
   slot ip-send-socket :: <ip-socket>;
 end;
 
+define method frame-type-for-layer (layer :: <tcp-layer>)
+ => (type == <tcp-frame>)
+ <tcp-frame>
+end;
+
 define inline method generate-id (tcp-frame :: <tcp-frame>) => (res :: <vector>)
   generate-id-aux (tcp-frame.parent.source-address,
                    tcp-frame.source-port,

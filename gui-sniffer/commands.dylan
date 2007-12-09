@@ -63,18 +63,15 @@ end;
 define method do-execute-command (context :: <nnv-context>, command :: <ping-command>)
   let target = command.%target;
   let stream = context.context-server.server-output-stream;
-  let demux-output = create-output-for-filter(context.nnv-context.ip-layer.demultiplexer,
-                                              format-to-string("(icmp) & (ipv4.source-address = %s)",
-                                                               target));
+  let socket = create-filter-socket(context.nnv-context.ip-layer,
+                                    list(protocol: 1, source-address: target),
+                                    #());
   let response-handler = make(<closure-node>, 
-                              closure: method(packet)
+                              closure: method(packet :: <icmp-frame>)
                                          format(stream, "Host %s is alive\n", target);
-                                         //refresh-output(context);
-                                         //disconnect(demux-output, response-handler);
-                                         remove-output(context.nnv-context.ip-layer.demultiplexer,
-                                                       demux-output);
+                                         close-socket(socket);
                                        end);
-  connect(demux-output, response-handler);
+  connect(socket, response-handler);
   let icmp = icmp-frame(code: 0, icmp-type: 8,
                         payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
   send(context.nnv-context.ip-layer, target, icmp);

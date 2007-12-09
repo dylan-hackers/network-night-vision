@@ -44,6 +44,9 @@ define open generic fan-in (object :: <layer>) => (res :: <fan-in>);
 define open generic demultiplexer (object :: <layer>) => (res :: <demultiplexer>);
 define open generic sockets (object :: <layer>) => (res :: <collection>);
 
+// Every layer handles frames of a certain type.  This g.f. returns the type.
+define open generic frame-type-for-layer (layer :: <layer>) => (frame-type :: subclass(<frame>));
+
 define abstract class <layer> (<object>)
   constant slot fan-in :: <fan-in> = make(<fan-in>);
   constant slot fan-out :: <fan-out> = make(<fan-out>);
@@ -98,6 +101,64 @@ define abstract class <socket> (<object>)
   slot completer :: <completer>;
 end;
 
+define class <filter-socket> (<socket>)
+end;
+
+define method connect (node :: <single-push-output-node>, socket :: <filter-socket>)
+  connect(node.the-output, socket.completer.the-input);
+end;
+
+define method connect (node :: <push-output>, socket :: <filter-socket>)
+  connect(node, socket.completer.the-input);
+end;
+
+define method disconnect (node :: <push-output>, socket :: <filter-socket>)
+  disconnect(node, socket.completer.the-input);
+end;
+
+define method disconnect (node :: <single-push-output-node>, socket :: <filter-socket>)
+  disconnect(node.the-output, socket.completer.the-input);
+end;
+
+define method connect (socket :: <filter-socket>, input :: <push-input>)
+  connect(socket.decapsulator.the-output, input);
+end;
+
+define method connect (socket :: <filter-socket>, input :: <single-push-input-node>)
+  connect(socket.decapsulator.the-output, input.the-input);
+end;
+
+define method disconnect (socket :: <filter-socket>, input :: <push-input>)
+  disconnect(socket.decapsulator.the-output, input);
+end;
+
+define method disconnect (socket :: <filter-socket>, input :: <single-push-input-node>)
+  disconnect(socket.decapsulator.the-output, input.the-input);
+end;
+
+define method create-filter-socket (layer :: <layer>, 
+                                    filter-key-value-pairs,
+                                    completer-key-value-pairs)
+ => (socket :: <filter-socket>);
+  let socket = make(<filter-socket>);
+  let frame-type = frame-type-for-layer(layer);
+  let template-frame = apply(make, frame-type, completer-key-value-pairs);
+  socket.completer := make(<completer>, template-frame: template-frame);
+  socket.demultiplexer-output
+    := create-output-for-filter(layer.demultiplexer,
+                                apply(build-frame-filter, frame-type, filter-key-value-pairs));
+  connect(socket.demultiplexer-output, socket.decapsulator);
+  connect(socket.completer, layer.fan-in);
+  socket;
+end;
+
+define method close-socket (socket :: <filter-socket>) => ();
+  disconnect(socket.decapsulator.the-output, socket.decapsulator.the-output.connected-input);
+  disconnect(socket.demultiplexer-output, socket.decapsulator.the-input);
+  disconnect(socket.completer.the-output, socket.completer.the-output.conected-input);
+  disconnect(socket.completer.the-input.connected-output, socket.completer.the-input);
+end;  
+
 define abstract class <adapter> (<object>)
 end;
 
@@ -118,6 +179,11 @@ define method initialize (layer :: <ethernet-layer>,
   connect(layer.fan-in, layer.ethernet-interface);
   connect(layer.ethernet-interface, layer.fan-out);
   connect(layer.fan-out, layer.demultiplexer);
+end;
+
+define method frame-type-for-layer (layer :: <ethernet-layer>)
+ => (type == <ethernet-frame>)
+ <ethernet-frame>
 end;
 
 define open generic ethernet-type-code (object :: <ethernet-socket>) => (res :: <integer>);
@@ -369,6 +435,11 @@ define class <ip-layer> (<layer>)
   constant slot routes = make(<stretchy-vector>);
   constant slot reassembler = make(<ip-reassembler>);
   slot raw-input;
+end;
+
+define method frame-type-for-layer (layer :: <ip-layer>)
+ => (type == <ipv4-frame>)
+ <ipv4-frame>
 end;
 
 define class <route> (<object>)

@@ -161,7 +161,8 @@ define module packet-filter
     <or-expression>,
     <not-expression>,
     matches?,
-    parse-filter;
+    parse-filter,
+    build-frame-filter;
 end;
 
 
