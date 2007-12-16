@@ -66,12 +66,15 @@ define method make-shell
     inc!(*nnv-shell-count*);
     name := format-to-string("NNV shell %d", *nnv-shell-count*)
   end;
-  make-empty-buffer(buffer-class,
-                    name:       name,
-                    major-mode: major-mode,
-                    anonymous?: anonymous?,
-                    section-class: section-class,
-                    editor: editor);
+  let buffer = make-empty-buffer(buffer-class,
+                                 name:       name,
+                                 major-mode: major-mode,
+                                 anonymous?: anonymous?,
+                                 section-class: section-class,
+                                 editor: editor);
+  let node = make-empty-section-node(buffer);
+  add-node!(buffer, node, after: #"start");
+  buffer
 end method make-shell;
 
 define class <nnv-editor> (<basic-editor>) end;
@@ -95,6 +98,7 @@ define function make-nnv-shell-pane
              interval: buffer,
              window: window,
              direction: #"output");
+    stream-position(stream) := buffer.buffer-start-node.interval-end-bp;
     let server
       = make-command-line-server
         (real-context: context,

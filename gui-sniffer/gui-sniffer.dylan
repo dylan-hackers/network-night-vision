@@ -379,14 +379,16 @@ end;
 define function highlight-hex-dump (mframe :: <gui-sniffer-frame>)
   let packet = mframe.packet-table.gadget-value;
   let tree = mframe.packet-tree-view;
-  let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
+  if (tree.gadget-selection.size > 0)
+    let selected-packet = tree.gadget-items[tree.gadget-selection[0]];
 
-  let start-highlight = compute-absolute-offset(selected-packet, packet.real-frame);
-  let end-highlight = start-highlight + compute-length(selected-packet);
-  format-out("start highlight %d end highlight %d\n", start-highlight, end-highlight);
-  set-highlight(mframe, start-highlight, end-highlight);
+    let start-highlight = compute-absolute-offset(selected-packet, packet.real-frame);
+    let end-highlight = start-highlight + compute-length(selected-packet);
+    set-highlight(mframe, start-highlight, end-highlight);
+  else
+    remove-highlight(mframe);
+  end;
   redisplay-window(mframe.packet-hex-dump);
-
 end;
 
 define variable *count* :: <integer> = 0;
@@ -538,12 +540,12 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
                    make(<column-splitter>,
                         children: vector(frame.packet-table,
                                          frame.packet-tree-view,
-                                         scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump
-                                         end,
-                                         scrolling (scroll-bars: #"both")
+//                                         scrolling (scroll-bars: #"both")
+                                           frame.packet-hex-dump,
+//                                         end,
+//                                         scrolling (scroll-bars: #"both")
                                            frame.nnv-shell
-                                         end
+//                                         end
                                          ));
                  end;
 
@@ -704,6 +706,7 @@ define method follow-connection (frame :: <gui-sniffer-frame>)
   apply-filter(frame);
   let packets = map(real-frame, frame.packet-table.gadget-items);
   let payloads = map(method(x) real-payload(x).data end, packets);
+  // urgh, apply seems to crash when payloads.size exceeds a certain size...
   show-payloads(apply(concatenate, payloads), owner: frame);
 end;
 

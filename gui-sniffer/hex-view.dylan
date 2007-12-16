@@ -111,6 +111,22 @@ define method set-highlight (frame, start-offset, end-offset)
   end;
 end;
 
+define method remove-highlight (frame)
+  let window :: <basic-window> = frame-window(frame);
+  let name = "Network Night Vision";
+  let editor = frame-editor(frame);
+  let buffer = find-buffer(editor, name);
+  if (buffer)
+    For (i from 0,
+        line = buffer.buffer-start-node.node-section.section-start-line then line.line-next,
+        while: line)
+      line.line-style-changes := #[];
+    end;
+    select-buffer-in-appropriate-window(window, buffer);
+    initialize-redisplay-for-buffer(window, buffer);
+  end;
+end;
+
 define method show-hexdump (frame :: <basic-editor-frame>,
                            text)
   let lines = split(hexdump(text), '\n');

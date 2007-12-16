@@ -10,7 +10,7 @@ define module hex-view
   use deuce;
   use deuce-internals;
 
-  export show-hexdump, set-highlight, hexdump;
+  export show-hexdump, set-highlight, hexdump, remove-highlight;
 end;
 
 define module command-line

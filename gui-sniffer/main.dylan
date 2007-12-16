@@ -14,6 +14,7 @@ define function main()
   *standard-output* := gui-sniffer.nnv-shell-pane.command-line-server.server-output-stream;
   write(*standard-output*, $about-text);
   new-line(*standard-output*);
+  recenter-window(gui-sniffer.nnv-shell-pane, gui-sniffer.nnv-shell-pane.window-point.bp-line, #"bottom");
   start-frame(gui-sniffer);
 end;
 
