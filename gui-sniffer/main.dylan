@@ -13,7 +13,7 @@ define function main()
   frame-mapped?(gui-sniffer) := #t;
   *standard-output* := gui-sniffer.nnv-shell-pane.command-line-server.server-output-stream;
   write(*standard-output*, $about-text);
-  new-line(*standard-output*);
+  format(*standard-output*, "\n\nType 'help' down here to get started.\n");
   recenter-window(gui-sniffer.nnv-shell-pane, gui-sniffer.nnv-shell-pane.window-point.bp-line, #"bottom");
   start-frame(gui-sniffer);
 end;

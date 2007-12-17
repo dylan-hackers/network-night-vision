@@ -196,9 +196,9 @@ define method do-execute-command (context :: <nnv-context>, command :: <filter-c
   apply-filter(context.nnv-context);
 end;
 
-define command-group nnv
-    (summary: "Network Night Vision commands",
-     documentation: "The set of commands provided by Network Night Vision.")
+define command-group network
+    (summary: "Networking commands",
+     documentation: "The set of commands for managing the network.")
   command ping;
   command dhcp-client;
   command set-ip-address;
@@ -207,8 +207,14 @@ define command-group nnv
   command show-arp-table;
   command show-forwarding-table;
   command filter;
+end command-group;
+
+define command-group nnv
+    (summary: "Network Night Vision commands",
+     documentation: "The set of commands provided by Network Night Vision.")
   group basic;
   group property;
+  group network;
 end command-group;
 
 define method context-command-group

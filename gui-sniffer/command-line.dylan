@@ -12,8 +12,19 @@ define method shell-input-complete?
     (mode :: <nnv-shell-mode>,
      buffer :: <basic-shell-buffer>, section :: <basic-shell-section>)
  => (complete? :: <boolean>, message :: false-or(<string>))
-  //--- This is where DylanWorks mode decides if there's a complete form
-  values(#t, #f)
+  let text = as(<string>, section);
+  let is-complete? = #f;
+  let message = #f;
+  block()
+    let (command, complete?, text) 
+      = parse-command-line(frame-window(*editor-frame*).command-line-server, text); 
+    if (complete?)
+      is-complete? := #t;
+    end
+  exception (e :: <condition>)
+    message := condition-to-string(e);
+  end;
+  values(is-complete?, message)
 end method shell-input-complete?;
 
 define method do-process-shell-input

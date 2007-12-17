@@ -510,17 +510,17 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   pane sniffer-status-bar (frame)
     make(<status-bar>, label: "Network Night Vision");
 
-  pane open-button (frame)
-    make(<push-button>, label: "open",
+  pane load-button (frame)
+    make(<push-button>, label: "Load",
          activate-callback: method(x) open-pcap-file(frame) end);
   pane save-button (frame)
-    make(<push-button>, label: "save",
+    make(<push-button>, label: "Save",
          activate-callback: method(x) save-pcap-file(frame) end);
-  pane play-button (frame)
-    make(<push-button>, label: "play",
+  pane capture-button (frame)
+    make(<push-button>, label: "Capture",
          activate-callback: method(x) open-interface(frame) end);
   pane stop-button (frame)
-    make(<push-button>, label: "stop", enabled?: #f,
+    make(<push-button>, label: "Stop", enabled?: #f,
          activate-callback: method(x) close-interface(frame) end);
     
   pane sniffer-tool-bar (frame)
@@ -528,10 +528,10 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
          height: 18,
          resizable?: #f,
          child: horizontally ()
-                  frame.open-button;
+                  frame.load-button;
                   frame.save-button;
                   make(<separator>, orientation: #"vertical");
-                  frame.play-button;
+                  frame.capture-button;
                   frame.stop-button;
                 end);
 
@@ -557,7 +557,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
 end;
 
 define command-table *file-command-table* (*global-command-table*)
-  menu-item "Open pcap file..." = open-pcap-file;
+  menu-item "Load pcap file..." = open-pcap-file;
   menu-item "Save to pcap file..." = save-pcap-file;
   menu-item "About" = show-about-box;
   menu-item "Exit" = exit-application;
@@ -837,9 +837,9 @@ define method open-interface (frame :: <gui-sniffer-frame>)
     frame.listening-socket := ethernet-socket;
     gadget-label(frame.sniffer-status-bar) := concatenate("Capturing ", interface-name);
     command-enabled?(open-pcap-file, frame) := #f;
-    gadget-enabled?(frame.open-button) := #f;
+    gadget-enabled?(frame.load-button) := #f;
     command-enabled?(open-interface, frame) := #f;
-    gadget-enabled?(frame.play-button) := #f;
+    gadget-enabled?(frame.capture-button) := #f;
     command-enabled?(close-interface, frame) := #t;
     gadget-enabled?(frame.stop-button) := #t;
   end;
@@ -853,9 +853,9 @@ define method close-interface (frame :: <gui-sniffer-frame>)
   disconnect(frame, frame.listening-socket);
   frame.listening-socket := #f;
   command-enabled?(open-pcap-file, frame) := #t;
-  gadget-enabled?(frame.open-button) := #t;
+  gadget-enabled?(frame.load-button) := #t;
   command-enabled?(open-interface, frame) := #t;
-  gadget-enabled?(frame.play-button) := #t;
+  gadget-enabled?(frame.capture-button) := #t;
   command-enabled?(close-interface, frame) := #f;
   gadget-enabled?(frame.stop-button) := #f;
 end;
@@ -883,7 +883,6 @@ define constant $about-text
   = concatenate("Network Night Vision 0.0.2\n",
                 "(c) 2005 - 2007 Andreas Bogk, Hannes Mehnert\n",
                 "All Rights Reserved. Free for non-commercial use.\n",
-                "\n",
                 "http://www.networknightvision.com/");
 
 define frame <about-box> (<dialog-frame>)
