@@ -159,7 +159,6 @@ define method toplevel (node :: <ethernet-interface>)
                  802 => <prism2-frame>;
                  803 => <bsd-80211-radio-frame>;
                end;
-    format-out("Type: %=\n", type);
     block()
       let frame = parse-frame(type, packet);
       push-data(node.the-output, frame);
