@@ -11,7 +11,7 @@ define library network-interfaces
   use collection-extensions;
   use flow;
   use packetizer;
-  use protocols, import: { ethernet };
+  use protocols, import: { ethernet, prism2 };
 
   export network-interfaces;
 end library network-interfaces;
@@ -33,6 +33,7 @@ define module network-interfaces
   use flow;
   use packetizer, import: { parse-frame, assemble-frame, packet };
   use ethernet, import: { <ethernet-frame> };
+  use prism2, import: { <prism2-frame>, <bsd-80211-radio-frame> };
 
   export <ethernet-interface>, interface-name, find-all-devices, device-name,
     running?, running?-setter;

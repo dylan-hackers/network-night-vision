@@ -88,22 +88,29 @@ define method device-name (a :: <string>) => (res :: <string>)
 end;
 
 define method receive (interface :: <interface>)
-  => (buffer)
+  => (buffer, type)
   let buffer = make(<buffer>, size: $ethernet-buffer-size);
   local method unix-receive ()
-          let fd = interface.unix-file-descriptor;
-          let read-bytes =
-            interruptible-system-call(unix-recv-buffer(fd,
-                                                       buffer-offset(buffer, 0),
-                                                       $ethernet-buffer-size,
-                                                       0));
-            if (read-bytes == -1)
-              //Only want to catch $EINTR, but getting mps assertion failures
-              //this is now done via interruptible-system-call macro
-              #f;
-            else
-              subsequence(buffer, end: read-bytes);
-            end if;
+          with-stack-structure (sockaddr :: <sockaddr-ll*>)
+            with-stack-structure (sockaddr-size :: <socklen-t*>)
+              pointer-value(sockaddr-size) := size-of(<sockaddr-ll>);
+              let fd = interface.unix-file-descriptor;
+              let read-bytes =
+                interruptible-system-call(unix-recv-buffer-from(fd,
+                                                                buffer-offset(buffer, 0),
+                                                                $ethernet-buffer-size,
+                                                                0,
+                                                                sockaddr,
+                                                                sockaddr-size));
+                if (read-bytes == -1)
+                  //Only want to catch $EINTR, but getting mps assertion failures
+                  //this is now done via interruptible-system-call macro
+                  #f;
+                else
+                  values(subsequence(buffer, end: read-bytes), sockaddr.sll-hatype);
+                end if;
+              end
+            end
         end method;
   unix-receive();
 end method receive;
@@ -145,9 +152,20 @@ end;
 
 define method toplevel (node :: <ethernet-interface>)
   while(node.running?)
-    let packet = receive(node.unix-interface);
-    let frame = parse-frame(<ethernet-frame>, packet);
-    push-data(node.the-output, frame);
+    let (packet, type-code) = receive(node.unix-interface);
+    let type = select (type-code)
+                 1   => <ethernet-frame>;
+                 801 => <ieee-80211-frame>;
+                 802 => <prism2-frame>;
+                 803 => <bsd-80211-radio-frame>;
+               end;
+    format-out("Type: %=\n", type);
+    block()
+      let frame = parse-frame(type, packet);
+      push-data(node.the-output, frame);
+    exception (e :: <error>)
+      //format-out("Incoming packet broken beyond repair\n");
+    end
   end while;
   int-close(node.unix-interface);
 end;
