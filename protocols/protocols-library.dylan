@@ -17,7 +17,8 @@ define library protocols
     prism2,
     dns,
     rip,
-    cidr;
+    cidr,
+    ieee80211;
 end;
 
 define module logical-link

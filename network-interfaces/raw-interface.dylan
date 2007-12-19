@@ -155,7 +155,7 @@ define method toplevel (node :: <ethernet-interface>)
     let (packet, type-code) = receive(node.unix-interface);
     let type = select (type-code)
                  1   => <ethernet-frame>;
-                 801 => <ieee-80211-frame>;
+                 801 => <ieee80211-frame>;
                  802 => <prism2-frame>;
                  803 => <bsd-80211-radio-frame>;
                end;
