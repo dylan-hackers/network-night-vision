@@ -35,7 +35,7 @@ define module network-interfaces
   use cidr, import: { <cidr>, netmask-from-byte-vector };
   use packetizer,
     import: { parse-frame,
-              <ethernet-frame>,
+              <frame>,
               assemble-frame,
               packet,
               <stretchy-vector-subsequence> };
