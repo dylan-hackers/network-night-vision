@@ -74,13 +74,13 @@ define test packetizer-dynamic-assemble ()
               as(<stretchy-byte-vector-subsequence>, #(#x3, #x0, #x0, #x23, #x42, #x23, #x42)),
               byte-vector.packet);
 end;
-define protocol static-start (container-frame)
+define protocol static-start-frame (container-frame)
   field a :: <unsigned-byte>;
   field b :: <raw-frame>, static-start: 24;
 end;
 
 define test static-start-test ()
-  let frame = parse-frame(<static-start>, #(#x3, #x4, #x5, #x6));
+  let frame = parse-frame(<static-start-frame>, #(#x3, #x4, #x5, #x6));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 24, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -89,13 +89,13 @@ define test static-start-test ()
 end;  
 
 define test static-start-assemble ()
-  let frame = make(<static-start>, a: #x23, b: parse-frame(<raw-frame>, as(<byte-vector>, #(#x2, #x3, #x4, #x5))));
+  let frame = make(<static-start-frame>, a: #x23, b: parse-frame(<raw-frame>, as(<byte-vector>, #(#x2, #x3, #x4, #x5))));
   let byte-vector = assemble-frame(frame);
   check-equal("Assembling static start frame is correct (including padding)",
               as(<byte-vector>, #(#x23, #x0, #x0, #x2, #x3, #x4, #x5)),
               byte-vector.packet);
 end;
-define protocol repeated-test (container-frame)
+define protocol repeated-test-frame (container-frame)
   field foo :: <unsigned-byte>;
   repeated field bar :: <unsigned-byte>,
     reached-end?: frame = 0;
@@ -103,7 +103,7 @@ define protocol repeated-test (container-frame)
 end;
 
 define test repeated-test ()
-  let frame = parse-frame(<repeated-test>, #(#x23, #x42, #x43, #x44, #x67, #x0, #x55));
+  let frame = parse-frame(<repeated-test-frame>, #(#x23, #x42, #x43, #x44, #x67, #x0, #x55));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
   static-checker(field-list[1], 8, $unknown-at-compile-time, $unknown-at-compile-time);
@@ -114,7 +114,7 @@ define test repeated-test ()
 end;
 
 define test repeated-assemble ()
-  let frame = make(<repeated-test>,
+  let frame = make(<repeated-test-frame>,
                    foo: #x23,
                    bar: as(<stretchy-vector>, #(#x23, #x42, #x23, #x42, #x0)),
                    after: #x44);
@@ -124,7 +124,7 @@ define test repeated-assemble ()
               byte-vector.packet);
 end;
 
-define protocol repeated-and-dynamic-test (header-frame)
+define protocol repeated-and-dynamic-test-frame (header-frame)
   field header-length :: <unsigned-byte>,
 // FIXME:    fixup: byte-offset(frame-size(frame.header-length) + frame-size(frame.type-code) + frame-size(frame.options));
     fixup: frame.options.size + 2;
@@ -136,7 +136,7 @@ define protocol repeated-and-dynamic-test (header-frame)
 end;
 
 define test repeated-and-dynamic-test ()
-  let frame = parse-frame(<repeated-and-dynamic-test>,
+  let frame = parse-frame(<repeated-and-dynamic-test-frame>,
                           #(#x8, #x23, #x42, #x43, #x44, #x45, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
@@ -150,7 +150,7 @@ define test repeated-and-dynamic-test ()
 end;
 
 define test repeated-and-dynamic-test2 ()
-  let frame = parse-frame(<repeated-and-dynamic-test>,
+  let frame = parse-frame(<repeated-and-dynamic-test-frame>,
                           #(#x8, #x23, #x42, #x43, #x44, #x0, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   frame-field-checker(0, frame, 0, 8, 8);
@@ -160,7 +160,7 @@ define test repeated-and-dynamic-test2 ()
 end;
 
 define test repeated-and-dynamic-assemble ()
-  let frame = make(<repeated-and-dynamic-test>,
+  let frame = make(<repeated-and-dynamic-test-frame>,
                    options: as(<stretchy-vector>, #(#x23, #x42, #x23, #x42, #x23, #x0)),
                    payload: parse-frame(<raw-frame>, as(<byte-vector>, #(#x0, #x1, #x2, #x3, #x4))));
   let byte-vector = assemble-frame(frame);
@@ -169,7 +169,7 @@ define test repeated-and-dynamic-assemble ()
               byte-vector.packet);
 end;
 
-define protocol count-repeated-test (container-frame)
+define protocol count-repeated-test-frame (container-frame)
   field foo :: <unsigned-byte>,
     fixup: frame.fragments.size;
   repeated field fragments :: <unsigned-byte>,
@@ -178,7 +178,7 @@ define protocol count-repeated-test (container-frame)
 end;
 
 define test count-repeated-test ()
-  let frame = parse-frame(<count-repeated-test>,
+  let frame = parse-frame(<count-repeated-test-frame>,
                           #(#x3, #x23, #x42, #x43, #x44, #x0, #x46, #x47, #x80, #x81, #x82));
   let field-list = fields(frame);
   static-checker(field-list[0], 0, 8, 8);
@@ -190,7 +190,7 @@ define test count-repeated-test ()
 end;
 
 define test count-repeated-assemble ()
-  let frame = make(<count-repeated-test>,
+  let frame = make(<count-repeated-test-frame>,
                    fragments: as(<stretchy-vector>, #(#x1, #x2, #x3, #x4, #x5, #x6, #x7)),
                    last-field: #x23);
   let byte-vector = assemble-frame(frame);
@@ -402,6 +402,18 @@ define test dns-foo-assemble ()
   check-equal("assembling of dns-foo[1] is correct", 42, as.packet[1]);
 end;
 
+define protocol dyn-length-in-container (container-frame)
+  length frame.mylength * 8;
+  field foo :: <unsigned-byte> = 0;
+  field mylength :: <unsigned-byte> = 3;
+end;
+
+define test dynlength ()
+  let f = make(<dyn-length-in-container>);
+  check-equal("size of frame with length is correct", 24, f.frame-size);
+  let as = assemble-frame(f);
+  check-equal("size of assembled frame is correct", 3, as.packet.size);
+end;
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -417,6 +429,7 @@ define suite packetizer-suite ()
   test dynamic-length;
   test half-byte-parsing;
   test dns-foo-parsing;
+  test dynlength;
 end;
 
 define suite packetizer-assemble-suite ()
