@@ -397,12 +397,13 @@ end;
 
 define method parse-frame (frame-type :: subclass(<variably-typed-container-frame>),
                            packet :: <byte-sequence>,
-                           #key parent :: false-or(<container-frame>))
+                           #key parent :: false-or(<container-frame>),
+                           default = <raw-frame>)
   if (layer(frame-type) & layer(frame-type).size > 0)
     let superprotocol-frame = next-method();
     let real-type = element(layer(frame-type),
                             layer-magic(superprotocol-frame),
-                            default: <raw-frame>);
+                            default: default);
     parse-frame(real-type, packet, parent: parent);
   else
     next-method()

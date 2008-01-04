@@ -52,8 +52,6 @@ define module ieee80211
   use ethernet, import: { <mac-address> };
   use logical-link, import: { <link-control> };
 
-  export wlan-device-name, <wlan-device-name>;
-
   export <ieee80211-frame>;
 /*
   export <ieee80211-sequence-control>,
@@ -459,3 +457,8 @@ define module cidr
     netmask-from-byte-vector;
 end;
 
+define module eap
+  use dylan;
+  use packetizer;
+  use ethernet, import: { <ethernet-frame> };
+end;

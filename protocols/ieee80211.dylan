@@ -3,8 +3,6 @@ Author:         Andreas Bogk, Hannes Mehnert, mb
 Copyright:      (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 
-define n-byte-vector(wlan-device-name, 16) end;
-
 // main frame types
 define constant $management-frame = #x0;
 define constant $control-frame = #x1;
@@ -68,44 +66,66 @@ define protocol ieee80211-capability-information (container-frame)
 end;
 
 // ieee80211 information fields
-define protocol ieee80211-information-field (container-frame)
+// TODO: need more info about various (commercially-used) fields
+define protocol ieee80211-information-element (variably-typed-container-frame)
+  length (2 + frame.data-length) * 8;
+  layering field element-id :: <unsigned-byte>;
   field data-length :: <unsigned-byte>,
-    fixup: byte-offset(frame-size(frame.raw-data));
+    fixup: byte-offset(frame-size(frame)) - 2;
 end;
 
-define protocol ieee80211-raw-information-field (ieee80211-information-field)
-  field raw-data :: <raw-frame>,
-    length: frame.data-length * 8;
+define method parse-frame (frame == <ieee80211-information-element>,
+                           packet :: <byte-sequence>,
+                           #next next-method,
+                           #key parent)
+  block()
+    next-method(frame, packet, parent: parent, default: #f);
+  exception (e :: <error>)
+    parse-frame(<ieee80211-reserved-field>, packet, parent: parent);
+  end;
 end;
 
-define protocol ieee80211-ssid (ieee80211-information-field)
+define protocol ieee80211-raw-information-element (ieee80211-information-element)
+  field raw-data :: <raw-frame>;
+end;
+
+define protocol ieee80211-reserved-field (ieee80211-raw-information-element)
+end;
+
+define protocol ieee80211-ssid (ieee80211-information-element)
+  over <ieee80211-information-element> $information-element-ssid;
   summary "SSID: %=", raw-data;
-  field raw-data :: <externally-delimited-string>,
-    length: frame.data-length * 8;
+  field raw-data :: <externally-delimited-string>;
 end;
 
-define protocol ieee80211-fh-set (ieee80211-raw-information-field)
+define protocol ieee80211-fh-set (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-fh-set;
 end;
 
-define protocol ieee80211-ds-set (ieee80211-raw-information-field)
+define protocol ieee80211-ds-set (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-ds-set;
 end;
 
-define protocol ieee80211-cf-set (ieee80211-raw-information-field)
+define protocol ieee80211-cf-set (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-cf-set;
 end;
 
-define protocol ieee80211-tim (ieee80211-raw-information-field)
+define protocol ieee80211-tim (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-tim;
 end;
 
-define protocol ieee80211-ibss (ieee80211-raw-information-field)
+define protocol ieee80211-ibss (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-ibss;
 end;
 
-define protocol ieee80211-challenge-text (ieee80211-raw-information-field)
+define protocol ieee80211-challenge-text (ieee80211-raw-information-element)
+  over <ieee80211-information-element> $information-element-challenge-text;
 end;
 
-define protocol ieee80211-supported-rates (ieee80211-information-field)
+define protocol ieee80211-supported-rates (ieee80211-information-element)
+  over <ieee80211-information-element> $information-element-supported-rates;
   repeated field supported-rate :: <rate>,
-    reached-end?: #f,
-    length: frame.data-length * 8;
+    reached-end?: #f;
 end;
 
 define method summary (frame :: <rate>) => (res :: <string>)
@@ -142,6 +162,7 @@ define method as (class == <string>, frame :: <extended-rate>) => (res :: <strin
                 #x12 => "9";
                 #x18 => "12";
                 #x24 => "18";
+                #x2c => "22"; //stolen from wireshark
                 #x30 => "24";
                 #x48 => "36";
                 #x60 => "48";
@@ -163,172 +184,11 @@ define method parse-frame (frame == <rate>,
   parse-frame(type, packet, parent: parent);
 end;
 
-define protocol ieee80211-reserved-field (ieee80211-raw-information-field)
-end;
-
-// ieee80211 information elements (information field header)
-define protocol ieee80211-information-element (container-frame)
-  summary "%s", compose(summary, information-field);
-  field element-id :: <unsigned-byte>;
-  variably-typed-field information-field, 
-    type-function:
-      select (frame.element-id)
-        $information-element-ssid => <ieee80211-ssid>;
-        $information-element-supported-rates => <ieee80211-supported-rates>;
-        $information-element-fh-set => <ieee80211-fh-set>;
-        $information-element-cf-set => <ieee80211-cf-set>;
-        $information-element-ds-set => <ieee80211-ds-set>;
-        $information-element-tim => <ieee80211-tim>;
-        $information-element-ibss => <ieee80211-ibss>;
-        $information-element-challenge-text => <ieee80211-challenge-text>;
-          // TODO: need more info about various (commercially-used) fields
-          otherwise <ieee80211-reserved-field>;
-      end select;
-end;
-
-// management frames
-define protocol ieee80211-management-frame (container-frame)
-  summary "DST %=, SRC %=, BSSID %=", destination-address,
-    source-address, bssid;
-  field duration :: <2byte-little-endian-unsigned-integer>;
-  field destination-address :: <mac-address>;
-  field source-address :: <mac-address>;
-  field bssid :: <mac-address>;
-  field sequence-control  :: <ieee80211-sequence-control>;
-end;
-
-define protocol ieee80211-disassociation (ieee80211-management-frame)
-  summary "DISASSOC %=", method (x) next-method() end;
-  field reason-code :: <2byte-little-endian-unsigned-integer>;
-end;
-
-define protocol ieee80211-association-request (ieee80211-management-frame)
-  summary "ASSOC-REQ %= %s", method (x) next-method() end, compose(summary, ssid);
-  field capability-information :: <ieee80211-capability-information>;
-  field listen-interval :: <2byte-little-endian-unsigned-integer>;
-  field ssid :: <ieee80211-information-element>;
-  field supported-rates :: <ieee80211-information-element>;
-end;
-
-define protocol ieee80211-association-response (ieee80211-management-frame)
-  field capability-information :: <ieee80211-capability-information>;
-  field status-code :: <2byte-little-endian-unsigned-integer>;
-  field association-id :: <2byte-little-endian-unsigned-integer>;
-  field supported-rates :: <ieee80211-information-element>;
-end;
-
-define protocol ieee80211-reassociation-request (ieee80211-management-frame)
-  summary "REASSOC %s", compose(summary, ssid);
-  field capabilty-information :: <ieee80211-capability-information>;
-  field listen-intervall :: <2byte-little-endian-unsigned-integer>;
-  field current-ap-address :: <mac-address>;
-  field ssid :: <ieee80211-information-element>;
-  field supported-rates :: <ieee80211-information-element>;
-end;
-
-define protocol ieee80211-reassociation-response (ieee80211-management-frame)
-  field capability-information :: <ieee80211-capability-information>;
-  field status-code :: <2byte-little-endian-unsigned-integer>;
-  field association-id :: <2byte-little-endian-unsigned-integer>;
-  field supported-rates :: <ieee80211-information-element>;
-end;
-
-define protocol ieee80211-probe-request (ieee80211-management-frame)
-  summary "PROBE-REQ %= %s", method(x) next-method() end, compose(summary, ssid);
-  field ssid :: <ieee80211-information-element>;
-  field supported-rates :: <ieee80211-information-element>;
-end;
-
-define protocol ieee80211-probe-response (ieee80211-management-frame)
-  summary "PROBE-RESP %= %s", method (x) next-method() end, compose(summary, ssid);
-  field timestamp :: <timestamp>;
-  field beacon-intervall :: <2byte-little-endian-unsigned-integer>;
-  field capability-information :: <ieee80211-capability-information>;
-  field ssid :: <ieee80211-information-element>;
-  field supported-rates :: <ieee80211-information-element>;
-  repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: #f;
-end;
-
-define protocol ieee80211-authentication (ieee80211-management-frame)
-  summary "AUTH %=", method (x) next-method() end;
-  field algorithm-number :: <2byte-little-endian-unsigned-integer>;
-  field transaction-sequence-number :: <2byte-little-endian-unsigned-integer>;
-  field status-code :: <2byte-little-endian-unsigned-integer>;
-  repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: #f;
-end;
-
-define protocol ieee80211-deauthentication (ieee80211-management-frame)
-  field reason-code :: <2byte-little-endian-unsigned-integer>;
-end;
-
-define protocol ieee80211-atim (ieee80211-management-frame)
-end;
-
-define protocol ieee80211-beacon (ieee80211-management-frame)
-  summary "BEACON %= %s", method (x) next-method() end, compose(summary, ssid);
-  field timestamp :: <timestamp>;
-  field beacon-interval :: <2byte-little-endian-unsigned-integer>;
-  field capability-information :: <2byte-little-endian-unsigned-integer>;
-  field ssid :: <ieee80211-information-element>;
-  field supported-rates :: <ieee80211-information-element>;
-  repeated field additional-information :: <ieee80211-information-element>,
-    reached-end?: #f;
-end;
-
-// ieee80211 data frames
-define protocol ieee80211-data-frame (header-frame)
-  field duration-id :: <2byte-little-endian-unsigned-integer>;
-  field mac-address-one :: <mac-address>;
-  field mac-address-two :: <mac-address>;
-  field mac-address-three :: <mac-address>;
-  field sequence-control ::  <ieee80211-sequence-control>;
-end;
-
-define protocol ieee80211-null-function (ieee80211-data-frame)
-  summary "NULL-FUNCTION %=", method (x) next-method() end;
-  field payload :: <raw-frame>; // there should be no data
-end;
-
-define protocol ieee80211-data (ieee80211-data-frame)
-  summary "%s", compose(summary, payload);
-  field payload :: <link-control>;
-end;
-
-// ieee80211 control frames
-define protocol ieee80211-control-frame (container-frame)
-end;
-
-define protocol ieee80211-request-to-send (ieee80211-control-frame)
-  field duration :: <2byte-little-endian-unsigned-integer>;
-  field receiver-address :: <mac-address>;
-  field transmitter-address :: <mac-address>;
-end;
-
-define protocol ieee80211-cts-and-ack (ieee80211-control-frame)
-  field duration :: <2byte-little-endian-unsigned-integer>;
-  field receiver-address :: <mac-address>;
-end;
-
-define protocol ieee80211-ps-poll (ieee80211-control-frame)
-  field association-id :: <2byte-little-endian-unsigned-integer>;
-  field bssid :: <mac-address>;
-  field transmitter-address :: <mac-address>;
-end;
-
-define protocol ieee80211-cf-end (ieee80211-control-frame)
-  field duration :: <2byte-little-endian-unsigned-integer>;
-  field receiver-address :: <mac-address>;
-  field bssid :: <mac-address>;
-end;
-
-// frame control field of each <ieee80211-frame>
-define protocol ieee80211-frame-control (container-frame)
-  summary "WEP: %=", wep;
+//frame control
+define protocol ieee80211-frame-control (variably-typed-container-frame)
   field subtype :: <4bit-unsigned-integer>;
-  field ftype :: <2bit-unsigned-integer>;
-  field protcol-version :: <2bit-unsigned-integer>;
+  layering field ftype :: <2bit-unsigned-integer>;
+  field protocol-version :: <2bit-unsigned-integer>;
   field order :: <1bit-unsigned-integer>;
   field wep :: <1bit-unsigned-integer>;
   field more-data :: <1bit-unsigned-integer>;
@@ -339,46 +199,195 @@ define protocol ieee80211-frame-control (container-frame)
   field from-ds :: <1bit-unsigned-integer>;
 end;
 
-define protocol ieee80211-frame (header-frame)
-  summary "IEEE80211 %s", compose(summary, frame-control);
+// ieee80211 frame
+define abstract protocol ieee80211-frame (header-frame)
   field frame-control :: <ieee80211-frame-control>;
+end;
+
+define method parse-frame (frame == <ieee80211-frame>,
+                           packet :: <byte-sequence>,
+                           #next next-method,
+                           #key parent)
+  let f = next-method();
+  let type = select (f.frame-control.ftype)
+               $management-frame => <ieee80211-management-frame>;
+               $data-frame => <ieee80211-data-frame>;
+               $control-frame => <ieee80211-control-frame>;
+               otherwise => signal(make(<malformed-packet-error>));
+             end;
+  parse-frame(type, packet, parent: parent);
+end;
+
+// ieee80211 management frames
+define protocol ieee80211-management-frame (ieee80211-frame)
+  summary "DST %=, SRC %=, BSSID %=", destination-address, source-address, bssid;
+  field duration :: <2byte-little-endian-unsigned-integer>;
+  field destination-address :: <mac-address>;
+  field source-address :: <mac-address>;
+  field bssid :: <mac-address>;
+  field sequence-control  :: <ieee80211-sequence-control>;
   variably-typed-field payload,
-    type-function: 
-      select (frame.frame-control.ftype)
-        $management-frame =>
-          select (frame.frame-control.subtype)
-            $atim => <ieee80211-atim>;
-            $beacon => <ieee80211-beacon>;
-            $disassociation => <ieee80211-disassociation>;
-            $association-request => <ieee80211-association-request>;
-            $association-response => <ieee80211-association-response>;
-            $reassociation-request => <ieee80211-reassociation-request>;
-            $reassociation-response => <ieee80211-reassociation-response>;
-            $probe-request => <ieee80211-probe-request>;
-            $probe-response => <ieee80211-probe-response>;
-            $authentication => <ieee80211-authentication>;
-            $deauthentication => <ieee80211-deauthentication>;
-              otherwise signal(make(<malformed-packet-error>));
-          end select;  
-        $control-frame =>
-          select (frame.frame-control.subtype)
-            $power-save-poll => <ieee80211-ps-poll>;
-            $request-to-send => <ieee80211-request-to-send>;
-            // XXX: split up
-            $clear-to-send, $acknowledgement => <ieee80211-cts-and-ack>;
-            $contention-free-end, $cf-end-cf-ack => <ieee80211-cf-end>;
-              otherwise signal(make(<malformed-packet-error>));
-          end select;
-        $data-frame =>
-          select (frame.frame-control.subtype)
-            // XXX: split up (inheritance)
-            $data, $data-cf-ack, $data-cf-poll, $data-cf-ack-cf-poll
-              => <ieee80211-data>;
-            $data-null-function, $cf-poll-no-data, $cf-ack-no-data, $cf-ack-cf-poll-no-data
-              => <ieee80211-null-function>;
-              otherwise signal(make(<malformed-packet-error>));
-          end select;
+    type-function:
+      select (frame.frame-control.subtype)
+        $atim => <ieee80211-atim>;
+        $beacon => <ieee80211-beacon>;
+        $disassociation => <ieee80211-disassociation>;
+        $association-request => <ieee80211-association-request>;
+        $association-response => <ieee80211-association-response>;
+        $reassociation-request => <ieee80211-reassociation-request>;
+        $reassociation-response => <ieee80211-reassociation-response>;
+        $probe-request => <ieee80211-probe-request>;
+        $probe-response => <ieee80211-probe-response>;
+        $authentication => <ieee80211-authentication>;
+        $deauthentication => <ieee80211-deauthentication>;
           otherwise signal(make(<malformed-packet-error>));
       end select;
 end;
+
+define protocol ieee80211-disassociation (container-frame)
+  summary "DISASSOC";
+  field reason-code :: <2byte-little-endian-unsigned-integer>;
+end;
+
+define protocol ieee80211-association-request (container-frame)
+  summary "ASSOC-REQ %s", compose(summary, ssid);
+  field capability-information :: <ieee80211-capability-information>;
+  field listen-interval :: <2byte-little-endian-unsigned-integer>;
+  field ssid :: <ieee80211-information-element>;
+  field supported-rates :: <ieee80211-information-element>;
+end;
+
+define protocol ieee80211-association-response (container-frame)
+  field capability-information :: <ieee80211-capability-information>;
+  field status-code :: <2byte-little-endian-unsigned-integer>;
+  field association-id :: <2byte-little-endian-unsigned-integer>;
+  field supported-rates :: <ieee80211-information-element>;
+end;
+
+define protocol ieee80211-reassociation-request (container-frame)
+  summary "REASSOC";
+  field capabilty-information :: <ieee80211-capability-information>;
+  field listen-intervall :: <2byte-little-endian-unsigned-integer>;
+  field current-ap-address :: <mac-address>;
+  field ssid :: <ieee80211-information-element>;
+  field supported-rates :: <ieee80211-information-element>;
+end;
+
+define protocol ieee80211-reassociation-response (container-frame)
+  field capability-information :: <ieee80211-capability-information>;
+  field status-code :: <2byte-little-endian-unsigned-integer>;
+  field association-id :: <2byte-little-endian-unsigned-integer>;
+  field supported-rates :: <ieee80211-information-element>;
+end;
+
+define protocol ieee80211-probe-request (container-frame)
+  summary "PROBE-REQ %s", compose(summary, ssid);
+  field ssid :: <ieee80211-information-element>;
+  field supported-rates :: <ieee80211-information-element>;
+end;
+
+define protocol ieee80211-probe-response (container-frame)
+  summary "PROBE-RESP %s", compose(summary, ssid);
+  field timestamp :: <timestamp>;
+  field beacon-intervall :: <2byte-little-endian-unsigned-integer>;
+  field capability-information :: <ieee80211-capability-information>;
+  field ssid :: <ieee80211-information-element>;
+  field supported-rates :: <ieee80211-information-element>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: #f;
+end;
+
+define protocol ieee80211-authentication (container-frame)
+  summary "AUTH";
+  field algorithm-number :: <2byte-little-endian-unsigned-integer>;
+  field transaction-sequence-number :: <2byte-little-endian-unsigned-integer>;
+  field status-code :: <2byte-little-endian-unsigned-integer>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: #f;
+end;
+
+define protocol ieee80211-deauthentication (container-frame)
+  field reason-code :: <2byte-little-endian-unsigned-integer>;
+end;
+
+define protocol ieee80211-atim (container-frame)
+end;
+
+define protocol ieee80211-beacon (container-frame)
+  summary "BEACON %s", compose(summary, ssid);
+  field timestamp :: <timestamp>;
+  field beacon-interval :: <2byte-little-endian-unsigned-integer>;
+  field capability-information :: <2byte-little-endian-unsigned-integer>;
+  field ssid :: <ieee80211-information-element>;
+  field supported-rates :: <ieee80211-information-element>;
+  repeated field additional-information :: <ieee80211-information-element>,
+    reached-end?: #f;
+end;
+
+// ieee80211 data frames
+define protocol ieee80211-data-frame (ieee80211-frame)
+  field duration-id :: <2byte-little-endian-unsigned-integer>;
+  field mac-address-one :: <mac-address>;
+  field mac-address-two :: <mac-address>;
+  field mac-address-three :: <mac-address>;
+  field sequence-control ::  <ieee80211-sequence-control>;
+  variably-typed-field payload,
+    type-function:
+      select (frame.frame-control.subtype)
+        // XXX: split up (inheritance)
+        $data, $data-cf-ack, $data-cf-poll, $data-cf-ack-cf-poll
+          => <ieee80211-data>;
+        $data-null-function, $cf-poll-no-data, $cf-ack-no-data, $cf-ack-cf-poll-no-data
+          => <ieee80211-null-function>;
+          otherwise signal(make(<malformed-packet-error>));
+      end select;
+end;
+
+define protocol ieee80211-null-function (container-frame)
+  summary "NULL-FUNCTION";
+  field no-data :: <raw-frame> = $empty-raw-frame; // there should be no data
+end;
+
+define protocol ieee80211-data (container-frame)
+  summary "%s", compose(summary, payload);
+  field actual-data :: <link-control>;
+end;
+
+// ieee80211 control frames
+define protocol ieee80211-control-frame (ieee80211-frame)
+  variably-typed-field payload,
+    type-function:
+      select (frame.frame-control.subtype)
+        $power-save-poll => <ieee80211-ps-poll>;
+        $request-to-send => <ieee80211-request-to-send>;
+        // XXX: split up
+        $clear-to-send, $acknowledgement => <ieee80211-cts-and-ack>;
+        $contention-free-end, $cf-end-cf-ack => <ieee80211-cf-end>;
+          otherwise signal(make(<malformed-packet-error>));
+      end select;
+end;
+
+define protocol ieee80211-request-to-send (container-frame)
+  field duration :: <2byte-little-endian-unsigned-integer>;
+  field receiver-address :: <mac-address>;
+  field transmitter-address :: <mac-address>;
+end;
+
+define protocol ieee80211-cts-and-ack (container-frame)
+  field duration :: <2byte-little-endian-unsigned-integer>;
+  field receiver-address :: <mac-address>;
+end;
+
+define protocol ieee80211-ps-poll (container-frame)
+  field association-id :: <2byte-little-endian-unsigned-integer>;
+  field bssid :: <mac-address>;
+  field transmitter-address :: <mac-address>;
+end;
+
+define protocol ieee80211-cf-end (container-frame)
+  field duration :: <2byte-little-endian-unsigned-integer>;
+  field receiver-address :: <mac-address>;
+  field bssid :: <mac-address>;
+end;
+
 
