@@ -2,8 +2,6 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
-
-
 define macro protocol-module-definer
   { protocol-module-definer (?:name; ?super:name; ?fields:*) }
  => { define module ?name
@@ -90,7 +88,7 @@ define macro real-class-definer
          end;
       end;
       define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
-        if (?#"attrs" = #"abstract")
+        if (find-method(container-frame-size, list(?name)))
           $unknown-at-compile-time;
         else
           static-end(last("$" ## ?name ## "-fields"));
@@ -419,12 +417,14 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
                    parent: parent);
   let length = field-size(frame-type);
   if (length = $unknown-at-compile-time)
-    let fr-length = container-frame-size(frame);
-    if (fr-length)
-      frame.packet := subsequence(frame.packet, length: fr-length);
-      values(frame, fr-length);
-    else
-      frame
+    block (ret)
+      let fr-length = container-frame-size(frame);
+      if (fr-length)
+        frame.packet := subsequence(frame.packet, length: fr-length);
+        ret(apply(values, frame, fr-length));
+      end;
+    exception (e :: <error>)
+      frame;
     end;
   else
     values(frame, length)

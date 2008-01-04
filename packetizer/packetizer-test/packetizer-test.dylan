@@ -405,15 +405,59 @@ end;
 define protocol dyn-length-in-container (container-frame)
   length frame.mylength * 8;
   field foo :: <unsigned-byte> = 0;
-  field mylength :: <unsigned-byte> = 3;
+  field mylength :: <unsigned-byte>,
+    fixup: byte-offset(frame-size(frame));
 end;
 
 define test dynlength ()
-  let f = make(<dyn-length-in-container>);
-  check-equal("size of frame with length is correct", 24, f.frame-size);
-  let as = assemble-frame(f);
-  check-equal("size of assembled frame is correct", 3, as.packet.size);
+  let f = parse-frame(<dyn-length-in-container>, #(#x00, #x02));
+  check-equal("length frame.my-length; size of simple frame is correct", 16, f.frame-size);
+  let field-list = fields(f);
+  static-checker(field-list[0], 0, 8, 8);
+  static-checker(field-list[1], 8, 8, 16);
+  frame-field-checker(0, f, 0, 8, 8);
+  frame-field-checker(1, f, 8, 8, 16);
+  let g = parse-frame(<dyn-length-in-container>, #(#x00, #x03, #x02));
+  check-equal("length frame.my-length; size of frame with padding is correct", 24, g.frame-size);
+  frame-field-checker(0, g, 0, 8, 8);
+  frame-field-checker(1, g, 8, 8, 16);
+  //this tells us: we need padding frame fields!
 end;
+
+define test dynlength-assemble ()
+  let f = make(<dyn-length-in-container>);
+  let as = assemble-frame(f);
+  check-equal("assembling of dynlength[1] works correct", 2, as.packet[1]);
+  let g = make(<dyn-length-in-container>);
+  let as = assemble-frame(g);
+  check-equal("assembly of dynlength[0] works correct", 0, as.packet[0]);
+  //hah, no padding support!
+  check-equal("assembly of dynlength[1] works correct", 3, as.packet[1]);
+  check-equal("assembly of dynlength[2] works correct", 0, as.packet[2]);
+end;
+
+define protocol dyn-length-as-client-field (container-frame)
+  field first-foo :: <dyn-length-in-container>;
+  field second-foo :: <dyn-length-in-container>;
+end;
+
+define test dyn-length-client ()
+  let f = parse-frame(<dyn-length-as-client-field>, #(#x00, #x02, #x00, #x02));
+  check-equal("size of dyn-length-client is correct", 32, f.frame-size);
+  let field-list = fields(f);
+  static-checker(field-list[0], 0, $unknown-at-compile-time, $unknown-at-compile-time);
+  static-checker(field-list[1], $unknown-at-compile-time, $unknown-at-compile-time, $unknown-at-compile-time);
+  frame-field-checker(0, f, 0, 16, 16);
+  frame-field-checker(1, f, 16, 16, 32);
+end;
+
+define test dyn-length-client2 ()
+  let f = parse-frame(<dyn-length-as-client-field>, #(#x00, #x03, #x04, #x00, #x04, #x01, #x02));
+  check-equal("size of dyn-length-client2 is correct", 56, f.frame-size);
+  frame-field-checker(0, f, 0, 24, 24);
+  frame-field-checker(1, f, 24, 32, 56);
+end;
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -430,6 +474,8 @@ define suite packetizer-suite ()
   test half-byte-parsing;
   test dns-foo-parsing;
   test dynlength;
+  test dyn-length-client;
+  test dyn-length-client2;
 end;
 
 define suite packetizer-assemble-suite ()
@@ -448,10 +494,11 @@ define suite packetizer-assemble-suite ()
   test half-bytes-assembling;
   test bits-assemble;
   test dns-foo-assemble;
+  test dynlength-assemble;
 end;
 
 begin
-  run-test-application(packetizer-suite, arguments: #("-debug"));
-  run-test-application(packetizer-assemble-suite, arguments: #("-debug"));
+  run-test-application(packetizer-suite); //, arguments: #("-debug"));
+  run-test-application(packetizer-assemble-suite); //, arguments: #("-debug"));
 end;
 

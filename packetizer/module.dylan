@@ -126,7 +126,9 @@ define module packetizer
     <decoded-header-frame>,
     payload, payload-setter;
 
-  export <variably-typed-container-frame>,
+  export <inline-layering-error>,
+    <missing-inline-layering-error>,
+    <variably-typed-container-frame>,
     <unparsed-variably-typed-container-frame>,
     <decoded-variably-typed-container-frame>;
 

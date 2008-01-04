@@ -151,10 +151,6 @@ end;
 
 define open generic container-frame-size (frame :: <container-frame>) => (length :: false-or(<integer>));
 
-define method container-frame-size (frame :: <container-frame>) => (res :: false-or(<integer>))
-  #f
-end;
-
 define open generic frame-size (frame :: type-union(<frame>, subclass(<fixed-size-frame>)))
  => (length :: <integer>);
 
@@ -281,6 +277,12 @@ define inline method fixup-protocol-magic (frame :: <container-frame>) => (magic
   end;
 end;
 
+define class <inline-layering-error> (<error>)
+end;
+
+define class <missing-inline-layering-error> (<error>)
+end;
+
 define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
   let layer-table = recursive-reverse-layer(frame.object-class);
   if (layer-table)
@@ -288,10 +290,10 @@ define inline method fixup-protocol-magic (frame :: <variably-typed-container-fr
     if (res)
       res
     else
-      error("Inline layering not found for %=", frame);
+      signal(make(<inline-layering-error>));
     end;
   else
-    error("No non-empty layering table not found for %=", frame);
+    signal(make(<missing-inline-layering-error>));
   end;
 end;
 
@@ -397,7 +399,11 @@ end;
 define open generic payload-setter (value /* :: false-or(<frame>) */, object :: <header-frame>)
  => (res /* :: false-or(<frame>) */);
 define method frame-size (frame :: <container-frame>) => (res :: <integer>)
-  reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
+  block()
+    container-frame-size(frame);
+  exception (e :: <error>)
+    reduce1(\+, map(curry(get-field-size-aux, frame), frame.fields));
+  end;
 end;
 
 define method assemble-frame (frame :: <unparsed-container-frame>) => (packet :: <unparsed-container-frame>);
