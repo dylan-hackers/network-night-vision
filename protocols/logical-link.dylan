@@ -7,7 +7,7 @@ define protocol link-control (header-frame)
   field ssap :: <unsigned-byte>;
   field control :: <unsigned-byte>;
   field organisation-code :: <3byte-big-endian-unsigned-integer>;
-  field type-code :: <2byte-big-endian-unsigned-integer>;
+  layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
     type-function: payload-type(frame);
 end;

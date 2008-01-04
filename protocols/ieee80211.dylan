@@ -336,7 +336,7 @@ define protocol ieee80211-data-frame (ieee80211-frame)
       select (frame.frame-control.subtype)
         // XXX: split up (inheritance)
         $data, $data-cf-ack, $data-cf-poll, $data-cf-ack-cf-poll
-          => <ieee80211-data>;
+          => <link-control>;
         $data-null-function, $cf-poll-no-data, $cf-ack-no-data, $cf-ack-cf-poll-no-data
           => <ieee80211-null-function>;
           otherwise signal(make(<malformed-packet-error>));
@@ -348,10 +348,12 @@ define protocol ieee80211-null-function (container-frame)
   field no-data :: <raw-frame> = $empty-raw-frame; // there should be no data
 end;
 
-define protocol ieee80211-data (container-frame)
+/*
+define protocol ieee80211-data (header-frame)
   summary "%s", compose(summary, payload);
-  field actual-data :: <link-control>;
+  field payload :: <link-control>;
 end;
+*/
 
 // ieee80211 control frames
 define protocol ieee80211-control-frame (ieee80211-frame)
