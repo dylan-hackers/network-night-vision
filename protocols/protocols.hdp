@@ -13,3 +13,5 @@ files:	protocols-library
 	pcap
 	rip
 	cidr
+	hsrp
+	ntp

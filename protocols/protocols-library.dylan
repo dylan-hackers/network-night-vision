@@ -457,8 +457,19 @@ define module cidr
     netmask-from-byte-vector;
 end;
 
-define module eap
+define module hsrp
   use dylan;
   use packetizer;
-  use ethernet, import: { <ethernet-frame> };
+  use format;
+
+  use ipv4, import: { <ipv4-address>, <udp-frame> };
+end;
+
+define module ntp
+  use dylan;
+  use packetizer;
+  use format;
+
+  use ipv4, import: { ipv4-address, <ipv4-address>, <udp-frame> };
+  use pcap, import: { <unix-time-value> };
 end;
