@@ -30,6 +30,13 @@ define constant $data-null-function = #b0100;
 define constant $cf-ack-no-data = #b0101;
 define constant $cf-poll-no-data = #b0110;
 define constant $cf-ack-cf-poll-no-data = #b0111;
+define constant $qos-data = #b1000;
+define constant $qos-data-cf-ack = #b1001;
+define constant $qos-data-cf-poll = #b1010;
+define constant $qos-data-cf-ack-cf-poll = #b1011;
+define constant $qos-null-function = #b1100;
+define constant $qos-cf-poll-no-data = #b1110;
+define constant $qos-cf-ack-cf-poll-no-data = #b1111;
 
 // control frame subtypes
 define constant $power-save-poll = #b1010;
@@ -339,6 +346,9 @@ define protocol ieee80211-data-frame (ieee80211-frame)
           => <link-control>;
         $data-null-function, $cf-poll-no-data, $cf-ack-no-data, $cf-ack-cf-poll-no-data
           => <ieee80211-null-function>;
+        $qos-data, $qos-data-cf-ack, $qos-data-cf-poll, $qos-data-cf-ack-cf-poll,
+        $qos-null-function, $qos-cf-poll-no-data, $qos-cf-ack-cf-poll-no-data
+          => <ieee80211-qos-control>;
           otherwise signal(make(<malformed-packet-error>));
       end select;
 end;
@@ -346,6 +356,24 @@ end;
 define protocol ieee80211-null-function (container-frame)
   summary "NULL-FUNCTION";
   field no-data :: <raw-frame> = $empty-raw-frame; // there should be no data
+end;
+
+define protocol ieee80211-qos-control (header-frame)
+  summary "QOS-CONTROL";
+  field traffic-identifier  :: <4bit-unsigned-integer>;
+  field end-of-service-period :: <1bit-unsigned-integer>;
+  field ack-policy :: <2bit-unsigned-integer>;
+  field reserved :: <1bit-unsigned-integer>;
+  field transmit-opportunity :: <unsigned-byte>;
+  variably-typed-field payload,
+    type-function:
+      select (frame.parent.frame-control.subtype)
+        $qos-null-function, $qos-cf-poll-no-data, $qos-cf-ack-cf-poll-no-data
+          => <ieee80211-null-function>;
+        $qos-data, $qos-data-cf-ack, $qos-data-cf-poll, $qos-data-cf-ack-cf-poll
+          => <link-control>;
+          otherwise signal(make(<malformed-packet-error>));
+      end select;
 end;
 
 /*
