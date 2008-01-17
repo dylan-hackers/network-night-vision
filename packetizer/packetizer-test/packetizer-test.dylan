@@ -428,7 +428,7 @@ define test dynlength-assemble ()
   let f = make(<dyn-length-in-container>);
   let as = assemble-frame(f);
   check-equal("assembling of dynlength[1] works correct", 2, as.packet[1]);
-  let g = make(<dyn-length-in-container>);
+  let g = make(<dyn-length-in-container>, mylength: 3);
   let as = assemble-frame(g);
   check-equal("assembly of dynlength[0] works correct", 0, as.packet[0]);
   //hah, no padding support!
@@ -458,6 +458,31 @@ define test dyn-length-client2 ()
   frame-field-checker(1, f, 24, 32, 56);
 end;
 
+define protocol enum-field-test (container-frame)
+  enum field foo :: <unsigned-byte>,
+    mappings: { 1 <=> #"hello",
+                2 <=> #"foobar" };
+end;
+
+define test enum-assemble-test ()
+  let frame = make(<enum-field-test>, foo: #"hello");
+  let assembled-frame = assemble-frame(frame);
+  check-equal("enum field value", 1, assembled-frame.packet[0]);
+  assembled-frame.foo := #"foobar";
+  check-equal("enum field value", 2, assembled-frame.packet[0]);
+  assembled-frame.foo := 23;
+  check-equal("enum field value", 23, assembled-frame.packet[0]);
+end;
+
+define test enum-parse-test ()
+  let f = parse-frame(<enum-field-test>, #[#x01]);
+  check-equal("enum field parses correct to symbol", #"hello", f.foo);
+  let g = parse-frame(<enum-field-test>, #[#x03]);
+  check-equal("enum field parses correct to integer", 3, g.foo);
+  g.foo := #"foobar";
+  g.foo := 23;
+end;
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -476,6 +501,7 @@ define suite packetizer-suite ()
   test dynlength;
   test dyn-length-client;
   test dyn-length-client2;
+  test enum-parse-test;
 end;
 
 define suite packetizer-assemble-suite ()
@@ -495,10 +521,11 @@ define suite packetizer-assemble-suite ()
   test bits-assemble;
   test dns-foo-assemble;
   test dynlength-assemble;
+  test enum-assemble-test;
 end;
 
 begin
-  run-test-application(packetizer-suite); //, arguments: #("-debug"));
-  run-test-application(packetizer-assemble-suite); //, arguments: #("-debug"));
+  run-test-application(packetizer-suite, arguments: #("-debug"));
+  run-test-application(packetizer-assemble-suite, arguments: #("-debug"));
 end;
 
