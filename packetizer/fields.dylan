@@ -103,6 +103,10 @@ end;
 define class <layering-field> (<single-field>)
 end;
 
+define class <enum-field> (<single-field>)
+  slot mappings, required-init-keyword: mappings:;
+end;
+
 define method static-field-size (field :: <single-field>) => (res :: <integer-or-unknown>)
   if (field.static-length ~= $unknown-at-compile-time)
     field.static-length

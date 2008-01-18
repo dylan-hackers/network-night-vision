@@ -528,6 +528,19 @@ define method assemble-frame-into (frame :: <unparsed-container-frame>,
   frame.packet.size * 8;
 end;
 
+define method assemble-field-into(field :: <enum-field>,
+                                  frame :: <container-frame>,
+                                  packet :: <stretchy-vector-subsequence>)
+  let value = field.getter(frame);
+  if (instance?(value, <symbol>))
+    value := enum-field-symbol-to-int(field, value)
+  end;
+  let length = assemble-aux(field.type, value, packet);
+  let ff = make(<frame-field>, field: field, frame: frame, length: length);
+  frame.concrete-frame-fields[field.index] := ff;
+  length;  
+end;
+
 define method assemble-field-into(field :: <single-field>,
                                   frame :: <container-frame>,
                                   packet :: <stretchy-vector-subsequence>)

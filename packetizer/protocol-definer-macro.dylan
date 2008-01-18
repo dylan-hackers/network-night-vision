@@ -32,6 +32,25 @@ define macro protocol-module-definer
 
 end;
 
+define inline function filter-enums!(key/value-pairs :: <collection>,
+                                     fields :: <collection>)
+  for (ele in fields)
+    if (instance?(ele, <enum-field>))
+      let (key, pos)
+        = block(ret)
+            for (i :: <integer> from 0 below key/value-pairs.size by 2)
+              if (key/value-pairs[i] == ele.field-name)
+                ret(values(key/value-pairs[i + 1], i + 1))
+              end;
+            end;
+          end;
+            
+      key/value-pairs[pos] := enum-field-symbol-to-int(ele, key);
+    end;
+  end;
+end;
+
+
 define macro real-class-definer
   { real-class-definer(?attrs:*; ?:name; ?superclasses:*; ?fields-aux:*) }
  => { define abstract class ?name (?superclasses)
@@ -95,6 +114,7 @@ define macro real-class-definer
         end;
       end;
       define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
+        filter-enums!(rest, "$" ## ?name ## "-fields");
         let frame = apply(make, decoded-class(?name), rest);
         for (field in fields(frame))
           if (field.getter(frame) = #f)
@@ -153,6 +173,7 @@ define macro real-class-definer
     { } => { <single-field> }
     { layering } => { <layering-field> }
     { repeated } => { <repeated-field> }
+    { enum } => { <enum-field> }
 
   args: //FIXME: better types, not <frame>!
     { } => { }
@@ -176,6 +197,13 @@ define macro real-class-definer
       => { static-length: ?length, ... }
     { static-end: ?end:expression, ... }
       => { static-end: ?end, ... }
+    { mappings: { ?mappings }, ... }
+      => { mappings: #( ?mappings ), ... }
+
+  mappings:
+    { } => { }
+    { ?key:expression <=> ?value:expression, ... }
+      => { ?key, ?value, ... }
 end;
 
 
@@ -194,6 +222,9 @@ define macro decoded-class-definer
     { repeated field ?:name ?rest:* }
       => { slot ?name :: false-or(<collection>) = #f,
       init-keyword: ?#"name" }
+    { enum field ?:name \:: ?field-type:name ?rest:* }
+    => { slot "%" ## ?name :: false-or(high-level-type(?field-type)) = #f,
+         init-keyword: ?#"name" }
     { ?attrs:* field ?:name \:: ?field-type:name ?rest:* }
     => { slot ?name :: false-or(high-level-type(?field-type)) = #f,
       init-keyword: ?#"name" }
@@ -245,6 +276,55 @@ define macro unparsed-frame-field-generator
       end;
  }
 end;
+
+define inline function enum-field-symbol-to-int
+    (field :: <enum-field>, key :: <symbol>) => (res :: <integer>)
+  block(ret)
+    for (i from 1 below field.mappings.size by 2)
+      if (field.mappings[i] == key)
+        ret(field.mappings[i - 1])
+      end;
+    end;
+    error("unknown symbol for enum field");
+  end;
+end;
+
+define macro enum-frame-field-generator
+  { enum-frame-field-generator(?:name,
+                               "<unparsed-" ## ?frame-type:name,
+                               ?field-index:expression) }
+ => { define inline method ?name (mframe :: "<decoded-" ## ?frame-type) => (res)
+        let field = fields(mframe)[?field-index];
+        let val = "%" ## ?name (mframe);
+        block(ret)
+          for (i from 0 below field.mappings.size by 2)
+            if (field.mappings[i] == val)
+              ret(field.mappings[i + 1])
+            end;
+          end;
+          val
+        end;
+      end;
+      define inline method ?name ## "-setter"
+          (value :: <symbol>, mframe :: "<decoded-" ## ?frame-type) => (res)
+        let field = fields(mframe)[?field-index];
+        let val :: <integer> = enum-field-symbol-to-int(field, value);
+        "%" ## ?name ## "-setter"(val , mframe);
+      end;
+      define inline method ?name ## "-setter"
+          (value :: false-or(<integer>),
+           mframe :: "<decoded-" ## ?frame-type) => (res)
+        "%" ## ?name ## "-setter"(value, mframe);
+      end;
+      define inline method ?name ## "-setter"
+          (value :: <symbol>, mframe :: "<unparsed-" ## ?frame-type) => (res)
+        let field = fields(mframe)[?field-index];
+        let val :: <integer> = enum-field-symbol-to-int(field, value);
+        ?name ## "-setter" (val, mframe)
+      end;
+ }
+end;
+
 
 define method parse-frame-field
    (frame-field :: <frame-field>)
@@ -433,7 +513,17 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
 end;
 
 define macro frame-field-generator
-    { frame-field-generator(?type:name; ?count:expression; ?args:* field ?field-name:name ?foo:*  ; ?rest:*) }
+    { frame-field-generator(?type:name; ?count:expression; enum field ?field-name:name ?foo:*  ; ?rest:*) }
+    => { enum-frame-field-generator(?field-name, ?type, ?count);
+         unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?type:name; ?count:expression; repeated field ?field-name:name ?foo:*  ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?type:name; ?count:expression; layering field ?field-name:name ?foo:*  ; ?rest:*) }
+    => { unparsed-frame-field-generator(?field-name, ?type, ?count);
+         frame-field-generator(?type; ?count + 1; ?rest) }
+    { frame-field-generator(?type:name; ?count:expression; field ?field-name:name ?foo:*  ; ?rest:*) }
     => { unparsed-frame-field-generator(?field-name, ?type, ?count);
          frame-field-generator(?type; ?count + 1; ?rest) }
     { frame-field-generator(?type:name; ?count:expression; variably-typed-field ?field-name:name ?foo:* ; ?rest:*) }

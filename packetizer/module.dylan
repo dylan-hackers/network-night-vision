@@ -139,7 +139,8 @@ define module packetizer
   export protocol-definer;
   //XXX: we shouldn't need to export those
   export real-class-definer, decoded-class-definer, gen-classes,
-    frame-field-generator, summary-generator, unparsed-frame-field-generator;
+    frame-field-generator, summary-generator, enum-frame-field-generator,
+    unparsed-frame-field-generator;
 
   export protocol-module-definer;
 end module packetizer;
