@@ -77,7 +77,7 @@ define method state-transition (state :: <dhcp-client-state>,
   let server-option = find-option(state.offer, <dhcp-server-identifier-option>);
   //XXX: somehow the #"dhcprequest" doesn't work here :/
   let options = list(make(<dhcp-message-type-option>,
-                          message-type: 3), //#"dhcprequest"),
+                          message-type: #"dhcprequest"),
                      make(<dhcp-requested-ip-address-option>,
                           requested-ip: state.offer.your-ip-address),
                      make(<dhcp-server-identifier-option>,

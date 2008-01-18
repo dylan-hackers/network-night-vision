@@ -38,17 +38,20 @@ define inline function filter-enums
   let args = copy-sequence(key/value-pairs);
   for (ele in fields)
     if (instance?(ele, <enum-field>))
-      let (key, pos)
+      let pos
         = block(ret)
             for (i :: <integer> from 0 below key/value-pairs.size by 2)
               if (key/value-pairs[i] == ele.field-name)
-                ret(values(key/value-pairs[i + 1], i + 1))
+                ret(i + 1);
               end;
             end;
           end;
-      if (key & instance?(key, <symbol>))
-        //format-out("changed %= from %= to %=\n", ele.field-name, key, enum-field-symbol-to-int(ele, key));
-        args[pos] := enum-field-symbol-to-int(ele, key);
+      if (pos)
+        let key = key/value-pairs[pos];
+        if (instance?(key, <symbol>))
+          //format-out("changed %= from %= to %=\n", ele.field-name, key, enum-field-symbol-to-int(ele, key));
+          args[pos] := enum-field-symbol-to-int(ele, key);
+        end;
       end;
     end;
   end;
