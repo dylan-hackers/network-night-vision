@@ -44,8 +44,9 @@ define inline function filter-enums!(key/value-pairs :: <collection>,
               end;
             end;
           end;
-            
-      key/value-pairs[pos] := enum-field-symbol-to-int(ele, key);
+      if (key & instance?(key, <symbol>))
+        key/value-pairs[pos] := enum-field-symbol-to-int(ele, key);
+      end;
     end;
   end;
 end;

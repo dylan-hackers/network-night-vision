@@ -5,7 +5,9 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 //from rfc2131
 define protocol dhcp-message (container-frame)
   over <udp-frame> 67;
-  field operation :: <unsigned-byte> = 1;
+  enum field operation :: <unsigned-byte> = 1,
+    mappings: { 1 <=> #"bootrequest",
+                2 <=> #"bootreply" };
   field hardware-address-type :: <unsigned-byte> = 1;
   field hardware-address-length :: <unsigned-byte> = 6;
   field hops :: <unsigned-byte> = 0;
@@ -53,6 +55,7 @@ end;
 
 define protocol dhcp-subnet-mask (dhcp-option-with-data)
   over <dhcp-option> 1;
+  summary "%=", subnet-mask;
   field subnet-mask :: <ipv4-address>;
 end;
 
@@ -282,8 +285,11 @@ end;
 
 define protocol dhcp-netbios-node-type-option (dhcp-option-with-data)
   over <dhcp-option> 46;
-  field node-type :: <unsigned-byte>;
-//0x1 -> b-node; 0x2 -> p-node; 0x4 -> m-node; 0x8 -> h-node
+  enum field node-type :: <unsigned-byte>,
+    mappings: { #x1 <=> #"b-node",
+                #x2 <=> #"p-node",
+                #x4 <=> #"m-node",
+                #x8 <=> #"h-node" };
 end;
 
 define protocol dhcp-netbios-scope-option (dhcp-option-with-data)
@@ -362,6 +368,7 @@ end;
 
 define protocol dhcp-tftp-server-name-option (dhcp-option-with-data)
   over <dhcp-option> 66;
+  summary "%=", tftp-server-name;
   field tftp-server-name :: <externally-delimited-string>;
 end;
 
@@ -372,19 +379,21 @@ end;
 
 define protocol dhcp-message-type-option (dhcp-option-with-data)
   over <dhcp-option> 53;
-  field message-type :: <unsigned-byte>;
-//    1     DHCPDISCOVER
-//    2     DHCPOFFER
-//    3     DHCPREQUEST
-//    4     DHCPDECLINE
-//    5     DHCPACK
-//    6     DHCPNAK
-//    7     DHCPRELEASE
-//    8     DHCPINFORM
+  summary "%=", message-type;
+  enum field message-type :: <unsigned-byte>,
+    mappings: { 1 <=> #"dhcpdiscover",
+                2 <=> #"dhcpoffer",
+                3 <=> #"dhcprequest",
+                4 <=> #"dhcpdecline",
+                5 <=> #"dhcpack",
+                6 <=> #"dhcpnak",
+                7 <=> #"dhcprelease",
+                8 <=> #"dhcpinform" };
 end;
 
 define protocol dhcp-server-identifier-option (dhcp-option-with-data)
   over <dhcp-option> 54;
+  summary "%=", selected-server;
   field selected-server :: <ipv4-address>;
 end;
 

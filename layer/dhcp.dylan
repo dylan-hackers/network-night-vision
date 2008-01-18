@@ -10,8 +10,8 @@ define method push-data-aux (input :: <push-input>,
                              frame :: <dhcp-message>)
   let message-type-frame = find-option(frame, <dhcp-message-type-option>);
   if (instance?(node.state, <selecting>))
-    if (frame.operation = 2)
-      if (message-type-frame.message-type = 2)
+    if (frame.operation == #"boot-reply")
+      if (message-type-frame.message-type == #"dhcpoffer")
         node.offer := frame;
         process-event(node, #"receive-offer");
         process-event(node, #"send-request");
@@ -20,12 +20,12 @@ define method push-data-aux (input :: <push-input>,
   end;
   if (instance?(node.state, type-union(<requesting>, <rebinding>,
                                        <renewing>, <rebooting>)))
-    if (frame.operation = 2)
-      if (message-type-frame.message-type = 5) //ack
+    if (frame.operation == #"boot-reply")
+      if (message-type-frame.message-type == #"dhcpack")
         process-event(node, #"receive-ack");
         node.received-response-callback(frame);
         //format-out("received ack %s\n", as(<string>, frame));
-      elseif (message-type-frame.message-type = 6) //nak
+      elseif (message-type-frame.message-type == #"dhcpnak")
         process-event(node, #"receive-nak")
       end
     end
@@ -49,7 +49,7 @@ define method state-transition (state :: <dhcp-client>,
                     transaction-id: state.xid,
                     client-hardware-address: $hardware-address,
                     dhcp-options: list(make(<dhcp-message-type-option>,
-                                            message-type: 1)));
+                                            message-type: #"dhcpdiscover")));
   send(state.send-socket, $broadcast-address, packet);
 end;
 
@@ -70,17 +70,18 @@ define method state-transition (state :: <dhcp-client-state>,
                                 new-state :: <requesting>) => ()
 //  if (matches-requirements?(state.offer))
   let server-option = find-option(state.offer, <dhcp-server-identifier-option>);
+  let options = list(make(<dhcp-message-type-option>,
+                          message-type: #"dhcprequest"),
+                     make(<dhcp-requested-ip-address-option>,
+                          requested-ip: state.offer.your-ip-address),
+                     make(<dhcp-server-identifier-option>,
+                          selected-server: server-option.selected-server));
   let packet = make(<dhcp-message>,
                     transaction-id: state.xid,
                     client-hardware-address: $hardware-address,
-                    dhcp-options: list(make(<dhcp-message-type-option>,
-                                            message-type: 3),
-                                       make(<dhcp-requested-ip-address-option>,
-                                            requested-ip: state.offer.your-ip-address),
-                                       make(<dhcp-server-identifier-option>,
-                                            selected-server: server-option.selected-server)));
+                    dhcp-options: options);
   send(state.send-socket, $broadcast-address, packet);
-//
+//  end
 end;
 
 

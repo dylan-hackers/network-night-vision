@@ -129,9 +129,9 @@ define protocol arp-frame (container-frame)
   field mac-address-size :: <unsigned-byte> = byte-offset(field-size(<mac-address>));
   field protocol-address-size :: <unsigned-byte> 
     = byte-offset(field-size(<ipv4-address>));
-  field operation :: <2byte-big-endian-unsigned-integer>;
-//    enum: { #x1 => #"arp-request", "ARP WHO HAS %= TELL %=";
-//            #x2 => #"arp-response", "ARP %= IS AT %="; };
+  enum field operation :: <2byte-big-endian-unsigned-integer>,
+    mappings: { #x1 <=> #"arp-request",
+                #x2 <=> #"arp-response" };
   field source-mac-address :: <mac-address>;
   field source-ip-address :: <ipv4-address>;
   field target-mac-address :: <mac-address>;
@@ -139,11 +139,11 @@ define protocol arp-frame (container-frame)
 end;
 
 define method summary (frame :: <arp-frame>) => (res :: <string>)
-  if(frame.operation = 1)
+  if(frame.operation = #"arp-request")
     format-to-string("ARP WHO-HAS %= tell %=",
                      frame.target-ip-address,
                      frame.source-ip-address)
-  elseif(frame.operation = 2)
+  elseif(frame.operation = #"arp-response")
     format-to-string("ARP %= IS-AT %=",
                      frame.source-ip-address,
                      frame.source-mac-address)
