@@ -319,6 +319,7 @@ define module dhcp
     <dhcp-server-identifier-option>,
     <dhcp-subnet-mask>,
     <dhcp-router-option>,
+    <dhcp-end-option>,
     subnet-mask,
     addresses,
     message-type,

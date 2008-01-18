@@ -9,6 +9,10 @@ define method push-data-aux (input :: <push-input>,
                              node :: <dhcp-client>,
                              frame :: <dhcp-message>)
   let message-type-frame = find-option(frame, <dhcp-message-type-option>);
+  //format-out("Received dhcp message %= %= %=\n",
+  //           node.state,
+  //           frame.operation,
+  //           message-type-frame.message-type); 
   if (instance?(node.state, <selecting>))
     if (frame.operation == #"bootreply")
       if (message-type-frame.message-type == #"dhcpoffer")
@@ -49,7 +53,8 @@ define method state-transition (state :: <dhcp-client>,
                     transaction-id: state.xid,
                     client-hardware-address: $hardware-address,
                     dhcp-options: list(make(<dhcp-message-type-option>,
-                                            message-type: #"dhcpdiscover")));
+                                            message-type: #"dhcpdiscover"),
+                                       make(<dhcp-end-option>)));
   send(state.send-socket, $broadcast-address, packet);
 end;
 
@@ -70,12 +75,14 @@ define method state-transition (state :: <dhcp-client-state>,
                                 new-state :: <requesting>) => ()
 //  if (matches-requirements?(state.offer))
   let server-option = find-option(state.offer, <dhcp-server-identifier-option>);
+  //XXX: somehow the #"dhcprequest" doesn't work here :/
   let options = list(make(<dhcp-message-type-option>,
-                          message-type: #"dhcprequest"),
+                          message-type: 3), //#"dhcprequest"),
                      make(<dhcp-requested-ip-address-option>,
                           requested-ip: state.offer.your-ip-address),
                      make(<dhcp-server-identifier-option>,
-                          selected-server: server-option.selected-server));
+                          selected-server: server-option.selected-server),
+                     make(<dhcp-end-option>));
   let packet = make(<dhcp-message>,
                     transaction-id: state.xid,
                     client-hardware-address: $hardware-address,
@@ -86,7 +93,7 @@ end;
 
 
 define method main()
-  let eth = build-ethernet-layer("Intel", promiscuous?: #t);
+  let eth = build-ethernet-layer("eth0", promiscuous?: #t);
   let ip-layer = build-ip-layer(eth);
   let udp = make(<udp-layer>, ip-layer: ip-layer);
   let socket = create-socket(udp, 67, client-port: 68);

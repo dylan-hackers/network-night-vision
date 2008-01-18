@@ -32,8 +32,10 @@ define macro protocol-module-definer
 
 end;
 
-define inline function filter-enums!(key/value-pairs :: <collection>,
-                                     fields :: <collection>)
+define inline function filter-enums
+    (key/value-pairs :: <collection>, fields :: <collection>)
+ => (args :: <collection>)
+  let args = copy-sequence(key/value-pairs);
   for (ele in fields)
     if (instance?(ele, <enum-field>))
       let (key, pos)
@@ -45,10 +47,13 @@ define inline function filter-enums!(key/value-pairs :: <collection>,
             end;
           end;
       if (key & instance?(key, <symbol>))
-        key/value-pairs[pos] := enum-field-symbol-to-int(ele, key);
+        //format-out("changed %= from %= to %=\n", ele.field-name, key, enum-field-symbol-to-int(ele, key));
+        args[pos] := enum-field-symbol-to-int(ele, key);
       end;
     end;
   end;
+  //format-out("returning from filter-enum1\n");
+  args;
 end;
 
 
@@ -114,9 +119,10 @@ define macro real-class-definer
           static-end(last("$" ## ?name ## "-fields"));
         end;
       end;
-      define method make (class == ?name, #rest rest, #key, #all-keys) => (res :: ?name)
-        filter-enums!(rest, "$" ## ?name ## "-fields");
-        let frame = apply(make, decoded-class(?name), rest);
+      define method make (class == ?name,
+                          #rest rest, #key, #all-keys) => (res :: ?name)
+        let args = filter-enums(rest, "$" ## ?name ## "-fields");
+        let frame = apply(make, decoded-class(?name), args);
         for (field in fields(frame))
           if (field.getter(frame) = #f)
             field.setter(field.init-value, frame);
