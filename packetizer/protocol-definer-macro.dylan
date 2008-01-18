@@ -118,6 +118,8 @@ define macro real-class-definer
       define inline method field-size (frame :: subclass(?name)) => (res :: <number>)
         if (find-method(container-frame-size, list(?name)))
           $unknown-at-compile-time;
+        elseif (?#"attrs" == #"abstract")
+          $unknown-at-compile-time;
         else
           static-end(last("$" ## ?name ## "-fields"));
         end;
