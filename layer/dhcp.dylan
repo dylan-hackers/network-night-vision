@@ -10,7 +10,7 @@ define method push-data-aux (input :: <push-input>,
                              frame :: <dhcp-message>)
   let message-type-frame = find-option(frame, <dhcp-message-type-option>);
   if (instance?(node.state, <selecting>))
-    if (frame.operation == #"boot-reply")
+    if (frame.operation == #"bootreply")
       if (message-type-frame.message-type == #"dhcpoffer")
         node.offer := frame;
         process-event(node, #"receive-offer");
@@ -20,7 +20,7 @@ define method push-data-aux (input :: <push-input>,
   end;
   if (instance?(node.state, type-union(<requesting>, <rebinding>,
                                        <renewing>, <rebooting>)))
-    if (frame.operation == #"boot-reply")
+    if (frame.operation == #"bootreply")
       if (message-type-frame.message-type == #"dhcpack")
         process-event(node, #"receive-ack");
         node.received-response-callback(frame);

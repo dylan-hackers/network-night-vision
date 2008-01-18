@@ -279,7 +279,7 @@ define method send (socket :: <ip-over-ethernet-adapter>, destination :: <ipv4-a
                                      (x.arp-mac-address = from-addr)
                                  end);
           let arp-request = make(<arp-frame>,
-                                 operation: 1,
+                                 operation: #"arp-request",
                                  source-mac-address: from-addr,
                                  source-ip-address: from-ip,
                                  target-ip-address: destination,
@@ -729,19 +729,19 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <arp-handler>,
                              frame :: <container-frame>)
-  if (frame.operation = 1
+  if (frame.operation = #"arp-request"
       & frame.target-mac-address = mac-address("00:00:00:00:00:00"))
     let arp-entry = element(node.arp-table, frame.target-ip-address, default: #f);
     if (arp-entry & instance?(arp-entry, <advertised-arp-entry>))
       let arp-response = make(<arp-frame>,
-                              operation: 2,
+                              operation: #"arp-response",
                               target-mac-address: frame.source-mac-address,
                               target-ip-address: frame.source-ip-address,
                               source-mac-address: arp-entry.arp-mac-address,
                               source-ip-address: arp-entry.ip-address);
       send(node.send-socket, frame.source-mac-address, arp-response);
     end;
-  elseif (frame.operation = 2)
+  elseif (frame.operation = #"arp-response")
     with-lock(node.table-lock)
       let old-entry = element(node.arp-table, frame.source-ip-address, default: #f);
       if (instance?(old-entry, <outstanding-arp-request>))
@@ -789,7 +789,7 @@ define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-a
   let arp-entry = element(arp-handler.arp-table, ip, default: #f);
   if (arp-entry)
     let arp-frame = make(<arp-frame>,
-                         operation: 1,
+                         operation: #"arp-request",
                          source-mac-address: arp-entry.arp-mac-address,
                          source-ip-address: arp-entry.ip-address,
                          target-mac-address: mac-address("00:00:00:00:00:00"),
