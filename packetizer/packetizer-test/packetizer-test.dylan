@@ -487,6 +487,71 @@ define test enum-parse-test ()
   check-equal("enum field parses correct to changed symbol", #"foobar", g.foobar);
 end;
 
+define abstract protocol abstract-test (variably-typed-container-frame)
+  layering field foo :: <unsigned-byte>;
+end;
+
+define protocol abstract-sub42 (abstract-test)
+  over <abstract-test> 42;
+  field bar :: <unsigned-byte> = 42;
+end;
+
+define protocol abstract-sub23 (abstract-test)
+  over <abstract-test> 23;
+  field foobar :: <unsigned-byte> = 23;
+end;
+
+define test abstract-parse-test ()
+  let f = parse-frame(<abstract-test>, #(#x23, #x42, #x23));
+  frame-field-checker(0, f, 0, 8, 8);
+  frame-field-checker(1, f, 8, 8, 16);
+  check-equal("type with inline layering is correct",
+              #t, instance?(f, <abstract-sub23>));
+end;
+
+define test abstract-assemble-test ()
+  let f = make(<abstract-sub42>);
+  let as = assemble-frame(f);
+  check-equal("assembling of abstract is ok", 42, as.packet[0]);
+  check-equal("assembling of abstract is ok", 42, as.packet[0]);
+end;
+  
+define protocol abstract-user (container-frame)
+  repeated field abstracts :: <abstract-test>,
+    reached-end?: instance?(frame, <abstract-sub23>);
+end;
+
+define test abstract-user-parse-test ()
+  let f = parse-frame(<abstract-user>, #(42, 42, 42, 42, 42, 42, 23, 23));
+  frame-field-checker(0, f, 0, 64, 64);
+  check-equal("abstract count is 4", 4, f.abstracts.size);
+  check-equal("repeated1 is 42", #t, instance?(f.abstracts[0], <abstract-sub42>));
+  check-equal("repeated2 is 42", #t, instance?(f.abstracts[1], <abstract-sub42>));
+  check-equal("repeated3 is 42", #t, instance?(f.abstracts[2], <abstract-sub42>));
+  check-equal("repeated4 is 23", #t, instance?(f.abstracts[3], <abstract-sub23>));
+end;
+
+define test abstract-user-assemble-test ()
+  let f = make(<abstract-user>,
+               abstracts: list(make(<abstract-sub42>),
+                               make(<abstract-sub42>),
+                               make(<abstract-sub42>),
+                               make(<abstract-sub42>),
+                               make(<abstract-sub23>)));
+  check-equal("frame size of abstract-user is correct", 80, frame-size(f));
+  let as = assemble-frame(f);
+  check-equal("byte1 of abstract-user is correct", 42, as.packet[0]);
+  check-equal("byte2 of abstract-user is correct", 42, as.packet[1]);
+  check-equal("byte3 of abstract-user is correct", 42, as.packet[2]);
+  check-equal("byte4 of abstract-user is correct", 42, as.packet[3]);
+  check-equal("byte5 of abstract-user is correct", 42, as.packet[4]);
+  check-equal("byte6 of abstract-user is correct", 42, as.packet[5]);
+  check-equal("byte7 of abstract-user is correct", 42, as.packet[6]);
+  check-equal("byte8 of abstract-user is correct", 42, as.packet[7]);
+  check-equal("byte9 of abstract-user is correct", 23, as.packet[8]);
+  check-equal("byte10 of abstract-user is correct", 23, as.packet[9]);
+end;
+
 define suite packetizer-suite ()
   test packetizer-parser;
   test packetizer-dynamic-parser;
@@ -506,6 +571,8 @@ define suite packetizer-suite ()
   test dyn-length-client;
   test dyn-length-client2;
   test enum-parse-test;
+  test abstract-parse-test;
+  test abstract-user-parse-test;
 end;
 
 define suite packetizer-assemble-suite ()
@@ -526,6 +593,8 @@ define suite packetizer-assemble-suite ()
   test dns-foo-assemble;
   test dynlength-assemble;
   test enum-assemble-test;
+  test abstract-assemble-test;
+  test abstract-user-assemble-test;
 end;
 
 begin
