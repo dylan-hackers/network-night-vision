@@ -469,8 +469,9 @@ end;
 define module ntp
   use dylan;
   use packetizer;
+  use date;
   use format;
 
   use ipv4, import: { ipv4-address, <ipv4-address>, <udp-frame> };
-  use pcap, import: { <unix-time-value> };
+  use pcap, import: { <unix-time-value>, make-unix-time };
 end;
