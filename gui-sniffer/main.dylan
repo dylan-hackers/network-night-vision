@@ -16,7 +16,7 @@ define function main()
   format(*standard-output*, "\n\nType 'help' down here to get started.\n");
   recenter-window(gui-sniffer.nnv-shell-pane, gui-sniffer.nnv-shell-pane.window-point.bp-line, #"bottom");
   start-frame(gui-sniffer);
-end;
+end function main;
 
 main()
 

@@ -87,22 +87,6 @@ define macro real-class-definer
           $protocols[?#"name"] := "$" ## ?name ## "-fields";
         end;
       end;
-      define constant "$" ## ?name ## "-layering" = make(<table>);
-      define inline method layer (frame :: subclass(?name)) => (res :: false-or(<table>))
-        "$" ## ?name ## "-layering";
-      end;
-      define constant "$" ## ?name ## "-reverse-layering" = make(<table>);
-      define inline method reverse-layer (frame :: subclass(?name)) => (res :: false-or(<table>))
-        "$" ## ?name ## "-reverse-layering"
-      end;
-      define inline method recursive-reverse-layer (frame :: subclass(?name), #next next-method)
-       => (res :: false-or(<table>))
-        if ("$" ## ?name ## "-reverse-layering".size > 0)
-          "$" ## ?name ## "-reverse-layering"
-        else
-          next-method()
-        end;
-      end;
       define constant "$" ## ?name ## "-layer-bonding"
         = begin
             let res = choose(rcurry(instance?, <layering-field>), "$" ## ?name ## "-fields");
@@ -491,14 +475,12 @@ define method parse-frame (frame-type :: subclass(<variably-typed-container-fram
                            packet :: <byte-sequence>,
                            #key parent :: false-or(<container-frame>),
                            default = <raw-frame>)
-  if (layer(frame-type) & layer(frame-type).size > 0)
-    let superprotocol-frame = next-method();
-    let real-type = element(layer(frame-type),
-                            layer-magic(superprotocol-frame),
-                            default: default);
+  let superprotocol-frame = next-method();
+  let real-type = lookup-layer(frame-type, layer-magic(superprotocol-frame));
+  if (real-type & (real-type ~== frame-type))
     parse-frame(real-type, packet, parent: parent);
   else
-    next-method()
+    superprotocol-frame
   end;
 end;
 
@@ -586,7 +568,8 @@ define macro protocol-definer
       end } =>
       { 
         define ?attrs protocol ?name (?superprotocol) ?fields end;
-        stack-protocol(?super, "<" ## ?name ## ">", ?magic);
+        define method lookup-layer (frame :: subclass(?super), value == ?magic) => (class :: <class>) "<" ## ?name ## ">" end;
+        define method reverse-lookup-layer (frame :: subclass(?super), payload :: "<" ## ?name ## ">") => (value :: <integer>) ?magic end;
       }
  
     { define ?attrs:* protocol ?:name (?superprotocol:name)

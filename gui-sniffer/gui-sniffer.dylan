@@ -631,8 +631,7 @@ end;
 
 define method ping-source (node :: <gui-sniffer-frame>)
   let data = current-packet(node);
-  let icmp = icmp-frame(code: 0, icmp-type: 8,
-                        payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
+  let icmp = icmp-echo-request(icmp-data: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
   send(node.ip-layer, data.payload.source-address, icmp);
 end;
 

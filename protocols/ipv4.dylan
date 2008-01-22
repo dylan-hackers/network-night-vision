@@ -115,7 +115,7 @@ end;
 define function my-payload-type (frame :: <udp-frame>)
   let res = payload-type(frame);
   if (res == <raw-frame>)
-    element(layer(frame.object-class), frame.source-port, default: <raw-frame>);
+    lookup-layer(frame.object-class, frame.source-port) | <raw-frame>;
   else
     res;
   end;

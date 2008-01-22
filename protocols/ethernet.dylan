@@ -67,7 +67,7 @@ define protocol snap-frame (header-frame)
   field organization-code :: <3byte-big-endian-unsigned-integer> = 0;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
-    type-function: element(<ethernet-frame>.layer, frame.type-code, default: <raw-frame>);
+    type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
 end;
 
 define protocol vlan-tag (header-frame)
@@ -78,7 +78,7 @@ define protocol vlan-tag (header-frame)
   field vlan-id :: <12bit-unsigned-integer>;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
-    type-function: element(<ethernet-frame>.layer, frame.type-code, default: <raw-frame>);
+    type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
 end;
 
 define protocol stp-identifier (container-frame)

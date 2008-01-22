@@ -300,7 +300,7 @@ define module icmp
   use streams-protocol;
   use format;
 
-  use ipv4, import: { <ipv4-frame>, calculate-checksum };
+  use ipv4, import: { <ipv4-frame>, <ipv4-address>, calculate-checksum };
   use ipv6, import: { <ipv6-frame> };
 
   export <icmp-frame>, icmp-frame,
@@ -308,6 +308,7 @@ define module icmp
     code, code-setter,
     checksum, checksum-setter;
 
+  export icmp-echo-request;
 end;
 define module dhcp
   use common-dylan;

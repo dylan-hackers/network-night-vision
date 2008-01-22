@@ -85,6 +85,7 @@ define method make-shell
                                  editor: editor);
   let node = make-empty-section-node(buffer);
   add-node!(buffer, node, after: #"start");
+  interval-read-only?(node) := #t;
   buffer
 end method make-shell;
 

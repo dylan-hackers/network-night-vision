@@ -117,9 +117,8 @@ define module packetizer
     destination-address, destination-address-setter,
     payload-type,
     container-frame-size,
-    get-protocol-magic, layer-magic,
-    layer,
-    reverse-layer, recursive-reverse-layer;
+    layer-magic,
+    lookup-layer, reverse-lookup-layer;
 
   export <header-frame>,
     <unparsed-header-frame>,

@@ -234,12 +234,6 @@ define open generic unparsed-class (type :: subclass(<container-frame>))
 define open generic decoded-class (type :: subclass(<container-frame>))
   => (class :: <class>);
 
-define open generic layer (type :: subclass(<container-frame>))
-  => (res :: false-or(<table>));
-
-define open generic reverse-layer (type :: subclass(<container-frame>))
-  => (res :: false-or(<table>));
-
 define open generic layer-magic (frame :: <container-frame>) => (res);
 
 define method layer-magic (frame :: <container-frame>) => (res)
@@ -251,30 +245,22 @@ define open abstract class <decoded-container-frame> (<container-frame>)
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
 end;
 
-define method stack-protocol (bottom-layer :: <type>, upper-layer :: <type>, magic)
-  layer(bottom-layer)[magic] := upper-layer;
-  reverse-layer(bottom-layer)[decoded-class(upper-layer)] := magic;
-end;
-
 define function payload-type (frame :: <container-frame>) => (res :: <type>)
-  let table = layer(frame.object-class);
-  element(table, frame.layer-magic, default: <raw-frame>);
+  lookup-layer(frame.object-class, frame.layer-magic) | <raw-frame>;
 end;
 
-define open generic recursive-reverse-layer (frame) => (res :: false-or(<table>));
+define open generic lookup-layer (frame :: subclass(<frame>), value :: <integer>) => (class :: false-or(<class>));
 
-define inline method recursive-reverse-layer (frame) => (res :: false-or(<table>))
-  #f
-end;
+define method lookup-layer (frame :: subclass(<frame>), value :: <integer>) => (false == #f) #f end;
+
+define open generic reverse-lookup-layer (frame :: subclass(<frame>), payload :: <frame>) => (value :: <integer>);
+
 define inline method fixup-protocol-magic (frame :: <header-frame>) => (magic)
-  get-protocol-magic(frame, frame.payload);
+  reverse-lookup-layer(frame.object-class, frame.payload);
 end;
 
 define inline method fixup-protocol-magic (frame :: <container-frame>) => (magic)
-  let res = choose(rcurry(instance?, <variably-typed-field>), fields(frame));
-  if (res.size = 1)
-    get-protocol-magic(frame, res[0].getter(frame));
-  end;
+  reverse-lookup-layer(frame.object-class, frame);
 end;
 
 define class <inline-layering-error> (<error>)
@@ -283,29 +269,6 @@ end;
 define class <missing-inline-layering-error> (<error>)
 end;
 
-define inline method fixup-protocol-magic (frame :: <variably-typed-container-frame>) => (magic)
-  let layer-table = recursive-reverse-layer(frame.object-class);
-  if (layer-table)
-    let res = element(layer-table, frame.object-class, default: #f);
-    if (res)
-      res
-    else
-      signal(make(<inline-layering-error>));
-    end;
-  else
-    signal(make(<missing-inline-layering-error>));
-  end;
-end;
-
-
-define inline method get-protocol-magic (frame :: <container-frame>, payload :: <frame>) => (magic)
-  let reverse-layering = reverse-layer(frame.object-class);
-  let res = element(reverse-layering, decoded-class(payload.object-class), default: #f);
-  unless (res)
-    error("don't know how to layer %= over %=", payload.frame-name, frame.frame-name);
-  end;
-  res;
-end;
 
 define method initialize (frame :: <decoded-container-frame>,
                           #rest rest, #key, #all-keys)
@@ -391,7 +354,6 @@ define open generic destination-address-setter (value, frame :: type-union(<raw-
 //can't specify type because unparsed-getter can't return false-or(<frame>)!
 define open generic payload (frame :: <header-frame>) => (payload);
 
-define open generic get-protocol-magic (frame :: <container-frame>, payload :: <frame>);
 define method payload (frame :: <header-frame>) => (payload)
   error("No payload specified");
 end;

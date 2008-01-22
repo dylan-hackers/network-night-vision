@@ -79,8 +79,7 @@ define method do-execute-command (context :: <nnv-context>, command :: <ping-com
                                          close-socket(socket);
                                        end);
   connect(socket, response-handler);
-  let icmp = icmp-frame(code: 0, icmp-type: 8,
-                        payload: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
+  let icmp = icmp-echo-request(icmp-data: read-frame(<raw-frame>, "123412341234123412341234123412341234123412341234"));
   send(context.nnv-context.ip-layer, target, icmp);
   format(stream, "Ping sent!\n");
 end;
@@ -196,6 +195,23 @@ define method do-execute-command (context :: <nnv-context>, command :: <filter-c
   apply-filter(context.nnv-context);
 end;
 
+define class <key-bindings-property> (<command-property>)
+end;
+
+define command-property key-bindings => <key-bindings-property> 
+    (summary: "Summary of key bindings",
+     documentation: "Shows a list of all editor key bindings")
+end;
+
+define method show-property
+    (context :: <nnv-context>, property :: <key-bindings-property>)
+ => ()
+  let stream = context.context-server.server-output-stream;
+  let docstrings = compute-key-binding-documentation(frame-command-set(context.nnv-context.nnv-shell-pane));
+  do(curry(write-line, stream), docstrings);
+end;
+
+
 define command-group network
     (summary: "Networking commands",
      documentation: "The set of commands for managing the network.")
@@ -215,6 +231,7 @@ define command-group nnv
   group basic;
   group property;
   group network;
+  property key-bindings;
 end command-group;
 
 define method context-command-group
