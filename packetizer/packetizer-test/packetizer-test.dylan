@@ -502,7 +502,7 @@ define protocol abstract-sub23 (abstract-test)
 end;
 
 define test abstract-parse-test ()
-  let f = parse-frame(<abstract-test>, #(#x23, #x42, #x23));
+  let f = parse-frame(<abstract-test>, #(23, 42, 23));
   frame-field-checker(0, f, 0, 8, 8);
   frame-field-checker(1, f, 8, 8, 16);
   check-equal("type with inline layering is correct",
