@@ -33,10 +33,44 @@ define method read-frame (frame-type :: subclass(<leaf-frame>), string :: <strin
   error("read-frame not supported for frame-type %=", frame-type);
 end;
 
-
-define class <unsigned-byte> (<fixed-size-translated-leaf-frame>)
-  slot data :: <byte>, init-keyword: data:;
+define class <boolean-bit> (<fixed-size-translated-leaf-frame>) end;
+ 
+define method parse-frame (frame-type == <boolean-bit>,
+                           packet :: <byte-sequence>,
+                           #key)
+ => (value :: <boolean>, next-unparsed :: <integer>)
+  values(logand(packet[0], #x80) == #x80, 1)
 end;
+    
+define method assemble-frame-into-as
+    (frame-type == <boolean-bit>,
+     data :: <boolean>,
+     packet :: <stretchy-byte-vector-subsequence>) => (end-offset :: <integer>)
+  if (data)
+    packet[0] := logior(packet[0], #x80);
+  else
+    packet[0] := logand(packet[0], #x7F)
+  end;
+  1;
+end;
+
+define inline method field-size (type == <boolean-bit>)
+  => (length :: <integer>)
+  1
+end;
+
+define method read-frame (type == <boolean-bit>,
+                          string :: <string>)
+ => (res)
+  string = "#t" | string = "true"
+end;
+
+define inline method high-level-type (low-level-type == <boolean-bit>)
+ => (res == <boolean>)
+  <boolean>;
+end;
+
+define class <unsigned-byte> (<fixed-size-translated-leaf-frame>) end;
 
 define method parse-frame (frame-type == <unsigned-byte>,
                            packet :: <byte-sequence>,
@@ -51,11 +85,6 @@ define method assemble-frame-into-as
      packet :: <stretchy-byte-vector-subsequence>) => (end-offset :: <integer>)
   packet[0] := data;
   8;
-end;
-
-define method as (class == <string>, frame :: <unsigned-byte>)
- => (string :: <string>)
-  concatenate("0x", integer-to-string(frame.data, base: 16, size: 2));
 end;
 
 define inline method field-size (type == <unsigned-byte>)

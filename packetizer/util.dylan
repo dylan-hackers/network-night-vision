@@ -33,6 +33,16 @@ define method as(type == <string>, object :: <integer>)
  => (res :: <string>)
   concatenate("0x", hex(object))
 end;
+
+define method as(type == <string>, object :: <boolean>)
+ => (res :: <string>)
+  if (object) "true" else "false" end
+end;
+
+define method print-object (frame :: <frame>, stream :: <stream>) => ()
+  write(stream, as(<string>, frame))
+end;
+   
 /*
 define method as(type == <string>, object :: <stretchy-vector>)
  => (res :: <string>)

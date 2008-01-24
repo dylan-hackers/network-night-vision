@@ -20,12 +20,17 @@ define protocol dns-frame (container-frame-with-metadata)
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
   field identifier :: <2byte-big-endian-unsigned-integer> = 2342;
-  field query-or-response :: <1bit-unsigned-integer> = 0;
-  field opcode :: <4bit-unsigned-integer> = 0;
-  field authoritative-answer :: <1bit-unsigned-integer> = 0;
-  field truncation :: <1bit-unsigned-integer> = 0;
-  field recursion-desired :: <1bit-unsigned-integer> = 1;
-  field recursion-available :: <1bit-unsigned-integer> = 0;
+  enum field query-or-response :: <1bit-unsigned-integer> = 0,
+    mappings: { 0 <=> #"query",
+                1 <=> #"response" };
+  enum field opcode :: <4bit-unsigned-integer> = 0,
+    mappings: { 0 <=> #"standard query",
+                1 <=> #"inverse query",
+                2 <=> #"server status request" };
+  field authoritative-answer :: <boolean-bit> = #f;
+  field truncation :: <boolean-bit> = #f;
+  field recursion-desired :: <boolean-bit> = #t;
+  field recursion-available :: <boolean-bit> = #f;
   field reserved :: <3bit-unsigned-integer> = 0;
   field response-code :: <4bit-unsigned-integer> = 0;
   field question-count :: <2byte-big-endian-unsigned-integer>,
@@ -69,7 +74,7 @@ define method assemble-frame-into
 end;
 
 define protocol domain-name (container-frame)
-  summary "%s", curry(as, <string>);
+  summary "%=", curry(as, <string>);
   repeated field fragment :: <domain-name-fragment>,
     reached-end?: frame.type-code = 3 | frame.data-length = 0;
 end;
@@ -147,8 +152,17 @@ end;
 
 
 define protocol dns-question (container-frame)
+  summary "%= %s", domainname, question-type;
   field domainname :: <domain-name>;
-  field question-type :: <2byte-big-endian-unsigned-integer>;
+  enum field question-type :: <2byte-big-endian-unsigned-integer>,
+    mappings: { 1  <=> #"A",
+                2  <=> #"NS",
+                5  <=> #"CNAME",
+                6  <=> #"SOA",
+                12 <=> #"PTR",
+                13 <=> #"HINFO",
+                15 <=> #"MX",
+                16 <=> #"TXT" };
   field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
@@ -163,21 +177,25 @@ define abstract protocol dns-resource-record (variably-typed-container-frame)
 end;
 
 define protocol a-host-address (dns-resource-record)
+  summary "%= A %=", domainname, ipv4-address;
   over <dns-resource-record> 1;
   field ipv4-address :: <ipv4-address>;
 end;
 
 define protocol name-server (dns-resource-record)
+  summary "%= NS %=", domainname, ns-name;
   over <dns-resource-record> 2;
   field ns-name :: <domain-name>;
 end;
 
 define protocol canonical-name (dns-resource-record)
+  summary "%= CNAME %=", domainname, cname; 
   over <dns-resource-record> 5;
   field cname :: <domain-name>;
 end;
 
 define protocol start-of-authority (dns-resource-record)
+  summary "%= SOA", domainname;
   over <dns-resource-record> 6;
   field nameserver :: <domain-name>;
   field hostmaster :: <domain-name>;
@@ -189,6 +207,7 @@ define protocol start-of-authority (dns-resource-record)
 end;
 
 define protocol domain-name-pointer (dns-resource-record)
+  summary "%= PTR %=", domainname, ptr-name;
   over <dns-resource-record> 12;
   field ptr-name :: <domain-name>;
 end;
@@ -199,24 +218,27 @@ define protocol character-string (container-frame)
     length: frame.data-length * 8;
 end;
 
-define protocol host-information (dns-resource-record)
-  over <dns-resource-record> 13;
-  field cpu :: <character-string>;
-  field operating-system :: <character-string>; 
-end;
-
 define method as (class == <string>, frame :: <character-string>)
  => (res :: <string>)
   as(<string>, frame.string-data);
 end;
 
+define protocol host-information (dns-resource-record)
+  summary "%= HINFO %=, %=", domainname, cpu, operating-system;
+  over <dns-resource-record> 13;
+  field cpu :: <character-string>;
+  field operating-system :: <character-string>; 
+end;
+
 define protocol mail-exchange (dns-resource-record)
+  summary "%= MX %= %=", domainname, preference, exchange; 
   over <dns-resource-record> 15;
   field preference :: <2byte-big-endian-unsigned-integer>;
   field exchange :: <domain-name>;
 end;
 
 define protocol text-strings (dns-resource-record)
+  summary "%= TXT %=", domainname, text-data;
   over <dns-resource-record> 16;
   field text-data :: <character-string>;
 end;

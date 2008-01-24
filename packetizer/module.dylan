@@ -31,7 +31,7 @@ define module packetizer
 
   export hexdump;
 
-  export <unsigned-byte>,
+  export <unsigned-byte>, <boolean-bit>,
     <3byte-big-endian-unsigned-integer>,
     <2byte-big-endian-unsigned-integer>, <2byte-little-endian-unsigned-integer>,
     <3byte-little-endian-unsigned-integer>,
