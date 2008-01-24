@@ -14,12 +14,12 @@ define method matches? (packet :: <frame>, filter :: <filter-expression>)
 end;
 
 define class <frame-present> (<filter-expression>)
-  slot filter-frame-name :: <symbol>, required-init-keyword: frame:;
+  slot filter-frame-type :: <class>, required-init-keyword: type:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <frame-present>)
  => (match? :: <boolean>)
-  as(<symbol>, packet.frame-name) = filter.filter-frame-name
+  instance?(packet, filter.filter-frame-type);
 end;
 
 define method matches? (packet :: <header-frame>, filter :: <frame-present>)
@@ -28,16 +28,16 @@ define method matches? (packet :: <header-frame>, filter :: <frame-present>)
 end;
 
 define class <field-equals> (<filter-expression>)
-  slot filter-frame-name :: <symbol>, required-init-keyword: frame:;
+  slot filter-frame-type :: <class>, required-init-keyword: type:;
   slot filter-field-name :: <symbol>, required-init-keyword: name:;
   slot filter-field :: <field>, required-init-keyword: field:;
   slot filter-field-value, required-init-keyword: value:;
 end;
 
 define method matches? (packet :: <container-frame>, filter :: <field-equals>)
-  => (match? :: <boolean>);
- (as(<symbol>, packet.frame-name) = filter.filter-frame-name)
-    & (filter.filter-field.getter(packet) = filter.filter-field-value)
+ => (match? :: <boolean>);
+  instance?(packet, filter.filter-frame-type)
+   & (filter.filter-field.getter(packet) = filter.filter-field-value)
 end;
 
 define method matches? (packet :: <header-frame>, filter :: <field-equals>)

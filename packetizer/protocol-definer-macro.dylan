@@ -67,7 +67,11 @@ define macro real-class-definer
       define inline method frame-name (frame :: subclass(?name)) => (res :: <string>)
         ?"name"
       end;
+      // XXX: unify clients
       define inline method fields (frame :: ?name) => (res :: <simple-vector>)
+          "$" ## ?name ## "-fields"
+      end;
+      define inline method fields (frame-type :: subclass(?name)) => (res :: <simple-vector>)
           "$" ## ?name ## "-fields"
       end;
       define method fields-initializer
@@ -84,7 +88,7 @@ define macro real-class-definer
         if (element($protocols, ?#"name", default: #f))
           error("Protocol with same name already exists");
         else
-          $protocols[?#"name"] := "$" ## ?name ## "-fields";
+          $protocols[?#"name"] := ?name;
         end;
       end;
       define constant "$" ## ?name ## "-layer-bonding"

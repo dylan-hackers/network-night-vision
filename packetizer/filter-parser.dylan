@@ -63,18 +63,13 @@ define constant $filter-productions
   production filter => [Name], action:
     method(p :: <simple-parser>, data, s, e)
         let (res, frame-name) = find-protocol(p[0]);
-        make(<frame-present>, frame: as(<symbol>, frame-name));
+        make(<frame-present>, type: res);
     end;
 
   production filter => [Name DOT Name EQUALS value], action:
     method(p :: <simple-parser>, data, s, e)
-        let (field, frame-name) = find-protocol-field(p[0], p[2]);
-        make(<field-equals>,
-             frame: as(<symbol>, frame-name),
-             name: as(<symbol>, p[2]),
-             value: read-frame(field.type, p[4]),
-             field: field);
-             //XXX: only works for statically typed fields, no support for repeated fields..
+        build-field-equals-filter(p[0], p[2], p[4]);
+        //XXX: only works for statically typed fields, no support for repeated fields..
     end;
 
   production compound-filter => [filter], action:
@@ -114,13 +109,13 @@ define function parse-filter (input :: <string>)
 end;
 
 define method print-object (filter :: <frame-present>, stream :: <stream>) => ();
-  format(stream, "%s", filter.filter-frame-name);
+  format(stream, "%s", filter.filter-frame-type.frame-name);
 end;
 
 define method print-object (filter :: <field-equals>, stream :: <stream>) => ();
   format(stream,
          "%s.%s = %s",
-         filter.filter-frame-name,
+         filter.filter-frame-type.frame-name,
          filter.filter-field-name,
          filter.filter-field-value);
 end;
@@ -141,21 +136,19 @@ define function build-field-equals-filter (frame-type :: type-union(<string>, <s
                                            field-name :: type-union(<string>, <symbol>),
                                            value)
  => (filter :: <field-equals>)
-  if (instance?(frame-type, <symbol>))
-    frame-type := as(<string>, frame-type)
-  end;
-  unless (instance?(frame-type, <string>))
-    frame-type := frame-type.frame-name;
-  end;
+  let protocol = select (frame-type by instance?)
+                   <string>, <symbol> => find-protocol(frame-type);
+                   otherwise => frame-type;
+                 end;
   if (instance?(field-name, <symbol>))
     field-name := as(<string>, field-name)
   end;
-  let (field, frame-name) = find-protocol-field(frame-type, field-name);
+  let field = find-protocol-field(protocol, field-name);
   unless (instance?(value, high-level-type(field.type)))
     value := read-frame(field.type, value);
   end;
   make(<field-equals>,
-       frame: as(<symbol>, frame-name),
+       type: protocol,
        name: as(<symbol>, field-name),
        value: value,
        field: field);

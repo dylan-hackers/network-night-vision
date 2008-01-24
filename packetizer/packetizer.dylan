@@ -47,17 +47,17 @@ define constant <bit-vector> = <stretchy-bit-vector-subsequence>;
 define constant $protocols = make(<table>);
 
 define method find-protocol-aux (protocol :: <string>)
- => (res :: false-or(<simple-vector>))
+ => (res :: false-or(<class>))
   find-protocol-aux(as(<symbol>, protocol));
 end;
 
 define method find-protocol-aux (protocol :: <symbol>)
- => (res :: false-or(<simple-vector>))
+ => (res :: false-or(<class>))
   element($protocols, protocol, default: #f);
 end;
 
 define function find-protocol (name :: <string>)
- => (res :: <simple-vector>, frame-name :: <string>)
+ => (res :: <class>, frame-name :: <string>)
   let protocol-name = name;
   let res = find-protocol-aux(protocol-name);
   unless(res)
@@ -74,15 +74,13 @@ define function find-protocol (name :: <string>)
   values(res, protocol-name);
 end;
 
-define function find-protocol-field (protocol-name :: <string>, field-name :: <string>)
- => (res :: <field>, frame-name :: <string>)
-  let (protocol-fields, frame-name) = find-protocol(protocol-name);
-  let field = find-field(field-name, protocol-fields);
-  if (field)
-    values(field, frame-name);
-  else
-    error("Field %s in protocol %s not found\n", field-name, protocol-name);
+define function find-protocol-field (protocol :: <class>, field-name :: <string>)
+ => (res :: <field>)
+  let field = find-field(field-name, fields(protocol));
+  unless (field)
+    error("Field %s in protocol %s not found\n", field-name, protocol.frame-name);
   end;
+  field
 end;
 
 define abstract class <frame> (<object>)
@@ -217,7 +215,7 @@ define inline method field-count (frame :: subclass(<unparsed-container-frame>))
   0;
 end;
 
-define open generic fields (frame :: <container-frame>)
+define open generic fields (frame :: type-union(<container-frame>, subclass(<container-frame>)))
  => (res :: <simple-vector>);
 
 define open generic fields-initializer (frame :: subclass(<container-frame>))
