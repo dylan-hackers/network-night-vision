@@ -2,6 +2,12 @@ module: packetizer
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+define macro unsupplied-or
+  { unsupplied-or(?:expression) }
+ =>
+  { type-union(singleton($unsupplied), ?expression) }
+end; 
+
 define macro protocol-module-definer
   { protocol-module-definer (?:name; ?super:name; ?fields:*) }
  => { define module ?name
@@ -117,7 +123,7 @@ define macro real-class-definer
         let args = filter-enums(rest, "$" ## ?name ## "-fields");
         let frame = apply(make, decoded-class(?name), args);
         for (field in fields(frame))
-          if (field.getter(frame) = #f)
+          if (field.getter(frame) = $unsupplied)
             field.setter(field.init-value, frame);
           end;
         end;
@@ -217,16 +223,16 @@ define macro decoded-class-definer
     
     field:
     { variably-typed-field ?:name, ?rest:* }
-    => { slot ?name :: false-or(<frame>) = #f,
+    => { slot ?name :: unsupplied-or(<frame>) = $unsupplied,
       init-keyword: ?#"name" }
     { repeated field ?:name ?rest:* }
-      => { slot ?name :: false-or(<collection>) = #f,
+      => { slot ?name :: unsupplied-or(<collection>) = $unsupplied,
       init-keyword: ?#"name" }
     { enum field ?:name \:: ?field-type:name ?rest:* }
-    => { slot "%" ## ?name :: false-or(high-level-type(?field-type)) = #f,
+    => { slot "%" ## ?name :: unsupplied-or(high-level-type(?field-type)) = $unsupplied,
          init-keyword: ?#"name" }
     { ?attrs:* field ?:name \:: ?field-type:name ?rest:* }
-    => { slot ?name :: false-or(high-level-type(?field-type)) = #f,
+    => { slot ?name :: unsupplied-or(high-level-type(?field-type)) = $unsupplied,
       init-keyword: ?#"name" }
 end;
 
@@ -254,7 +260,7 @@ define macro unparsed-frame-field-generator
                                    ?frame-type:name,
                                    ?field-index:expression) }
  => { define inline method ?name (mframe :: ?frame-type) => (res)
-         if (mframe.cache.?name)
+         if (mframe.cache.?name ~== $unsupplied)
            mframe.cache.?name
          else
           let frame-field = get-frame-field(?field-index, mframe);

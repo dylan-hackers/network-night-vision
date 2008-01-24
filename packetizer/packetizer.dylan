@@ -429,7 +429,7 @@ define method assemble-frame-into (frame :: <container-frame>,
                                    packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
   let offset :: <integer> = 0;
   for (field in fields(frame))
-    unless (field.getter(frame))
+    if (field.getter(frame) == $unsupplied)
       if (field.fixup-function)
         field.setter(field.fixup-function(frame), frame);
       else

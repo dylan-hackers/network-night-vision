@@ -55,9 +55,10 @@ define module gui-sniffer
   use pcap, import: { make-unix-time, <pcap-packet>, decode-unix-time, timestamp };
   use prism2, import: { <prism2-frame> };
   use ipv4, import: { <ipv4-frame>, <udp-frame>, source-port, destination-port,
-                      acknowledgement-number, sequence-number, ipv4-address, <ipv4-address> };
+                      acknowledgement-number, sequence-number, ipv4-address, <ipv4-address>, udp-frame };
   use icmp, import: { <icmp-frame>, icmp-echo-request };
   use dhcp, import: { <dhcp-message>, <dhcp-subnet-mask>, <dhcp-router-option>, subnet-mask, addresses, your-ip-address };
+  use dns, import: { dns-frame, dns-question, <domain-name> };
   use cidr;
   use tcp;
   use ipv6;

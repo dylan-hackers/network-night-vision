@@ -195,6 +195,26 @@ define method do-execute-command (context :: <nnv-context>, command :: <filter-c
   apply-filter(context.nnv-context);
 end;
 
+define class <resolve-command> (<basic-command>)
+  constant slot %host-name :: <string>, required-init-keyword: host-name:;
+end;
+
+define command-line resolve => <resolve-command>
+  (summary: "Resolve host name using DNS",
+   documentation:  "Resolve a host name to IP address using DNS.  Uses hard-coded resolver and query type.")
+  argument host-name :: <string> = "The host to resolve"
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <resolve-command>)
+  let host-name = copy-sequence(command.%host-name, end: command.%host-name.size - 1);
+  let stream = context.context-server.server-output-stream;
+  let dns-query = dns-frame(questions: list(dns-question(domainname: as(<domain-name>, host-name))));
+  let query = udp-frame(source-port: 53, destination-port: 53, payload: dns-query);
+  send(context.nnv-context.ip-layer, ipv4-address("141.1.1.1"), query);
+end;
+
+
+
 define class <key-bindings-property> (<command-property>)
 end;
 
@@ -217,6 +237,7 @@ define command-group network
      documentation: "The set of commands for managing the network.")
   command ping;
   command dhcp-client;
+  command resolve;
   command set-ip-address;
   command add-route;
   command delete-route;

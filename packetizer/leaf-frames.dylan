@@ -45,11 +45,12 @@ end;
 define method assemble-frame-into-as
     (frame-type == <boolean-bit>,
      data :: <boolean>,
-     packet :: <stretchy-byte-vector-subsequence>) => (end-offset :: <integer>)
+     packet :: <byte-sequence>) => (end-offset :: <integer>)
+  let subseq = subsequence(packet, length: 1);
   if (data)
-    packet[0] := logior(packet[0], #x80);
+    encode-integer(1, subseq, 1); 
   else
-    packet[0] := logand(packet[0], #x7F)
+    encode-integer(0, subseq, 1); 
   end;
   1;
 end;

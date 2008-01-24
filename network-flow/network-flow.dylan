@@ -276,9 +276,9 @@ define method push-data-aux (input :: <push-input>,
                              node :: <completer>,
                              frame :: <container-frame>);
   for (field in node.template-frame.fields)
-    unless (field.getter(frame))
+    if (field.getter(frame) == $unsupplied)
       let default-field-value = field.getter(node.template-frame);
-      if (default-field-value)
+      if (default-field-value ~== $unsupplied)
         field.setter(default-field-value, frame);
       elseif (~ field.fixup-function)
         signal(make(<undefined-field-error>));

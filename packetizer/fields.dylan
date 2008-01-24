@@ -77,7 +77,7 @@ define abstract class <field> (<object>)
   slot static-start :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-start:;
   slot static-length :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-length:;
   slot static-end :: <integer-or-unknown> = $unknown-at-compile-time, init-keyword: static-end:;
-  slot init-value = #f, init-keyword: init-value:;
+  slot init-value = $unsupplied, init-keyword: init-value:;
   slot fixup-function :: false-or(<function>) = #f, init-keyword: fixup:;
   constant slot getter, required-init-keyword: getter:;
   constant slot setter, required-init-keyword: setter:;

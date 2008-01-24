@@ -50,7 +50,7 @@ define protocol dns-frame (container-frame-with-metadata)
   repeated field additional-records :: <dns-resource-record>,
     count: frame.additional-count;
 end;
-
+/*
 define method assemble-frame-into
  (frame :: <domain-name>, packet :: <stretchy-byte-vector-subsequence>)
  => (res :: <integer>)
@@ -72,7 +72,7 @@ define method assemble-frame-into
   encode-fragments(frame.fragment);
   offset;
 end;
-
+*/
 define protocol domain-name (container-frame)
   summary "%=", curry(as, <string>);
   repeated field fragment :: <domain-name-fragment>,
@@ -154,7 +154,7 @@ end;
 define protocol dns-question (container-frame)
   summary "%= %s", domainname, question-type;
   field domainname :: <domain-name>;
-  enum field question-type :: <2byte-big-endian-unsigned-integer>,
+  enum field question-type :: <2byte-big-endian-unsigned-integer> = #"A",
     mappings: { 1  <=> #"A",
                 2  <=> #"NS",
                 5  <=> #"CNAME",

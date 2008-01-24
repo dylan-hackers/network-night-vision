@@ -229,7 +229,7 @@ define module ipv4
     header-checksum, header-checksum-setter,
     options, options-setter;
 
-  export <udp-frame>,
+  export <udp-frame>, udp-frame,
     source-port, source-port-setter,
     destination-port, destination-port-setter,
     payload-size, payload-size-setter,
@@ -337,7 +337,7 @@ define module dns
   use simple-io;
   use ipv4, import: { <ipv4-address>, <udp-frame> };
 
-  export <dns-frame>,
+  export <dns-frame>, dns-frame,
     identifier, identifier-setter,
     query-or-response, query-or-response-setter,
     opcode, opcode-setter,
@@ -363,7 +363,7 @@ define module dns
     <label-offset>, offset, offset-setter,
     <label>, data-length, data-length-setter, raw-data, raw-data-setter;
 
-  export <dns-question>,
+  export <dns-question>, dns-question,
     domainname, domainname-setter,
     question-type, question-type-setter,
     question-class, question-class-setter;
