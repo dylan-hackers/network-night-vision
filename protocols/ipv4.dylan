@@ -73,9 +73,13 @@ define protocol ipv4-frame (header-frame)
   summary "IP SRC %= DST %=", source-address, destination-address;
   over <ethernet-frame> #x800;
   over <link-control> #x800;
+  over <ppp> #x21;
   field version :: <4bit-unsigned-integer> = 4;
   field header-length :: <4bit-unsigned-integer>,
-    fixup: ceiling/(reduce(\+, 20, map(method(x) byte-offset(frame-size(x)) end, frame.options)), 4);
+    fixup: ceiling/(reduce(\+, 20,
+                           map(compose(byte-offset, frame-size),
+                               frame.options)),
+                    4);
   field type-of-service :: <unsigned-byte> = 0;
   field total-length :: <2byte-big-endian-unsigned-integer>,
     fixup: frame.header-length * 4 + byte-offset(frame-size(frame.payload));

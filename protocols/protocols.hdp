@@ -2,6 +2,8 @@ library: protocols
 files:	protocols-library
 	logical-link
 	ethernet
+	ppp
+	pppoe
 	ipv4
 	ipv6
 	icmp

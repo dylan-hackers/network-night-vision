@@ -18,7 +18,9 @@ define library protocols
     dns,
     rip,
     cidr,
-    ieee80211;
+    ieee80211,
+    ppp,
+    pppoe;
 end;
 
 define module logical-link
@@ -43,6 +45,23 @@ define module ethernet
     type-code, type-code-setter;
 
   export <mac-address>, mac-address;
+end;
+
+define module ppp
+  use common-dylan;
+  use packetizer;
+
+  export <ppp>;
+end;
+
+define module pppoe
+  use common-dylan;
+  use packetizer;
+
+  use ethernet, import: { <ethernet-frame> };
+  use ppp, import: { <ppp> };
+
+  export <pppoe>;
 end;
 
 define module ieee80211
@@ -192,6 +211,7 @@ define module ipv4
 
   use ethernet, import: { <ethernet-frame>, <mac-address> };
   use logical-link, import: { <link-control> };
+  use ppp, import: { <ppp> };
 
   export <ip-option-frame>,
     copy-flag, copy-flag-setter,
