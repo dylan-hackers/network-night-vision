@@ -20,7 +20,8 @@ define library protocols
     cidr,
     ieee80211,
     ppp,
-    pppoe;
+    pppoe,
+    bittorrent;
 end;
 
 define module logical-link
@@ -267,6 +268,15 @@ define module ipv4
     target-ip-address, target-ip-address-setter;
 
   export calculate-checksum;
+end;
+
+define module bittorrent
+  use common-dylan;
+  use packetizer;
+  use ipv4;
+  use udp;
+
+  export <bittorrent-announce>;
 end;
 
 define module ipv6

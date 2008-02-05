@@ -10,6 +10,7 @@ files:	protocols-library
 	tcp
 	dhcp
 	dns
+	bittorrent
 	ieee80211
 	prism2
 	pcap
