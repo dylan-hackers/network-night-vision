@@ -61,42 +61,29 @@ define function build-udp-layer (ip-layer :: <ip-layer>)
 end;
 
 define function udp-begin()
-  let ip-layer = init-ip-layer();
-  let udp = make(<udp-layer>, ip-layer: ip-layer);
-  let socket = create-socket(udp, 53);
-  connect(socket.decapsulator, make(<verbose-printer>, stream: *standard-output*));
-  send(udp.ip-send-socket, 
-       ipv4-address("141.1.1.1"),
-       make(<udp-frame>, source-port: 53, destination-port: 53,
-            payload: make(<dns-frame>,
-                          questions: vector(make(<dns-question>,
-                                                 question-type:  1, // A
-                                                 question-class: 1, // THE INTERNET
-                                                 domainname: as(<domain-name>, "www.ccc.de"))))));
-  sleep(10000);
-/*
-  let tcp = make(<tcp-layer>, ip-layer: ip-layer, default-ip-address: ip-layer.default-ip-address);
-  let s = create-client-socket(tcp, ipv4-address("213.73.91.29"), 80);
-  write(s, "GET / HTTP/1.1\r\nHost: www.ccc.de\r\nConnection: keep-alive\r\n\r\n");
-  block(ret)
-    while (#t)
-      let res = read(s, 20, on-end-of-stream: #f);
-      //if (res)
-        //format-out("Read %s\n", map-as(<string>, curry(as, <character>), res))
-      //else
-        close(s);
-        ret();
-      //end;
-    end;
-  end;
-  let ss = create-server-socket(tcp, 23);
-  while (#t)
-    let conn = accept(ss);
-    write(conn, "fnord");
-    close(conn);
-  end;
-  sleep(1000);
-*/
+  let ethernet-layer
+    = build-ethernet-layer("eth0", promiscuous?: #t);
+  let ethernet-socket = create-raw-socket(ethernet-layer);
+  let (ip-layer, adapter)
+    = build-ip-layer(ethernet-layer,
+                     ip-address: ipv4-address("23.23.23.112"),
+                     default-gateway: ipv4-address("23.23.23.1"),
+                     netmask: 24);
+
+  let bittorrent-frame = make(<bittorrent-announce>,
+                              event: big-endian-unsigned-integer-4byte(#(0, 0, 0, 2)));
+  let udpframe = make(<udp-frame>,
+                       source-port: 2342,
+                       destination-port: 6969,
+                       payload: bittorrent-frame);
+  format-out("sending %=\n", udpframe);
+  send(ip-layer, ipv4-address("217.13.206.133"), udpframe);
+
+  let ff = make(<frame-filter>, frame-filter: "udp.source-port = 6969");
+  connect(ethernet-socket, ff);
+  connect(ff, make(<verbose-printer>,
+                   stream: *standard-output*));
+  sleep(100);
 end;
 
 //udp-begin();

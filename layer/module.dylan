@@ -22,6 +22,7 @@ define module layer
   use simple-random;
   use streams;
   use ipv4;
+  use bittorrent;
   use dhcp;
   use dhcp-state-machine;
   use tcp;
