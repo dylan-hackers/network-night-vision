@@ -40,25 +40,14 @@ Copyright: (C) 2006,  All rights reserved.
 // encapsulator       decapsulator
 // (dest: find-mac)
 
-define open generic fan-in (object :: <layer>) => (res :: <fan-in>);
-define open generic demultiplexer (object :: <layer>) => (res :: <demultiplexer>);
-define open generic sockets (object :: <layer>) => (res :: <collection>);
-
-// Every layer handles frames of a certain type.  This g.f. returns the type.
-define open generic frame-type-for-layer (layer :: <layer>) => (frame-type :: subclass(<frame>));
-
 define abstract class <layer> (<object>)
+  // Every layer handles frames of a certain type.  This returns the type.
+  each-subclass constant slot frame-type :: subclass(<container-frame>);
   constant slot fan-in :: <fan-in> = make(<fan-in>);
   constant slot fan-out :: <fan-out> = make(<fan-out>);
   constant slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
   constant slot sockets :: <collection> = make(<stretchy-vector>);
 end;
-
-define open generic demultiplexer-output (object :: <socket>) => (res :: <object>);
-define open generic demultiplexer-output-setter (value :: <object>, object :: <socket>) => (res :: <object>);
-define open generic decapsulator (object :: <socket>) => (res :: <decapsulator>);
-define open generic completer (object :: <socket>) => (res :: <completer>);
-define open generic completer-setter (value :: <completer>, object :: <socket>) => (res :: <completer>);
 
 define class <raw-socket> (<object>)
   constant slot socket-layer :: <layer>, required-init-keyword: layer:;
@@ -149,7 +138,7 @@ define method create-filter-socket (layer :: <layer>,
                                     completer-key-value-pairs)
  => (socket :: <filter-socket>);
   let socket = make(<filter-socket>);
-  let frame-type = frame-type-for-layer(layer);
+  let frame-type = frame-type(layer);
   let template-frame = apply(make, frame-type, completer-key-value-pairs);
   socket.completer := make(<completer>, template-frame: template-frame);
   socket.demultiplexer-output
@@ -170,12 +159,8 @@ end;
 define abstract class <adapter> (<object>)
 end;
 
-define generic ethernet-interface (object :: <ethernet-layer>) => (res :: <ethernet-interface>);
-define generic ethernet-interface-setter (object :: <ethernet-interface>, object2 :: <ethernet-layer>) => (res :: <ethernet-interface>);
-define generic default-mac-address (object :: <ethernet-layer>) => (res :: <mac-address>);
-define generic default-mac-address-setter (object :: <mac-address>, object2 :: <ethernet-layer>) => (res :: <mac-address>);
-
 define class <ethernet-layer> (<layer>)
+  inherited slot frame-type :: subclass(<container-frame>) = <ethernet-frame>;
   slot ethernet-interface :: <ethernet-interface>,
     required-init-keyword: ethernet-interface:;
   slot default-mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:01"),
@@ -188,14 +173,6 @@ define method initialize (layer :: <ethernet-layer>,
   connect(layer.ethernet-interface, layer.fan-out);
   connect(layer.fan-out, layer.demultiplexer);
 end;
-
-define method frame-type-for-layer (layer :: <ethernet-layer>)
- => (type == <ethernet-frame>)
- <ethernet-frame>
-end;
-
-define open generic ethernet-type-code (object :: <ethernet-socket>) => (res :: <integer>);
-define open generic listen-address (object :: <object>) => (res :: <object>);
 
 define class <ethernet-socket> (<socket>)
   constant slot ethernet-type-code :: <integer>, init-keyword: type-code:;
@@ -241,19 +218,17 @@ define method delete-socket (socket :: <ethernet-socket>, layer :: <ethernet-lay
   disconnect(socket.completer, layer.fan-in);
 end;
 
-define open generic ethernet-layer (object :: <ip-over-ethernet-adapter>) => (res :: <ethernet-layer>);
-define generic arp-handler (object :: <ip-over-ethernet-adapter>) => (res :: <arp-handler>);
-define generic v4-address (object :: <ip-over-ethernet-adapter>) => (res :: <ipv4-address>);
-define open generic ip-layer (object :: <object>) => (res :: <ip-layer>);
-define open generic ip-layer-setter (value :: <ip-layer>, object :: <object>) => (res :: <ip-layer>);
-define open generic ip-send-socket (object) => (res :: <socket>);
-define open generic ip-send-socket-setter (value :: <socket>, object) => (res :: <socket>);
-define open generic netmask (object :: <ip-over-ethernet-adapter>) => (res :: <integer>);
+define class <arp-handler> (<filter>)
+  constant slot arp-table :: <vector-table> = make(<vector-table>);
+  constant slot table-lock :: <lock> = make(<lock>);
+  slot send-socket :: <socket>;
+  slot ip-send-socket :: <ethernet-socket>;
+end;
 
 define class <ip-over-ethernet-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot ethernet-layer :: <ethernet-layer>, required-init-keyword: ethernet:;
-  constant slot arp-handler :: <arp-handler>, required-init-keyword: arp:;
+  slot arp-handler :: <arp-handler>, required-init-keyword: arp:;
   slot v4-address :: <ipv4-address>, required-init-keyword: ipv4-address:;
   slot netmask :: <integer>, required-init-keyword: netmask:;
   slot ip-send-socket :: <ethernet-socket>;
@@ -350,8 +325,6 @@ define method initialize (ip-over-ethernet :: <ip-over-ethernet-adapter>,
 end; 
 
 
-define open generic fragmented-packets (object :: <ip-reassembler>) => (res :: <vector-table>);
-
 define class <ip-reassembler> (<filter>)
   constant slot fragmented-packets :: <vector-table> = make(<vector-table>);
 end;
@@ -362,14 +335,6 @@ define inline function generate-assembly-id (ip-frame :: <ipv4-frame>)
               ip-frame.destination-address.data,
               assemble-frame-as(<2byte-big-endian-unsigned-integer>, ip-frame.identification));
 end;
-
-
-define generic first-packet (obj :: <frag-packet>) => (res);
-define generic payloads (obj :: <frag-packet>) => (res :: <stretchy-vector>);
-define generic next-fragment-offset (obj :: <frag-packet>) => (res :: <integer>);
-define generic next-fragment-offset-setter (value :: <integer>, obj :: <frag-packet>) => (res :: <integer>);
-define generic timeout (obj :: <frag-packet>) => (res);
-define generic timeout-setter (value, obj :: <frag-packet>) => (res);
 
 define class <frag-packet> (<object>)
   constant slot first-packet, required-init-keyword: first-packet:;
@@ -428,15 +393,8 @@ define method push-data-aux (input :: <push-input>,
   end;
 end;
 
-define open generic send-socket (object :: <object>) => (res);
-define open generic send-socket-setter (value :: <object>, object :: <object>) => (res);
-define generic default-ip-address (object :: <layer>) => (res :: <ipv4-address>);
-define generic default-ip-address-setter (value :: <ipv4-address>, object :: <layer>) => (res :: <ipv4-address>);
-define open generic adapters (object :: <ip-layer>) => (res);
-define open generic routes (object :: <ip-layer>) => (res);
-define open generic reassembler (object :: <ip-layer>) => (res);
-
 define class <ip-layer> (<layer>)
+  inherited slot frame-type :: subclass(<container-frame>) = <ipv4-frame>;
   slot send-socket :: type-union(<socket>, <adapter>);
   constant slot adapters = make(<stretchy-vector>);
   slot default-ip-address :: <ipv4-address>;
@@ -445,16 +403,9 @@ define class <ip-layer> (<layer>)
   slot raw-input;
 end;
 
-define method frame-type-for-layer (layer :: <ip-layer>)
- => (type == <ipv4-frame>)
- <ipv4-frame>
-end;
-
 define class <route> (<object>)
   constant slot cidr :: <cidr>, required-init-keyword: cidr:;
 end;
-
-define generic next-hop (object :: <next-hop-route>) => (res :: <ipv4-address>);
 
 define class <next-hop-route> (<route>)
   constant slot next-hop :: <ipv4-address>, required-init-keyword: next-hop:;
@@ -463,7 +414,7 @@ end;
 define method print-object (object :: <next-hop-route>, stream :: <stream>) => ()
   format(stream, "%= -> %s", object.cidr, object.next-hop);
 end;
-define generic adapter (object :: <connected-route>) => (res :: <adapter>);
+
 define class <connected-route> (<route>)
   constant slot adapter :: <adapter>, required-init-keyword: adapter:;
 end;
@@ -575,7 +526,7 @@ define method send (ip-layer :: <ip-layer>, destination :: <ipv4-address>, paylo
                    payload: payload);
   push-data-aux(ip-layer.raw-input, ip-layer.fan-in, frame);
 end;
-define open generic ip-protocol (object :: <ip-socket>) => (res :: <integer>);
+
 define class <ip-socket> (<socket>)
   constant slot ip-protocol :: <integer>, init-keyword: protocol:;
   constant slot listen-address :: false-or(<ipv4-address>) = #f, init-keyword: listen-address:;
@@ -615,9 +566,6 @@ define method send (ip-socket :: <ip-socket>, destination :: <ipv4-address>, pay
 end;
 
 
-define generic ip-socket (object :: <icmp-handler>) => (res :: <ip-socket>);
-define generic ip-socket-setter (value :: <ip-socket>, object :: <icmp-handler>) => (res :: <ip-socket>);
-
 define class <icmp-handler> (<filter>)
   slot ip-socket :: <ip-socket>;
 end;
@@ -634,7 +582,6 @@ define method push-data-aux (input :: <push-input>,
     send(node.ip-socket, frame.parent.source-address, response)
   end;
 end;
-define generic icmp-handler (object :: <icmp-over-ip-adapter>) => (res :: <icmp-handler>);
 
 define class <icmp-over-ip-adapter> (<adapter>)
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
@@ -648,24 +595,7 @@ define method initialize (icmp-over-ip :: <icmp-over-ip-adapter>,
   icmp-over-ip.icmp-handler.ip-socket := icmp-socket;
 end;
 
-define generic arp-table (object :: <arp-handler>) => (res :: <vector-table>);
-define generic table-lock (object :: <arp-handler>) => (res :: <lock>);
-define class <arp-handler> (<filter>)
-  constant slot arp-table :: <vector-table> = make(<vector-table>);
-  constant slot table-lock :: <lock> = make(<lock>);
-  slot send-socket :: <socket>;
-  slot ip-send-socket :: <ethernet-socket>;
-end;
 
-define generic original-request (object :: <outstanding-arp-request>) => (res :: <frame>);
-define generic destination (object :: <outstanding-arp-request>) => (res :: <mac-address>);
-define open generic timer (object :: <outstanding-arp-request>) => (res :: <timer>);
-define open generic timer-setter (value :: <timer>, object :: <outstanding-arp-request>) => (res :: <timer>);
-define open generic counter (object :: <outstanding-arp-request>) => (res :: <object>);
-define open generic counter-setter (value :: <object>, object :: <outstanding-arp-request>) => (res :: <object>);
-define open generic outstanding-packets (object :: <outstanding-arp-request>) => (res :: <list>);
-define open generic outstanding-packets-setter (value :: <list>, object :: <outstanding-arp-request>) => (res :: <list>);
-define open generic ip-address (object :: <arp-entry>) => (res :: <ipv4-address>);
 define abstract class <arp-entry> (<object>)
   constant slot ip-address :: <ipv4-address>, required-init-keyword: ip-address:;
 end;
@@ -678,7 +608,6 @@ define class <outstanding-arp-request> (<arp-entry>)
   slot outstanding-packets :: <list>, required-init-keyword: outstanding-packets:;
 end;
 
-define generic arp-mac-address (object :: <known-arp-entry>) => (res :: <mac-address>);
 define abstract class <known-arp-entry> (<arp-entry>)
   constant slot arp-mac-address :: <mac-address>, required-init-keyword: mac-address:;
 end;
@@ -709,7 +638,7 @@ define function print-arp-table (stream :: <stream>, arp-handler :: <arp-handler
     format(stream, "%=\n", arp);
   end;
 end;
-define open generic arp-timestamp (object :: <dynamic-arp-entry>) => (res :: <date>);
+
 define class <dynamic-arp-entry> (<known-arp-entry>)
   constant slot arp-timestamp :: <date> = current-date()
 end;

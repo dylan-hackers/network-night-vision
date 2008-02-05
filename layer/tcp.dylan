@@ -1,20 +1,11 @@
 module: layer
 
-define open generic connection-tracking (l :: <tcp-layer>) => (res :: <vector-table>);
-define open generic notification (t) => (res :: <notification>);
-define open generic notification-setter (value :: <notification>, t) => (res :: <notification>);
-
-
 define class <tcp-layer> (<layer>)
+  inherited slot frame-type :: subclass(<container-frame>) = <tcp-frame>;
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   constant slot connection-tracking :: <vector-table> = make(<vector-table>);
   slot default-ip-address :: <ipv4-address>, init-keyword: default-ip-address:;
   slot ip-send-socket :: <ip-socket>;
-end;
-
-define method frame-type-for-layer (layer :: <tcp-layer>)
- => (type == <tcp-frame>)
- <tcp-frame>
 end;
 
 define inline method generate-id (tcp-frame :: <tcp-frame>) => (res :: <vector>)
@@ -91,23 +82,6 @@ define method initialize (layer :: <tcp-layer>,
   layer.ip-send-socket := socket;
 end;
 
-define generic send-buffer (c :: <tcp-connection>) => (res);
-define generic receive-buffer (c :: <tcp-connection>) => (res);
-define generic tcp-sequence-number (c :: <tcp-connection>) => (res :: <float>);
-define generic tcp-sequence-number-setter (value :: <float>, c :: <tcp-connection>) => (res :: <float>);
-define generic tcp-acknowledgement-number (c :: <tcp-connection>) => (res :: false-or(<float>));
-define generic tcp-acknowledgement-number-setter (value :: false-or(<float>), c :: <tcp-connection>) => (res :: false-or(<float>));
-define generic tcp-window-size (c :: <tcp-connection>) => (res :: <integer>);
-define generic tcp-window-size-setter (value :: <integer>, c :: <tcp-connection>) => (res :: <integer>);
-define generic tcp-source-port (c :: <tcp-connection>) => (res :: <integer>);
-define generic tcp-destination-port (c :: <tcp-connection>) => (res :: <integer>);
-define generic tcp-source-address (c :: <tcp-connection>) => (res :: <ipv4-address>);
-define generic tcp-destination-address (c :: <tcp-connection>) => (res :: <ipv4-address>);
-define generic tcp-layer (c :: <tcp-connection>) => (res :: <tcp-layer>);
-define generic last-received-packet (c :: <tcp-connection>) => (res :: <tcp-frame>);
-define generic last-received-packet-setter (value :: <tcp-frame>, c :: <tcp-connection>) => (res :: <tcp-frame>);
-define generic established-notification (c :: <tcp-connection>) => (res :: <notification>);
-define generic established-notification-setter (value :: <notification>, c :: <tcp-connection>) => (res :: <notification>);
 define class <tcp-connection> (<tcp-dingens>, <stream>)
   constant slot send-buffer = make(<deque>);
   constant slot receive-buffer = make(<deque>);
@@ -403,11 +377,6 @@ end;
 define method close (tcp-connection :: <tcp-connection>, #key) => ()
   process-event-locked(tcp-connection, #"close")
 end;
-
-define open generic listen-port (t :: <object>) => (res :: <integer>);
-define open generic connections (t :: <tcp-listener-socket>) => (res :: <deque>);
-define open generic listener-lock (t :: <tcp-listener-socket>) => (res :: <lock>);
-
 
 define class <tcp-listener-socket> (<object>)
   constant slot listen-port :: <integer>, required-init-keyword: listen-port:;

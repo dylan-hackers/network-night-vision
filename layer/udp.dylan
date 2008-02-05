@@ -1,6 +1,7 @@
 module: layer
 
 define class <udp-layer> (<layer>)
+  inherited slot frame-type :: subclass(<container-frame>) = <udp-frame>;
   constant slot ip-layer :: <ip-layer>, required-init-keyword: ip-layer:;
   slot ip-send-socket :: <ip-socket>;
 end;
@@ -11,11 +12,6 @@ define method initialize (layer :: <udp-layer>,
   let socket = create-socket(layer.ip-layer, 17);
   connect(socket.decapsulator, layer.demultiplexer);
   layer.ip-send-socket := socket;
-end;
-
-define method frame-type-for-layer (layer :: <udp-layer>)
- => (type == <udp-frame>)
- <udp-frame>
 end;
 
 define class <udp-socket> (<socket>)
