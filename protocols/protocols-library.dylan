@@ -46,11 +46,14 @@ define module ethernet
     type-code, type-code-setter;
 
   export <mac-address>, mac-address;
+
+  export <ipv4-address>, ipv4-address;
 end;
 
 define module ppp
   use common-dylan;
   use packetizer;
+  use ethernet, import: { <ipv4-address> };
 
   export <ppp>;
 end;
@@ -210,7 +213,7 @@ define module ipv4
   use streams-protocol;
   use format;
 
-  use ethernet, import: { <ethernet-frame>, <mac-address> };
+  use ethernet, export: { ipv4-address, <ipv4-address> };
   use logical-link, import: { <link-control> };
   use ppp, import: { <ppp> };
 
@@ -233,7 +236,7 @@ define module ipv4
     handling-restrictions, handling-restrictions-setter,
     transmission-control-code, transmission-control-code-setter;
 
-  export <ipv4-address>, ipv4-address;
+//  export <ipv4-address>, ipv4-address;
 
   export <ipv4-frame>,
     version, version-setter,

@@ -17,44 +17,69 @@ define abstract protocol link-control-protocol (variably-typed-container-frame)
     fixup: byte-offset(frame-size(frame));
 end;
 
-define protocol lcp-configure-request (link-control-protocol)
-  over <link-control-protocol> 1;
-  repeated field configuration-option :: <lcp-option>,
+define abstract protocol ip-control-protocol (variably-typed-container-frame)
+  length frame.ipcp-length * 8;
+  over <ppp> #x8021;
+  layering field ipcp-code :: <unsigned-byte>;
+  field ipcp-identifier :: <unsigned-byte>;
+  field ipcp-length :: <2byte-big-endian-unsigned-integer>,
+    fixup: byte-offset(frame-size(frame));
+end;
+
+define macro lcp-protocol-definer
+  { define lcp-protocol ?:name (?short:name) end }
+    => {
+define protocol ?short ## "-configure-request" (?name)
+  over "<" ## ?name ## ">" 1;
+  repeated field configuration-option :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol lcp-configure-ack (link-control-protocol)
-  over <link-control-protocol> 2;
-  repeated field configuration-option :: <lcp-option>,
+define protocol ?short ## "-configure-ack" (?name)
+  over "<" ## ?name ## ">" 2;
+  repeated field configuration-option :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol lcp-configure-nak (link-control-protocol)
-  over <link-control-protocol> 3;
-  repeated field configuration-option :: <lcp-option>,
+define protocol ?short ## "-configure-nak" (?name)
+  over "<" ## ?name ## ">" 3;
+  repeated field configuration-option :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol lcp-configure-reject (link-control-protocol)
-  over <link-control-protocol> 4;
-  repeated field configuration-option :: <lcp-option>,
+define protocol ?short ## "-configure-reject" (?name)
+  over "<" ## ?name ## ">" 4;
+  repeated field configuration-option :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol lcp-terminate-request (link-control-protocol)
-  over <link-control-protocol> 5;
+define protocol ?short ## "-terminate-request" (?name)
+  over "<" ## ?name ## ">" 5;
   field custom-data :: <raw-frame>;
 end;
 
-define protocol lcp-terminate-ack (link-control-protocol)
-  over <link-control-protocol> 6;
+define protocol ?short ## "-terminate-ack" (?name)
+  over "<" ## ?name ## ">" 6;
   field custom-data :: <raw-frame>;
 end;
 
-define protocol lcp-code-reject (link-control-protocol)
-  over <link-control-protocol> 7;
+define protocol ?short ## "-code-reject" (?name)
+  over "<" ## ?name ## ">" 7;
   field rejected-packet :: <raw-frame>; //? <link-control-protocol>;
 end;
+
+define abstract protocol ?short ## "-option" (variably-typed-container-frame)
+  length ?short ## "-option-length" (frame) * 8;
+  layering field ?short ## "-option-type" :: <unsigned-byte>;
+  field ?short ## "-option-length" :: <unsigned-byte>,
+    fixup: byte-offset(frame-size(frame));
+end;
+
+};
+end;
+
+define lcp-protocol link-control-protocol (lcp) end;
+
 
 define protocol lcp-protocol-reject (link-control-protocol)
   over <link-control-protocol> 8;
@@ -93,12 +118,6 @@ define protocol lcp-time-remaining (link-control-protocol)
   field message :: <externally-delimited-string>;
 end;
 
-define abstract protocol lcp-option (variably-typed-container-frame)
-  length frame.lcp-option-length * 8;
-  layering field lcp-option-type :: <unsigned-byte>;
-  field lcp-option-length :: <unsigned-byte>,
-    fixup: byte-offset(frame-size(frame));
-end;
 
 define protocol lcp-reserved (lcp-option)
   over <lcp-option> 0;
@@ -244,3 +263,53 @@ define protocol chap-failure (chap)
   over <chap> 4;
   field chap-message :: <externally-delimited-string>;
 end;
+
+define lcp-protocol ip-control-protocol (ipcp) end;
+
+define protocol ipcp-ip-addresses (ipcp-option)
+  over <ipcp-option> 1;
+  field source-ip-address :: <ipv4-address>;
+  field destination-ip-address :: <ipv4-address>;
+end;
+
+define protocol ipcp-ip-compression-protocol (ipcp-option)
+  over <ipcp-option> 2;
+  enum field compression-protocol :: <2byte-big-endian-unsigned-integer>,
+    mappings: { #x002d <=> #"van jacobsen compressed TCP/IP" };
+  field max-slot-id :: <unsigned-byte>;
+  enum field compress-slot-id :: <unsigned-byte>,
+    mappings: { 0 <=> #"not compressed",
+                1 <=> #"compressed" };
+  field custom-data :: <raw-frame>;
+end;
+
+define protocol ipcp-ip-address (ipcp-option)
+  over <ipcp-option> 3;
+  field ip-address :: <ipv4-address>;
+end;
+
+define protocol ipcp-mobile-ipv4 (ipcp-option)
+  over <ipcp-option> 4;
+  field mobile-nodes-home-address :: <ipv4-address>;
+end;
+
+define protocol ipcp-primary-dns (ipcp-option)
+  over <ipcp-option> 129;
+  field primary-dns :: <ipv4-address>;
+end;
+
+define protocol ipcp-primary-nbns (ipcp-option)
+  over <ipcp-option> 130;
+  field primary-nbnd :: <ipv4-address>;
+end;
+
+define protocol ipcp-secondary-dns (ipcp-option)
+  over <ipcp-option> 131;
+  field secondary-dns :: <ipv4-address>;
+end;
+
+define protocol ipcp-secondary-nbns (ipcp-option)
+  over <ipcp-option> 132;
+  field secondary-nbns :: <ipv4-address>;
+end;
+

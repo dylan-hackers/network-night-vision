@@ -2,6 +2,21 @@ module: ethernet
 Author:    Andreas Bogk, Hannes Mehnert
 Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
+define n-byte-vector(ipv4-address, 4) end;
+
+define method read-frame (frame-type == <ipv4-address>, string :: <string>)
+ => (res)
+  make(<ipv4-address>,
+       data: map-as(<stretchy-vector-subsequence>, string-to-integer, split(string, '.')));
+end;
+
+define method as (class == <string>, frame :: <ipv4-address>) => (string :: <string>);
+  reduce1(method(a, b) concatenate(a, ".", b) end,
+          map-as(<stretchy-vector>,
+                 integer-to-string,
+                 frame.data))
+end;
+
 define n-byte-vector(mac-address, 6) end;
 
 define method read-frame(type == <mac-address>,

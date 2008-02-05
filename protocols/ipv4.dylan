@@ -30,20 +30,6 @@ define protocol security-ip-option-frame (ip-option-frame)
   field transmission-control-code :: <3byte-big-endian-unsigned-integer>;
 end;
 
-define n-byte-vector(ipv4-address, 4) end;
-
-define method read-frame (frame-type == <ipv4-address>, string :: <string>)
- => (res)
-  make(<ipv4-address>,
-       data: map-as(<stretchy-vector-subsequence>, string-to-integer, split(string, '.')));
-end;
-
-define method as (class == <string>, frame :: <ipv4-address>) => (string :: <string>);
-  reduce1(method(a, b) concatenate(a, ".", b) end,
-          map-as(<stretchy-vector>,
-                 integer-to-string,
-                 frame.data))
-end;
 
 define method print-object (object :: <frame>, stream :: <stream>) => ()
   write(stream, as(<string>, object));
