@@ -498,6 +498,15 @@ define method as (class == <string>, frame :: <raw-frame>) => (res :: <string>)
   end
 end;
 
+
+define method as (class == <raw-frame>, bytes :: <collection>)
+ => (res :: <raw-frame>)
+  let sv = make(<raw-frame>,
+                data: make(<byte-sequence>, capacity: bytes.size));
+  copy-bytes(sv.data, 0, bytes, 0, bytes.size);
+  sv;
+end;
+
 define method read-frame (type == <raw-frame>,
                           string :: <string>)
  => (res)
