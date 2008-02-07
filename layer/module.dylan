@@ -25,6 +25,8 @@ define module layer
   use bittorrent;
   use dhcp;
   use dhcp-state-machine;
+  use ppp-state-machine;
+  use pppoe;
   use tcp;
   use icmp;
   use ethernet;
@@ -62,4 +64,6 @@ define module layer
     <tcp-layer>;
 
   export <dhcp-client>, find-option;
+
+  export <pppoe-client>;
 end module layer;

@@ -16,6 +16,7 @@ end;
 
 define protocol pppoe-discovery (container-frame)
   over <ethernet-frame> #x8863;
+  summary "PPPoE (session %=) %=", session-id, pppoe-code;
   field pppoe-version :: <4bit-unsigned-integer> = 1;
   field pppoe-type :: <4bit-unsigned-integer> = 1;
   enum field pppoe-code :: <unsigned-byte> = 0,
@@ -24,11 +25,11 @@ define protocol pppoe-discovery (container-frame)
                 #x9 <=> #"PADI (PPPoE Active Discovery Initiation)",
                 #x19 <=> #"PADR (PPPoE Active Discovery Request)",
                 #x65 <=> #"PADS (PPPoE Active Discovery Session-confirmation)",
-                #xa7 <=> #"PADT (PPPoE Active Discovery Termination" };
+                #xa7 <=> #"PADT (PPPoE Active Discovery Termination)" };
   field session-id :: <2byte-big-endian-unsigned-integer> = 0;
   field pppoe-length :: <2byte-big-endian-unsigned-integer>,
-    fixup: reduce1(\+, map(compose(byte-offset, frame-size),
-                           frame.pppoe-tags));
+    fixup: reduce(\+, 0, map(compose(byte-offset, frame-size),
+                             frame.pppoe-tags));
   repeated field pppoe-tags :: <pppoe-tag>,
     reached-end?: instance?(frame, <pppoe-end-of-list>);
 end;
@@ -46,7 +47,7 @@ end;
 
 define protocol pppoe-service-name (pppoe-tag)
   over <pppoe-tag> #x0101;
-  field service-name :: <externally-delimited-string>;
+  field service-name :: <externally-delimited-string> = $empty-externally-delimited-string;
 end;
 
 define protocol pppoe-access-contentrator-name (pppoe-tag)

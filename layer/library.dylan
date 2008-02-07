@@ -16,6 +16,7 @@ define library layer
   use state-machine;
   use protocols;
   use dhcp-state-machine;
+  use ppp-state-machine;
 
   // Add any more module exports here.
   export layer;

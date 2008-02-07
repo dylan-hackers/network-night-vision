@@ -97,7 +97,7 @@ define method read-frame (type == <unsigned-byte>,
                           string :: <string>)
  => (res)
   let res = string-to-integer(string);
-  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+  if (res < 0 | res > (2 ^ field-size(type) - 1))
     signal(make(<out-of-range-error>))
   end;
   res;
@@ -192,7 +192,7 @@ define method read-frame (type :: subclass(<unsigned-integer-bit-frame>),
                           string :: <string>)
  => (res)
   let res = string-to-integer(string);
-  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+  if (res < 0 | res > (2 ^ field-size(type) - 1))
     signal(make(<out-of-range-error>))
   end;
   res;
@@ -368,7 +368,7 @@ define method read-frame (type :: subclass(<big-endian-unsigned-integer-byte-fra
                           string :: <string>)
  => (res)
   let res = string-to-integer(string);
-  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+  if (res < 0 | res > (2 ^ field-size(type) - 1))
     signal(make(<out-of-range-error>))
   end;
   res;
@@ -426,7 +426,7 @@ define method read-frame (type :: subclass(<little-endian-unsigned-integer-byte-
                           string :: <string>)
  => (res)
   let res = string-to-integer(string);
-  if (res < 0 | res > 2 ^ (field-size(type) - 1))
+  if (res < 0 | res > (2 ^ field-size(type) - 1))
     signal(make(<out-of-range-error>))
   end;
   res;

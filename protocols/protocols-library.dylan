@@ -65,7 +65,18 @@ define module pppoe
   use ethernet, import: { <ethernet-frame> };
   use ppp, import: { <ppp> };
 
-  export <pppoe>;
+  export 
+    <pppoe-discovery>,
+    pppoe-discovery,
+    pppoe-code,
+    session-id,
+    pppoe-tags,
+    
+    pppoe-service-name,
+    pppoe-host-uniq,
+    
+    <pppoe-session>,
+    pppoe-session;
 end;
 
 define module ieee80211

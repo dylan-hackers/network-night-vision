@@ -109,6 +109,21 @@ define method do-execute-command (context :: <nnv-context>, command :: <dhcp-cli
   process-event(dhcp, #"send-discover");
 end;
 
+define class <pppoe-client-command> (<basic-command>)
+end;
+
+define command-line pppoe-client => <pppoe-client-command>
+    (summary: "Aquire PPPoE session.",
+     documentation:  "Initiates a PPPoE client session, and aborts.")
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <pppoe-client-command>)
+  let socket = create-socket(context.nnv-context.ethernet-layer, #x8863);
+  let pppoe = make(<pppoe-client>, send-socket: socket);
+  connect(socket.decapsulator, pppoe);
+  process-event(pppoe, #"padi-sent");
+end;
+
 define class <set-ip-address-command> (<basic-command>)
   constant slot %address :: <cidr>, required-init-keyword: address:;
 end;
@@ -237,6 +252,7 @@ define command-group network
      documentation: "The set of commands for managing the network.")
   command ping;
   command dhcp-client;
+  command pppoe-client;
   command resolve;
   command set-ip-address;
   command add-route;

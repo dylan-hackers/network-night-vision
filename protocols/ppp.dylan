@@ -215,17 +215,17 @@ end;
 define protocol pap-authenticate-ack (pap)
   over <pap> 2;
   field message-length :: <unsigned-byte>,
-    fixup: byte-offset(frame.message);
+    fixup: byte-offset(frame-size(frame.message));
   field message :: <externally-delimited-string>,
-    length: field.message-length * 8;
+    length: frame.message-length * 8;
 end;
 
 define protocol pap-authenticate-nak (pap)
   over <pap> 3;
   field message-length :: <unsigned-byte>,
-    fixup: byte-offset(frame.message);
+    fixup: byte-offset(frame-size(frame.message));
   field message :: <externally-delimited-string>,
-    length: field.message-length * 8;
+    length: frame.message-length * 8;
 end;
 
 define abstract protocol chap (variably-typed-container-frame)
@@ -233,7 +233,8 @@ define abstract protocol chap (variably-typed-container-frame)
   length frame.chap-length * 8;
   layering field chap-code :: <unsigned-byte>;
   field chap-identifier :: <unsigned-byte>;
-  field chap-length :: <2byte-big-endian-unsigned-integer>;
+  field chap-length :: <2byte-big-endian-unsigned-integer>,
+    fixup: byte-offset(frame-size(frame));
 end;
 
 define protocol chap-challenge (chap)
