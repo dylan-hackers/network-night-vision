@@ -43,11 +43,13 @@ define method next-state (state :: <protocol-state>, event :: <symbol>)
 end;
 
 define method process-event (dingens :: <protocol-state-encapsulation>, event :: <symbol>)
-  let old-state = dingens.state;
-  let new-state = next-state(old-state, event);
-  //format-out("State transition %= => %=\n", old-state, new-state);
-  dingens.state := new-state;
-  state-transition(dingens, old-state, new-state);
+  with-lock (dingens.lock)
+    let old-state = dingens.state;
+    let new-state = next-state(old-state, event);
+    //format-out("State transition %= => %=\n", old-state, new-state);
+    dingens.state := new-state;
+    state-transition(dingens, old-state, new-state);
+  end;
 end;
 
 define open generic state-transition (dingens :: <protocol-state-encapsulation>,
