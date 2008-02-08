@@ -240,6 +240,7 @@ define macro transition-definer
   } => {
     define method state-transition (?=tcp-connection :: <tcp-connection>,
                                     ?=old-state :: ?old,
+                                    ?=event,
                                     ?=new-state :: ?new,
                                     #next next-method) => ();
       let ?=send = curry(send-via-tcp, ?=tcp-connection);

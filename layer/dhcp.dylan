@@ -44,6 +44,7 @@ define constant $broadcast-address = ipv4-address("255.255.255.255");
 
 define method state-transition (state :: <dhcp-client>,
                                 old-state :: <init>,
+                                event,
                                 new-state :: <selecting>) => ()
   let random = random(2 ^ 16 - 1);
   let (r1, r2) = values(logand(#xff, ash(random, -2)), logand(#xff, random));
@@ -72,6 +73,7 @@ end;
 
 define method state-transition (state :: <dhcp-client-state>,
                                 old-state :: <selecting>,
+                                event,
                                 new-state :: <requesting>) => ()
 //  if (matches-requirements?(state.offer))
   let server-option = find-option(state.offer, <dhcp-server-identifier-option>);

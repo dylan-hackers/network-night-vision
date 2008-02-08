@@ -15,7 +15,12 @@ define module ppp-state-machine
 
   export <pppoe-client-abstract-state-machine>;
 
-  export <closed>,  <padi-sent>,
+  export <down>,  <padi-sent>,
     <pado-received>, <padr-sent>,
     <established>, <pppoe-state>;
+
+  export <ppp-abstract-state-machine>;
+
+  export <initial>, <starting>, <closed>, <stopped>, <closing>, <stopping>,
+    <request-sent>, <ack-received>, <ack-sent>, <opened>, <ppp-state>;
 end module;

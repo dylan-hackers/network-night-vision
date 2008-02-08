@@ -56,6 +56,27 @@ define module ppp
   use ethernet, import: { <ipv4-address> };
 
   export <ppp>;
+
+  export magic-number, custom-data;
+
+  export ppp, lcp-configure-request, configuration-options,
+    lcp-configure-ack, lcp-configure-nak, lcp-configure-reject,
+    lcp-terminate-request, lcp-terminate-ack, lcp-terminate-nak,
+    lcp-code-reject, lcp-protocol-reject,
+    lcp-echo-request, lcp-echo-reply, lcp-discard-request,
+    lcp-identification, lcp-time-remaining;
+
+  export lcp-authentication-protocol, authentication-protocol,
+    lcp-maximum-receive-unit, maximum-receive-unit,
+    lcp-quality-protocol, lcp-magic-number-option,
+    lcp-protocol-field-compression, lcp-address-and-control-field-compression,
+    lcp-fcs-alternative, lcp-self-describing-padding, lcp-numbered-mode,
+    lcp-callback, lcp-compound-frames;
+
+  export <pap>, pap-authenticate-request,
+    peer-id, password,
+    pap-autenticate-ack, pap-authenticate-nak;
+    
 end;
 
 define module pppoe

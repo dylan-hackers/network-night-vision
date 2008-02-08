@@ -31,25 +31,25 @@ define macro lcp-protocol-definer
     => {
 define protocol ?short ## "-configure-request" (?name)
   over "<" ## ?name ## ">" 1;
-  repeated field configuration-option :: "<" ## ?short ## "-option>",
+  repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
 define protocol ?short ## "-configure-ack" (?name)
   over "<" ## ?name ## ">" 2;
-  repeated field configuration-option :: "<" ## ?short ## "-option>",
+  repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
 define protocol ?short ## "-configure-nak" (?name)
   over "<" ## ?name ## ">" 3;
-  repeated field configuration-option :: "<" ## ?short ## "-option>",
+  repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
 define protocol ?short ## "-configure-reject" (?name)
   over "<" ## ?name ## ">" 4;
-  repeated field configuration-option :: "<" ## ?short ## "-option>",
+  repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 

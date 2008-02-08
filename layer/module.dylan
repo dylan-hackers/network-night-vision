@@ -27,6 +27,7 @@ define module layer
   use dhcp-state-machine;
   use ppp-state-machine;
   use pppoe;
+  use ppp;
   use tcp;
   use icmp;
   use ethernet;
