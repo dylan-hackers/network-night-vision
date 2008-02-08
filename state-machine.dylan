@@ -9,6 +9,7 @@ define open abstract class <protocol-state> (<object>) end;
 define open abstract class <protocol-state-encapsulation> (<object>)
   constant slot lock :: <simple-lock> = make(<simple-lock>);
   slot state :: <protocol-state>;
+  slot debugging? :: <boolean> = #f, init-keyword: debugging?:;
 end;
 
 define macro singleton-class-definer
@@ -46,20 +47,24 @@ define method process-event (dingens :: <protocol-state-encapsulation>, event ::
   with-lock (dingens.lock)
     let old-state = dingens.state;
     let new-state = next-state(old-state, event);
-    //format-out("State transition %= => %=\n", old-state, new-state);
+    if (dingens.debugging?)
+      format-out("Event %= triggers state transition %= => %=\n", event, old-state, new-state);
+    end;
     dingens.state := new-state;
-    state-transition(dingens, old-state, new-state);
+    state-transition(dingens, old-state, event, new-state);
   end;
 end;
 
 define open generic state-transition (dingens :: <protocol-state-encapsulation>,
                                       old-state :: <protocol-state>,
+                                      event,
                                       new-state :: <protocol-state>) => ();
 
 define method state-transition (dingens :: <protocol-state-encapsulation>,
                                 old-state :: <protocol-state>,
+                                event,
                                 new-state :: <protocol-state>) => ()
-  ignore(dingens, old-state, new-state)
+  ignore(dingens, old-state, event, new-state)
 end;  
 
 define macro state-transition-rule-definer
