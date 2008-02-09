@@ -151,12 +151,3 @@ define class <property-changed-event> (<event>)
   constant slot property-changed-event-old-value, required-init-keyword: old-value:;
 end;
 
-
-define layer test-ethernet-layer
-  property mac-address :: <mac-address> = mac-address("00:de:ad:be:ef:00");
-  property mtu :: <integer> = 1500;
-end;
-
-
-make(<test-ethernet-layer>, mtu: 1248);
-
