@@ -32,7 +32,7 @@ end;
 define test simple-layer-callback ()
   let callback-called? = #f;
   let a = make(<simple-layer>);
-  register-event(get-property(a, #"a"), method(c) callback-called? := #t end);
+  register-event(a, #"a", method(c) callback-called? := #t end);
   a.@a := 42;
   check-true("callback called", callback-called?);
 end;
@@ -40,9 +40,31 @@ end;
 define test simple-layer-null-callback ()
   let callback-called? = #f;
   let a = make(<simple-layer>);
-  register-event(get-property(a, #"a"), method(c) callback-called? := #t end);
+  register-event(a, #"a", method(c) callback-called? := #t end);
   a.@a := 23;
   check-false("callback not called", callback-called?);
+end;
+
+define test simple-layer-null-callback-2 ()
+  let callback-called? = #f;
+  let a = make(<simple-layer>);
+  register-event(a, #"a", method(c) callback-called? := #t end);
+  a.@a := 23;
+  check-false("callback not called", callback-called?);
+  a.@a := 42;
+  check-true("callback called", callback-called?);
+end;
+
+define test simple-layer-callback-with-deregister ()
+  let callback-called? = #f;
+  let a = make(<simple-layer>);
+  let callback = method(c) callback-called? := #t end;
+  register-event(a, #"a", callback);
+  a.@a := 23;
+  check-false("callback not called", callback-called?);
+  deregister-event(a, #"a", callback);
+  a.@a := 42;
+  check-false("callback also not called", callback-called?);
 end;
 
 define suite layer-suite ()
@@ -50,6 +72,8 @@ define suite layer-suite ()
   test simple-layer-with-default;
   test simple-layer-callback;
   test simple-layer-null-callback;
+  test simple-layer-null-callback-2;
+  test simple-layer-callback-with-deregister;
 end;
 
 begin

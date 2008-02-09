@@ -403,6 +403,8 @@ define class <ip-layer> (<layer>)
   slot raw-input;
 end;
 
+//XXX: probably should use radix trees
+//http://www.matasano.com/log/1009/aguri-coolest-data-structure-youve-never-heard-of/
 define class <route> (<object>)
   constant slot cidr :: <cidr>, required-init-keyword: cidr:;
 end;

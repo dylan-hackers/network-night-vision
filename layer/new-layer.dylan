@@ -61,7 +61,8 @@ define macro layer-definer
    end; }
 end;
 
-define function init-layer (layer :: <layer>, default-name :: <string>, name)
+define inline function init-layer
+    (layer :: <layer>, default-name :: <string>, name)
   unless(name)
     name := as(<symbol>, format-to-string("%s%=", default-name, layer.instance-count));
     layer.instance-count := layer.instance-count + 1;
@@ -73,7 +74,7 @@ define function init-layer (layer :: <layer>, default-name :: <string>, name)
   $layer-registry[name] := layer;
 end;
 
-define function init-properties (layer :: <layer>, args :: <collection>)
+define inline function init-properties (layer :: <layer>, args :: <collection>)
   for (i from 0 below args.size by 2)
     if (get-property(layer, args[i]))
       let prop = get-property(layer, args[i]);
@@ -89,16 +90,21 @@ define class <event-source> (<object>)
   slot listeners = #();
 end;
 
-define method event-notify (source :: <event-source>, event :: <event>)
+define inline function event-notify
+    (source :: <event-source>, event :: <event>) => ()
   do(method (x) x(event) end, source.listeners)
 end;
 
-define method register-event (source :: <event-source>, callback :: <function>)
-  source.listeners := add!(source.listeners, callback);
+define inline function register-event
+    (source :: <layer>, name :: <symbol>, callback :: <function>) => ()
+  let prop = get-property(source, name);
+  prop.listeners := add!(prop.listeners, callback);
 end;
 
-define method deregister-event (source :: <event-source>, callback :: <function>)
-  source.listeners := remove!(source.listeners, callback);
+define inline function deregister-event
+    (source :: <layer>, name :: <symbol>, callback :: <function>) => ()
+  let prop = get-property(source, name);
+  prop.listeners := remove!(prop.listeners, callback);
 end;
 
 define class <property> (<event-source>)
@@ -111,35 +117,44 @@ define class <property> (<event-source>)
   //constant slot property-setter, init-keyword: setter:;
 end;
 
-define function get-property (object :: <layer>, property-name :: <symbol>)
- => (res :: <property>)
-  element(object.properties, property-name);
-end;
+define open generic check-property (owner, property-name :: <symbol>, value)
+ => ();
 
-define function set-property-value (object :: <layer>, property-name :: <symbol>, new-value)
- => (res)
-  get-property(object, property-name).property-value := new-value;
-end;
-
-define function get-property-value (object :: <layer>, property-name :: <symbol>)
- => (res)
-  get-property(object, property-name).property-value;
-end;
-
-define inline method property-value (property :: <property>)
-  %property-value(property)
-end;
-
-define open generic check-property (owner, property-name :: <symbol>, value) => ();
 define method check-property (owner, property-name :: <symbol>, value) => ()
   //move along
 end;
-define inline method property-value-setter (value, property :: <property>)
+
+define inline function get-property
+    (object :: <layer>, property-name :: <symbol>)
+ => (property :: <property>)
+  element(object.properties, property-name);
+end;
+
+define inline function set-property-value
+    (object :: <layer>, property-name :: <symbol>, new-value)
+ => (value)
+  get-property(object, property-name).property-value := new-value;
+end;
+
+define inline function get-property-value
+    (object :: <layer>, property-name :: <symbol>)
+ => (value)
+  get-property(object, property-name).property-value;
+end;
+
+define inline function property-value (property :: <property>)
+  %property-value(property)
+end;
+
+define inline function property-value-setter
+    (value, property :: <property>) => (value)
   let old-value = property.property-value;
   check-property(property.property-owner, property.property-name, value);
   if (old-value ~= value)
     property.%property-value := value;
-    let event = make(<property-changed-event>, property: property, old-value: old-value);
+    let event = make(<property-changed-event>,
+                     property: property,
+                     old-value: old-value);
     event-notify(property, event);
   end;
   value
@@ -147,7 +162,9 @@ end;
 
 
 define class <property-changed-event> (<event>)
-  constant slot property-changed-event-property :: <property>, required-init-keyword: property:;
-  constant slot property-changed-event-old-value, required-init-keyword: old-value:;
+  constant slot property-changed-event-property :: <property>,
+    required-init-keyword: property:;
+  constant slot property-changed-event-old-value,
+    required-init-keyword: old-value:;
 end;
 
