@@ -68,3 +68,28 @@ define module layer
 
   export <pppoe-client>;
 end module layer;
+
+define module new-layer
+  use common-dylan;
+
+  export <layer>, layer-name,
+    <event>, <event-source>,
+    event-notify, register-event, deregister-event;
+
+  export <property>, property-name,
+    property-type, property-default-value,
+    property-value, property-value-setter,
+    property-owner;
+
+  export get-property, 
+    set-property-value, get-property-value,
+    check-property;
+
+  export <property-changed-event>,
+    property-changed-event-property,
+    property-changed-event-old-value;
+
+  export \layer-definer,
+    \add-properties-to-table,
+    \layer-getter-and-setter-definer;
+end;

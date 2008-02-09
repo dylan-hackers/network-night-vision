@@ -1,6 +1,7 @@
 Library:          layer
 Files:            library
 	module
+	new-layer
 	layer
 	tcp
 	udp

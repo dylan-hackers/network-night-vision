@@ -20,4 +20,5 @@ define library layer
 
   // Add any more module exports here.
   export layer;
+  export new-layer;
 end library layer;
