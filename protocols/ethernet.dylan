@@ -272,6 +272,7 @@ end;
 
 define protocol cdp-frame (container-frame)
   over <ethernet-frame> #x2000;
+  over <cisco-hdlc-frame> #x2000;
   summary "Cisco Discovery Protocol";
   field version :: <unsigned-byte>;
   field time-to-live :: <unsigned-byte>;

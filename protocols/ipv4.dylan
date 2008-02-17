@@ -58,6 +58,7 @@ end;
 define protocol ipv4-frame (header-frame)
   summary "IP SRC %= DST %=", source-address, destination-address;
   over <ethernet-frame> #x800;
+  over <cisco-hdlc-frame> #x800;
   over <link-control> #x800;
   over <ppp> #x21;
   field version :: <4bit-unsigned-integer> = 4;

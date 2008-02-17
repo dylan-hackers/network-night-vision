@@ -4,9 +4,9 @@ Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
 
 // from pcap-bpf.h
 define constant $DLT-EN10MB = 1;
+define constant $DLT-C-HDLC = 104;
 define constant $DLT-PRISM-HEADER = 119;
 define constant $DLT-80211-BSD-RADIO = 127;
-
 
 define protocol pcap-file-header (container-frame)
   field magic :: <little-endian-unsigned-integer-4byte>
@@ -62,6 +62,7 @@ define protocol pcap-packet (header-frame)
   variably-typed-field payload,
     type-function: select (frame.parent.header.linktype)
                      $DLT-EN10MB => <ethernet-frame>;
+                     $DLT-C-HDLC => <cisco-hdlc-frame>;
                      $DLT-PRISM-HEADER => <prism2-frame>;
                      $DLT-80211-BSD-RADIO => <bsd-80211-radio-frame>; 
                      otherwise => <raw-frame>;

@@ -21,7 +21,8 @@ define library protocols
     ieee80211,
     ppp,
     pppoe,
-    bittorrent;
+    bittorrent,
+    hdlc;
 end;
 
 define module logical-link
@@ -36,9 +37,19 @@ define module logical-link
     type-code, type-code-setter;
 end;
 
+define module hdlc
+  use dylan;
+  use packetizer;
+  use format;
+  use format-out;
+
+  export <cisco-hdlc-frame>;
+end;
+
 define module ethernet
   use common-dylan;
   use packetizer;
+  use hdlc, import: { <cisco-hdlc-frame> };
 
   use common-extensions;
 
@@ -212,6 +223,7 @@ define module pcap
 
   use ethernet, import: { <ethernet-frame> };
   use prism2, import: { <prism2-frame>, <bsd-80211-radio-frame> };
+  use hdlc, import: { <cisco-hdlc-frame> };
 
   export <pcap-file-header>,
     magic, magic-setter,
@@ -246,6 +258,7 @@ define module ipv4
   use format;
 
   use ethernet, export: { ipv4-address, <ipv4-address> };
+  use hdlc, import: { <cisco-hdlc-frame> };
   use logical-link, import: { <link-control> };
   use ppp, import: { <ppp> };
 
