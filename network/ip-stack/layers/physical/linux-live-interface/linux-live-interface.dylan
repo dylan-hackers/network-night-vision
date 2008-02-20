@@ -1,0 +1,184 @@
+module: pcap-live-interface
+Author:    Andreas Bogk, Hannes Mehnert
+Copyright: (C) 2005, 2006, 2008, All rights reserved. Free for non-commercial use.
+
+define class <packet-flow-node> (<filter>)
+  slot unix-file-descriptor :: <integer>;
+end class;
+
+define constant $ethernet-buffer-size :: <integer> = 1548;
+define constant <buffer> = <byte-vector>;
+
+define layer phy (<physical-layer>)
+  property administrative-state :: <symbol> = #"down";
+  property promiscuous? :: <boolean> = #t;
+  system property running-state :: <symbol> = #"down";
+  system property device-name :: <string>;
+  slot packet-flow-node :: <packet-flow-node>;
+end;
+
+define method create-raw-socket (phy :: <phy-layer>) => (res :: <node>)
+  phy.packet-flow-node
+end;
+
+define method initialize-layer (layer :: <phy-layer>,
+                                #key, #all-keys)
+ => ()
+  layer.packet-flow-node := make(<packet-flow-node>);
+  register-c-dylan-object(layer.packet-flow-node);
+  register-property-changed-event(layer, #"administrative-state",
+                                  toggle-administrative-state);
+end;
+
+define function toggle-administrative-state (event :: <property-changed-event>)
+ => ();
+  let property = event.property-changed-event-property;
+  let layer = property.property-owner;
+  if (property.property-value == #"up")
+    make(<thread>, function: curry(run-interface, layer));
+  else
+    layer.@running-state := #"down";    
+  end;
+end;
+
+define method push-data-aux (input :: <push-input>,
+                             node :: <packet-flow-node>,
+                             frame :: <ethernet-frame>)
+  send(node.unix-file-descriptor,
+       as(<byte-vector>, assemble-frame(frame).packet));
+end;
+
+define function run-interface (layer :: <phy-layer>)
+  block(return)
+    let node = layer.packet-flow-node;
+    let handle = socket($PF-PACKET, $SOCK-RAW, htons($ETH-P-ALL));
+    if (handle == -1)
+      layer.@running-state := #"error";
+      return();
+    end;
+    node.unix-file-descriptor := handle;
+
+    with-stack-structure (ifreq :: <ifreq*>)
+      ifreq.ifr-name := layer.@device-name;
+      let res = ioctl(node.unix-file-descriptor, $SIOCGIFFLAGS, ifreq);
+      if (res == -1)
+        layer.@running-state := #"error";
+        return();
+      else
+        ifreq.ifr-flags := logior(ifreq.ifr-flags,
+                                  logior($IFF-UP, if (layer.@promiscuous?)
+                                                    $IFF-PROMISC
+                                                  else
+                                                    0
+                                                  end));
+        let result = ioctl(node.unix-file-descriptor, $SIOCSIFFLAGS, ifreq);
+        if (result == -1)
+          layer.@running-state := #"error";
+          return();
+        end if;
+      end if;
+    end with-stack-structure;
+
+    with-stack-structure (sockaddr :: <sockaddr-ll*>)
+      sockaddr.sll-family   := $AF-PACKET;
+      sockaddr.sll-protocol := htons($ETH-P-ALL);
+      sockaddr.sll-ifindex  := name-to-index(node.unix-file-descriptor,
+                                             layer.@device-name);
+      if (bind(node.unix-file-descriptor, sockaddr, size-of(<sockaddr-ll>)) == -1)
+        layer.@running-state := #"error";
+        return();
+      end if;
+    end;
+    layer.@running-state := #"up";
+
+    while(layer.@running-state == #"up")
+      let (packet, type-code) = receive(node);
+      let type = select (type-code)
+                   1   => <ethernet-frame>;
+                   801 => <ieee80211-frame>;
+                   802 => <prism2-frame>;
+                   803 => <bsd-80211-radio-frame>;
+                 end;
+      block()
+        let frame = parse-frame(type, packet);
+        push-data(node.the-output, frame);
+      exception (e :: <error>)
+        //format-out("Incoming packet broken beyond repair\n");
+      end
+    end while;
+    close(node.unix-file-descriptor);
+  end;
+end;
+
+define function name-to-index (socket, name)
+  with-stack-structure (ifreq :: <ifreq*>)
+    ifreq.ifr-name := name;
+    let rc = ioctl(socket, $SIOCGIFINDEX, ifreq);
+    if (rc == -1)
+      error("Error binding to interface %s\n", name);
+    end if;
+    ifreq.ifr-ifindex;
+  end with-stack-structure;
+end function name-to-index;
+
+define function start-packet ()
+  let packet-socket = socket($PF-PACKET, $SOCK-RAW, htons($ETH-P-ALL));
+  with-stack-structure (ifreq :: <ifreq*>)
+    for (i from 0 below 256)
+      ifreq.ifr-ifindex := i;
+      if (ioctl(packet-socket, $SIOCGIFNAME, ifreq) >= 0)
+        make(<phy-layer>, device-name: as(<byte-string>, ifreq.ifr-name));
+      end;
+    end;
+  end;
+  close(packet-socket);
+end;
+
+define method receive (interface :: <packet-flow-node>)
+  => (buffer, type)
+  let buffer = make(<buffer>, size: $ethernet-buffer-size);
+  local method unix-receive ()
+          with-stack-structure (sockaddr :: <sockaddr-ll*>)
+            with-stack-structure (sockaddr-size :: <socklen-t*>)
+              pointer-value(sockaddr-size) := size-of(<sockaddr-ll>);
+              let fd = interface.unix-file-descriptor;
+              let read-bytes =
+                interruptible-system-call(unix-recv-buffer-from(fd,
+                                                                buffer-offset(buffer, 0),
+                                                                $ethernet-buffer-size,
+                                                                0,
+                                                                sockaddr,
+                                                                sockaddr-size));
+                if (read-bytes == -1)
+                  //Only want to catch $EINTR, but getting mps assertion failures
+                  //this is now done via interruptible-system-call macro
+                  #f;
+                else
+                  values(subsequence(buffer, end: read-bytes), sockaddr.sll-hatype);
+                end if;
+              end
+            end
+        end method;
+  unix-receive();
+end method receive;
+
+define method send (interface :: <integer>, buffer :: <buffer>)
+  unix-send-buffer(interface,
+                   buffer-offset(buffer, 0),
+                   buffer.size,
+                   0);
+end method send;
+
+define function buffer-offset
+    (the-buffer :: <buffer>, data-offset :: <integer>)
+ => (result-offset :: <machine-word>)
+  u%+(data-offset,
+      primitive-wrap-machine-word
+        (primitive-repeated-slot-as-raw
+           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
+end function;
+
+
+begin
+  register-startup-function(start-packet);
+end;
