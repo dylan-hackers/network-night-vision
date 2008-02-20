@@ -71,19 +71,28 @@ end module layer;
 
 define module new-layer
   use common-dylan;
+  use format;
 
-  export <layer>, layer-name,
+  export <layer>, layer-name, initialize-layer,
     <event>, <event-source>,
-    event-notify, register-event, deregister-event;
+    event-notify, register-event, deregister-event,
+    register-property-changed-event, deregister-property-changed-event;
+
+  export find-layer, find-all-layers,
+    print-layer, print-config;
+
+  export create-raw-socket,
+    start-layer, register-startup-function;
 
   export <property>, property-name,
     property-type, property-default-value,
     property-value, property-value-setter,
-    property-owner;
+    property-owner, read-into-property,
+    read-as;
 
-  export get-property, 
+  export get-property, get-properties,
     set-property-value, get-property-value,
-    check-property;
+    check-property, print-property;
 
   export <property-changed-event>,
     property-changed-event-property,

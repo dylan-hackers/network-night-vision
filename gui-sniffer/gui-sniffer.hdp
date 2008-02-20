@@ -5,6 +5,7 @@ files:	library
 	module
 	hex-view
 	command-line
+	layer-commands
 	gui-sniffer
 	commands
 	main

@@ -246,7 +246,6 @@ define method show-property
   do(curry(write-line, stream), docstrings);
 end;
 
-
 define command-group network
     (summary: "Networking commands",
      documentation: "The set of commands for managing the network.")
@@ -262,12 +261,35 @@ define command-group network
   command filter;
 end command-group;
 
+define class <tap-command> (<basic-command>)
+  slot %layer :: new-<layer>, required-init-keyword: layer:
+end;
+
+define command-line tap => <tap-command>
+  (summary: "Taps a layer",
+   documentation: "Tap a layer")
+  argument layer :: new-<layer> = "The layer to tap";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <tap-command>)
+  let layer = command.%layer;
+  connect(new-create-raw-socket(layer), context.nnv-context);
+  new-set-property-value(layer, #"administrative-state", #"up");
+end;
+define command-group layer-gui
+    (summary: "Layer command for the GUI",
+     documentation: "The set of commands which connect the layer to the GUI")
+  command tap;
+end;
+
 define command-group nnv
     (summary: "Network Night Vision commands",
      documentation: "The set of commands provided by Network Night Vision.")
   group basic;
   group property;
   group network;
+  group layer;
+  group layer-gui;
   property key-bindings;
 end command-group;
 

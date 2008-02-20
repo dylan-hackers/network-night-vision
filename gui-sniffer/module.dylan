@@ -25,8 +25,21 @@ define module command-line
   use commands;
   use command-lines;
 
-  export make-nnv-shell-pane, command-line-server, nnv-context, nnv-context-setter, <nnv-context>;
+  export make-nnv-shell-pane, command-line-server, nnv-context, nnv-context-setter, <nnv-context>,
+     chop;
 end;
+
+define module layer-commands
+  use common-dylan;
+  use new-layer;
+  use command-line;
+  use commands;
+  use command-lines;
+  use format;
+
+  export $layer-command-group;
+end;
+
 
 define module gui-sniffer
   use common-dylan, exclude: { format-to-string };
@@ -48,6 +61,7 @@ define module gui-sniffer
   use network-flow;
   use flow;
   use command-line;
+  use layer-commands;
   use commands;
   use command-lines;
   use hex-view;
@@ -66,4 +80,5 @@ define module gui-sniffer
   use network-interfaces;
   use layer;
   use timer;
+  use new-layer, prefix: "new-";
 end module gui-sniffer;

@@ -8,6 +8,14 @@ define method mode-name
   "NNV shell"
 end method mode-name;
 
+define function chop (string :: <string>) => (string :: <string>)
+  if (string[string.size - 1] = '\n')
+    copy-sequence(string, end: string.size - 1)
+  else
+    string;
+  end;
+end;
+
 define method shell-input-complete?
     (mode :: <nnv-shell-mode>,
      buffer :: <basic-shell-buffer>, section :: <basic-shell-section>)
