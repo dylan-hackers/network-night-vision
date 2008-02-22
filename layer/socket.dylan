@@ -22,5 +22,5 @@ define class <flow-node-socket> (<socket>)
 end;
 
 define method send (node :: <flow-node-socket>, data)
-  push-data(node.flow-node.the-output, data)
+  push-data(node.flow-node.the-input, data)
 end;
