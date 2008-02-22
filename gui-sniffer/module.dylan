@@ -81,4 +81,5 @@ define module gui-sniffer
   use layer;
   use timer;
   use new-layer, prefix: "new-";
+  use socket, prefix: "new-";
 end module gui-sniffer;

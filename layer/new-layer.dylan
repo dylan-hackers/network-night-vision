@@ -1,11 +1,75 @@
 module: new-layer
 
 define open abstract class <layer> (<object>)
-  slot layer-name :: <symbol>;
+  slot layer-name :: <symbol>, init-keyword: name:;
   slot properties :: <table> = make(<table>);
   constant each-subclass slot default-name :: <symbol>;
+  slot upper-layers :: <sequence> = #();
+  slot lower-layers :: <sequence> = #();
 end;
 
+define open generic register-lower-layer (upper :: <layer>, lower :: <layer>);
+define open generic register-upper-layer (lower :: <layer>, upper :: <layer>);
+
+define method register-lower-layer (upper :: <layer>, lower :: <layer>)
+end;
+
+define method register-upper-layer (lower :: <layer>, upper :: <layer>);
+end;
+
+define open generic deregister-lower-layer (upper :: <layer>, lower :: <layer>);
+define open generic deregister-upper-layer (lower :: <layer>, upper :: <layer>);
+
+define method deregister-lower-layer (upper :: <layer>, lower :: <layer>)
+end;
+
+define method deregister-upper-layer (lower :: <layer>, upper :: <layer>);
+end;
+
+define open generic check-lower-layer? (upper :: <layer>, lower :: <layer>) => (allowed? :: <boolean>);
+define open generic check-upper-layer? (lower :: <layer>, upper :: <layer>) => (allowed? :: <boolean>);
+
+define method check-lower-layer? (upper :: <layer>, lower :: <layer>) => (allowed? :: <boolean>)
+  #f
+end;
+
+define method check-upper-layer? (lower :: <layer>, upper :: <layer>) => (allowed? :: <boolean>);
+  #f
+end;
+
+define function connect-layer (lower :: <layer>, upper :: <layer>) => ();
+  if (member?(upper, lower.upper-layers)
+       | member?(lower, upper.lower-layers))
+    error("Layer connection already established!")
+  end;
+  unless (check-upper-layer?(lower, upper))
+    error("Lower layer refused new upper")
+  end;
+  unless (check-lower-layer?(upper, lower))
+    error("Upper layer refused new lower")
+  end;
+  
+  register-upper-layer(lower, upper);
+  block ()
+    register-lower-layer(upper, lower);
+    lower.upper-layers := add(lower.upper-layers, upper);
+    upper.lower-layers := add(upper.lower-layers, lower);
+  exception (e :: <error>)
+    deregister-upper-layer(lower, upper);
+    signal(e);
+  end;
+end;
+
+define function disconnect-layer (lower :: <layer>, upper :: <layer>) => ();
+  unless (member?(upper, lower.upper-layers)
+       & member?(lower, upper.lower-layers))
+    error("Layers not connected")
+  end;
+  deregister-upper-layer(lower, upper);
+  deregister-lower-layer(upper, lower);
+  lower.upper-layers := remove(lower.upper-layers, upper);
+  upper.lower-layers := remove(upper.lower-layers, lower);
+end;
 
 define constant <socket> = <object>;
 
@@ -13,6 +77,7 @@ define open generic create-raw-socket (layer :: <layer>) => (res :: <socket>);
 
 define constant $layer-registry = make(<table>);
 
+define constant $layer-type-registry = make(<table>);
 define constant $layer-startups :: <stretchy-vector> = make(<stretchy-vector>);
 
 define function register-startup-function (function :: <function>) => ()
@@ -22,7 +87,14 @@ end;
 define function start-layer () => ()
   do(method(x) x() end, $layer-startups);
 end;
-  
+
+define function find-layer-type (name :: type-union(<symbol>, <string>))
+ => (layer :: false-or(subclass(<layer>)))
+  if (instance?(name, <string>))
+    name := as(<symbol>, name);
+  end;
+  element($layer-type-registry, name, default: #f);
+end;
 define function find-layer (name :: type-union(<symbol>, <string>)) => (layer :: false-or(<layer>))
   if (instance?(name, <string>))
     name := as(<symbol>, name);
@@ -50,6 +122,9 @@ define function print-config (stream :: <stream>, layer :: <layer>) => ()
         end;
       end;
     end;
+  end;
+  for (upper in layer.upper-layers)
+    format(stream, "  service %s\n", upper.layer-name);
   end;
   format(stream, "}\n\n");
 end;
@@ -135,6 +210,8 @@ define macro layer-definer
  { layer-getter-and-setter-definer("<" ## ?name ## "-layer>"; ?properties);
    layer-class-definer(?attr; ?name (?superclass); ?properties);
 
+   $layer-type-registry[?#"name"] := "<" ## ?name ## "-layer>";
+
    define variable "$" ## ?name ## "-instance-count" :: <integer> = 0;
    define method make (class == "<" ## ?name ## "-layer>",
                        #next next-method, #rest rest, #key name, #all-keys)
@@ -163,10 +240,12 @@ end;
 
 define inline function init-properties (layer :: <layer>, args :: <collection>)
   for (i from 0 below args.size by 2)
-    if (get-property(layer, args[i]))
-      let prop = get-property(layer, args[i]);
-      prop.property-default-value := args[i + 1];
-      prop.%property-value := args[i + 1];
+    unless (args[i] == #"name")
+      if (get-property(layer, args[i]))
+        let prop = get-property(layer, args[i]);
+        prop.property-default-value := args[i + 1];
+        prop.%property-value := args[i + 1];
+      end;
     end;
   end;
 end;
@@ -213,7 +292,7 @@ define method check-property (owner, property-name :: <symbol>, value) => ()
 end;
 
 define inline function print-property (stream :: <stream>, prop :: <property>) => ()
-  format(stream, "%s %=\n", prop.property-name, prop.property-value);
+  format(stream, "%s: %=\n", prop.property-name, prop.property-value);
 end;
 define inline function get-properties
     (object :: <layer>) => (res :: <collection>)

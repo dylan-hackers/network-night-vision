@@ -16,15 +16,28 @@ define layer pcap (<physical-layer>)
   slot pcap-flow-node :: <pcap-flow-node>;
 end;
 
-define method create-raw-socket (pcap :: <pcap-layer>) => (res :: <node>)
-  pcap.pcap-flow-node;
-end;
 define method initialize-layer
     (layer :: <pcap-layer>, #key, #all-keys)
   => ()
   layer.pcap-flow-node := make(<pcap-flow-node>);
   register-c-dylan-object(layer.pcap-flow-node);
   register-property-changed-event(layer, #"administrative-state", toggle-administrative-state);
+end;
+
+define method check-upper-layer? (lower :: <pcap-layer>, upper :: <layer>)
+ => (allowed? :: <boolean>);
+  lower.upper-layers.size == 0;
+end;
+
+define method check-socket-arguments? (lower :: <pcap-layer>, #rest rest, #key type, #all-keys)
+ => (valid-arguments? :: <boolean>)
+  //XXX: if (valid-type?)
+  type == <ethernet-frame>
+end;
+
+define method create-socket (lower :: <pcap-layer>, #rest rest, #key, #all-keys)
+ => (socket :: <socket>)
+  make(<flow-node-socket>, owner: lower, flow-node: lower.pcap-flow-node);
 end;
 
 define function toggle-administrative-state (event :: <property-changed-event>) => ();

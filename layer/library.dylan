@@ -21,4 +21,5 @@ define library layer
   // Add any more module exports here.
   export layer;
   export new-layer;
+  export socket;
 end library layer;

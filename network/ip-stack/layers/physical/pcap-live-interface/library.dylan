@@ -18,8 +18,9 @@ end;
 define module pcap-live-interface
   use common-dylan;
   use new-layer;
+  use socket;
   use c-ffi;
-  use winsock2;
+  use winsock2, import: { <timeval>, <lpsockaddr>, <C-buffer-offset> };
   use physical-layer;
   //use format-out;
   use standard-io;

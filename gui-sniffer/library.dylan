@@ -21,4 +21,5 @@ define library gui-sniffer
   use layer;
   use timer;
   use pcap-live-interface;
+  use bridge-group;
 end library gui-sniffer;

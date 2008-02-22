@@ -273,8 +273,15 @@ end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <tap-command>)
   let layer = command.%layer;
-  connect(new-create-raw-socket(layer), context.nnv-context);
-  new-set-property-value(layer, #"administrative-state", #"up");
+  if (context.nnv-context.tapping-socket)
+    new-close-socket(context.nnv-context.tapping-socket);
+    if (context.nnv-context.tapping-socket.new-flow-node.the-output.connected-input.node = context.nnv-context)
+      disconnect(context.nnv-context.tapping-socket.new-flow-node, context.nnv-context);
+    end;
+  end;
+  let tap = new-create-socket(layer);
+  context.nnv-context.tapping-socket := tap;
+  connect(tap.new-flow-node, context.nnv-context);
 end;
 define command-group layer-gui
     (summary: "Layer command for the GUI",

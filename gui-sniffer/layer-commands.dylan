@@ -63,6 +63,11 @@ end;
 define method do-execute-command (context :: <nnv-context>, command :: <show-layer-command>)
   let out = context.context-server.server-output-stream;
   do(curry(print-property, out), get-properties(command.%layer));
+  format(out, "services: ");
+  do(curry(format, out, "%s "), map(layer-name, command.%layer.upper-layers));
+  format(out, "\nsources: ");
+  do(curry(format, out, "%s "), map(layer-name, command.%layer.lower-layers));
+  format(out, "\n");
 end;
 
 define class <set-l-property-command> (<basic-command>)
@@ -84,6 +89,77 @@ define method do-execute-command (context :: <nnv-context>, command :: <set-l-pr
   read-into-property(property, chop(command.%property-value));
 end;
 
+define class <connect-command> (<basic-command>)
+  constant slot %lower :: <layer>, required-init-keyword: lower:;
+  constant slot %upper :: <layer>, required-init-keyword: upper:;
+end;
+
+define command-line connect => <connect-command>
+  (summary: "Connect lower to upper layer",
+   documentation: "Tries to plug the upper layer into the lower layer.")
+  argument lower :: <layer> = "Name of lower layer to connect.";
+  argument upper :: <layer> = "Name of upper layer to connect.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <connect-command>)
+  connect-layer(command.%lower, command.%upper);
+end;
+define class <disconnect-command> (<basic-command>)
+  constant slot %lower :: <layer>, required-init-keyword: lower:;
+  constant slot %upper :: <layer>, required-init-keyword: upper:;
+end;
+
+define command-line disconnect => <disconnect-command>
+  (summary: "Disconnect lower and upper layer",
+   documentation: "Unplugs the upper layer out of the lower layer.")
+  argument lower :: <layer> = "Name of lower layer to disconnect.";
+  argument upper :: <layer> = "Name of upper layer to disconnect.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <disconnect-command>)
+  disconnect-layer(command.%lower, command.%upper);
+end;
+
+define class <layer-type> (<object>)
+  constant slot ltype :: subclass(<layer>), required-init-keyword: type:;
+end;
+
+define method parse-next-argument
+    (context :: <nnv-context>, type == <layer-type>,
+     text :: <string>,
+     #key start :: <integer> = 0, end: stop = #f)
+ => (value :: <layer-type>, next-index :: <integer>)
+   block (return)
+     let (name, next-index)
+       = parse-next-word(text, start: start, end: stop);
+     if (find-layer-type(name))
+       values(make(<layer-type>, type: find-layer-type(name)),
+              next-index)
+     else
+       parse-error("Missing argument.")
+     end
+   exception (e :: <condition>)
+     parse-error("Layer-type not found")
+   end;
+end;
+
+define class <create-command> (<basic-command>)
+  constant slot %layer-type :: <layer-type>, required-init-keyword: layer-type:;
+  constant slot %layer-name :: <string>, required-init-keyword: layer-name:;
+end;
+
+define command-line create => <create-command>
+  (summary: "Creates a new layer",
+   documentation: "Instantiates a new layer of given type.")
+  argument layer-type :: <layer-type> = "Type of layer to create.";
+  argument layer-name :: <string> = "Name of layer to create.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <create-command>)
+  let layer = make(command.%layer-type.ltype, name: as(<symbol>, chop(command.%layer-name)));
+  let out = context.context-server.server-output-stream;
+  format(out, "Layer %s of type %s created\n", layer.layer-name, layer.default-name);
+end;
 define command-group layer
     (summary: "Layer commands",
      documentation: "The set of commands for managing the layers.")
@@ -91,5 +167,8 @@ define command-group layer
   command show-layers;
   command show-layer;
   command !set;
+  command connect;
+  command disconnect;
+  command create;
 end command-group;
 

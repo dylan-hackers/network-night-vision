@@ -73,12 +73,20 @@ define module new-layer
   use common-dylan;
   use format;
 
-  export <layer>, layer-name, initialize-layer,
-    <event>, <event-source>,
+  export <layer>, layer-name, default-name,
+    lower-layers, upper-layers,
+    initialize-layer,
+    connect-layer, disconnect-layer,
+    register-lower-layer, register-upper-layer,
+    deregister-lower-layer, deregister-upper-layer,
+    check-lower-layer?, check-upper-layer?;
+
+
+  export <event>, <event-source>,
     event-notify, register-event, deregister-event,
     register-property-changed-event, deregister-property-changed-event;
 
-  export find-layer, find-all-layers,
+  export find-layer, find-layer-type, find-all-layers,
     print-layer, print-config;
 
   export create-raw-socket,
@@ -102,3 +110,18 @@ define module new-layer
     \add-properties-to-table,
     \layer-getter-and-setter-definer;
 end;
+
+define module socket
+  use common-dylan;
+  use format;
+  use network-flow;
+  use flow;
+  use new-layer;
+
+  export <socket>, <flow-node-socket>,
+    create-socket, flow-node, socket-owner,
+    check-socket-arguments?;
+  
+  export send, close-socket;
+end;
+

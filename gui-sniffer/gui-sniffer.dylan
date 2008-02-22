@@ -447,6 +447,7 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   slot listening-socket = #f;
   slot first-packet-arrived :: false-or(<date>) = #f;
   slot filter-history :: <list> = make(<list>);
+  slot tapping-socket = #f;
 
   pane filter-field (frame)
     make(<combo-box>,
