@@ -1,4 +1,4 @@
 library: network-interfaces
-files: pcap-library
+files: pcap-library-win32
 	pcap
 c-libraries: wpcap.lib
