@@ -2,7 +2,6 @@ module: pppoe
 Author: Hannes Mehnert
 Copyright: (C) 2008,  All rights reserved. Free for non-commercial use.
 
-
 define protocol pppoe-session (header-frame)
   over <ethernet-frame> #x8864;
   field pppoe-version :: <4bit-unsigned-integer> = 1;
@@ -47,7 +46,8 @@ end;
 
 define protocol pppoe-service-name (pppoe-tag)
   over <pppoe-tag> #x0101;
-  field service-name :: <externally-delimited-string> = $empty-externally-delimited-string;
+  field service-name :: <externally-delimited-string>
+    = $empty-externally-delimited-string;
 end;
 
 define protocol pppoe-access-contentrator-name (pppoe-tag)

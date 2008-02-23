@@ -19,3 +19,4 @@ files:	protocols-library
 	cidr
 	hsrp
 	ntp
+	socks

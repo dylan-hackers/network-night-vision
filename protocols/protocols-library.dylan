@@ -22,7 +22,8 @@ define library protocols
     ppp,
     pppoe,
     bittorrent,
-    hdlc;
+    hdlc,
+    socks;
 end;
 
 define module logical-link
@@ -322,7 +323,6 @@ define module bittorrent
   use common-dylan;
   use packetizer;
   use ipv4;
-  use udp;
 
   export <bittorrent-announce>;
 end;
@@ -336,7 +336,7 @@ define module ipv6
   use ethernet, import: { <ethernet-frame>, <mac-address> };
   use logical-link, import: { <link-control> };
 
-  export <ipv6-frame>;
+  export <ipv6-frame>, <ipv6-address>, ipv6-address;
 end;
 
 define module tcp
@@ -553,4 +553,12 @@ define module ntp
 
   use ipv4, import: { ipv4-address, <ipv4-address>, <udp-frame> };
   use pcap, import: { <unix-time-value>, make-unix-time };
+end;
+
+define module socks
+  use dylan;
+  use packetizer;
+  use ipv4, import: { <ipv4-address> };
+  use ipv6, import: { <ipv6-address> };
+  use dns, import: { <domain-name> };
 end;
