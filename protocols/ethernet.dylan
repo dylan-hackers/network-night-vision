@@ -151,13 +151,15 @@ define protocol cdp-address-frame (container-frame)
   field cdp-protocol-type :: <unsigned-byte>;
   field cdp-protocol-length :: <unsigned-byte>;
   field cdp-protocol :: <raw-frame>, length: frame.cdp-protocol-length * 8;
-  field cdp-address-length :: <unsigned-byte>;
+  field cdp-address-length :: <2byte-big-endian-unsigned-integer>;
   field cdp-address :: <raw-frame>, length: frame.cdp-address-length * 8;
 end; 
 
 define protocol cdp-addresses-frame (cdp-record)
   over <cdp-record> #x2;
-  field address-count :: <unsigned-byte>;
+  // FIXME: field address-count :: <big-endian-unsigned-integer-4byte>;
+  field address-count-first :: <unsigned-byte>;
+  field address-count :: <3byte-big-endian-unsigned-integer>;
   repeated field cdp-addresses :: <cdp-address-frame>,
     count: frame.address-count;
 end;
