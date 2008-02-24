@@ -561,7 +561,7 @@ define command-table *file-command-table* (*global-command-table*)
   menu-item "Load pcap file..." = open-pcap-file;
   menu-item "Save to pcap file..." = save-pcap-file;
   menu-item "About" = show-about-box;
-  menu-item "Exit" = exit-application;
+  menu-item "Exit" = exit-frame;
 end;
 
 define command-table *interface-command-table* (*global-command-table*)
