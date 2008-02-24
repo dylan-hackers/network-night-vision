@@ -23,7 +23,8 @@ define library protocols
     pppoe,
     bittorrent,
     hdlc,
-    socks;
+    socks,
+    eigrp;
 end;
 
 define module logical-link
@@ -567,6 +568,6 @@ define module eigrp
   use dylan;
   use packetizer;
   
-  use ipv4, import: { <ipv4-frame> };
+  use ipv4, import: { <ipv4-frame>, <ipv4-address> };
 end;
 
