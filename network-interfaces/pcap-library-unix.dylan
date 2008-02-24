@@ -20,8 +20,8 @@ end;
 define module network-interfaces
   use common-dylan;
   use c-ffi;
-  use winsock2, import: { sa-data-array, <timeval>,
-                          <lpsockaddr>, <C-buffer-offset> };
+  use unix-sockets, import: { sa-data-array, <timeval>,
+                              <lpsockaddr>, <C-buffer-offset> };
   //use format-out;
   use standard-io;
   use subseq;
