@@ -20,3 +20,4 @@ files:	protocols-library
 	hsrp
 	ntp
 	socks
+	eigrp

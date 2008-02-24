@@ -562,3 +562,11 @@ define module socks
   use ipv6, import: { <ipv6-address> };
   use dns, import: { <domain-name> };
 end;
+
+define module eigrp
+  use dylan;
+  use packetizer;
+  
+  use ipv4, import: { <ipv4-frame> };
+end;
+
