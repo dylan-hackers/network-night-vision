@@ -269,7 +269,7 @@ end;
 define function show-packet (frame :: <gui-sniffer-frame>)
   let current-packet = current-packet(frame);
   show-packet-tree(frame, current-packet);
-  current-packet & show-hexdump(frame, current-packet.packet);
+  current-packet & show-hexdump(frame, current-packet.assemble-frame!.packet);
   redisplay-window(frame.packet-hex-dump);
 end;
 

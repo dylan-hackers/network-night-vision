@@ -6,6 +6,7 @@ define open abstract class <layer> (<object>)
   constant each-subclass slot default-name :: <symbol>;
   slot upper-layers :: <sequence> = #();
   slot lower-layers :: <sequence> = #();
+  slot sockets :: <list> = #();
 end;
 
 define open generic register-lower-layer (upper :: <layer>, lower :: <layer>);
@@ -328,6 +329,10 @@ define method read-as (type == <boolean>, value :: <string>) => (res :: <boolean
   if ((value = "#t") | (value = "true") | (value = "t"))
     #t;
   end;
+end;
+
+define method read-as (type == <integer>, value :: <string>) => (res :: <integer>)
+  string-to-integer(value);
 end;
 
 define inline function set-property-value

@@ -22,4 +22,5 @@ define library gui-sniffer
   use timer;
   use pcap-live-interface;
   use bridge-group;
+  use ieee802-1q;
 end library gui-sniffer;

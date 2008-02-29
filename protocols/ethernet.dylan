@@ -88,8 +88,8 @@ end;
 define protocol vlan-tag (header-frame)
   over <ethernet-frame> #x8100;
   summary "VLAN: %=", vlan-id;
-  field priority :: <3bit-unsigned-integer>;
-  field canonical-format-indicatior :: <1bit-unsigned-integer>;
+  field priority :: <3bit-unsigned-integer> = 0;
+  field canonical-format-indicator :: <1bit-unsigned-integer> = 0;
   field vlan-id :: <12bit-unsigned-integer>;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,

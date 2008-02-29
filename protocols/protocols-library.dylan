@@ -55,8 +55,10 @@ define module ethernet
 
   use common-extensions;
 
-  export <ethernet-frame>,
+  export <ethernet-frame>, ethernet-frame,
     type-code, type-code-setter;
+
+  export vlan-tag;
 
   export <mac-address>, mac-address;
 

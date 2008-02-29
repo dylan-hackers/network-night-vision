@@ -13,20 +13,23 @@ define layer pcap (<physical-layer>)
   system property running-state :: <symbol> = #"down";
   system property device-id :: <string>;
   system property device-description :: <string>;
-  slot pcap-flow-node :: <pcap-flow-node>;
+  slot pcap-flow-node :: <pcap-flow-node> = make(<pcap-flow-node>);
+  slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
+  slot fan-in :: <fan-in> = make(<fan-in>);
 end;
 
 define method initialize-layer
     (layer :: <pcap-layer>, #key, #all-keys)
   => ()
-  layer.pcap-flow-node := make(<pcap-flow-node>);
+  connect(layer.pcap-flow-node, layer.demultiplexer);
+  connect(layer.fan-in, layer.pcap-flow-node);
   register-c-dylan-object(layer.pcap-flow-node);
   register-property-changed-event(layer, #"administrative-state", toggle-administrative-state);
 end;
 
 define method check-upper-layer? (lower :: <pcap-layer>, upper :: <layer>)
  => (allowed? :: <boolean>);
-  lower.upper-layers.size == 0;
+  #t
 end;
 
 define method check-socket-arguments? (lower :: <pcap-layer>, #rest rest, #key type, #all-keys)
@@ -35,9 +38,11 @@ define method check-socket-arguments? (lower :: <pcap-layer>, #rest rest, #key t
   type == <ethernet-frame>
 end;
 
-define method create-socket (lower :: <pcap-layer>, #rest rest, #key, #all-keys)
+define method create-socket (lower :: <pcap-layer>, #rest rest, #key type, filter-string, #all-keys)
  => (socket :: <socket>)
-  make(<flow-node-socket>, owner: lower, flow-node: lower.pcap-flow-node);
+  let input = create-input(lower.fan-in);
+  let output = create-output-for-filter(lower.demultiplexer, filter-string | "ethernet");
+  make(<input-output-socket>, owner: lower, input: input, output: output);
 end;
 
 define function toggle-administrative-state (event :: <property-changed-event>) => ();
@@ -71,7 +76,7 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <pcap-flow-node>,
                              frame :: <frame>)
-  let buffer = as(<byte-vector>, assemble-frame(frame).packet);
+  let buffer = as(<byte-vector>, assemble-frame!(frame).packet);
   pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
 end;
 

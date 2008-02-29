@@ -75,6 +75,7 @@ define module new-layer
 
   export <layer>, layer-name, default-name,
     lower-layers, upper-layers,
+    sockets, sockets-setter,
     initialize-layer,
     connect-layer, disconnect-layer,
     register-lower-layer, register-upper-layer,
@@ -121,7 +122,9 @@ define module socket
   export <socket>, <flow-node-socket>,
     create-socket, flow-node, socket-owner,
     check-socket-arguments?;
-  
+
+  export <input-output-socket>, socket-input, socket-output;
+
   export send, close-socket;
 end;
 

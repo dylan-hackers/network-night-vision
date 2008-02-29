@@ -145,21 +145,27 @@ end;
 define method create-output-for-filter
   (demux :: <demultiplexer>, filter :: <filter-expression>)
  => (output :: <filtered-push-output>)
-  let output = make(<filtered-push-output>,
-                    frame-filter: filter,
-                    node: demux);
+  make(<filtered-push-output>,
+       frame-filter: filter,
+       node: demux);
+end;
+
+define method connect (output :: <filtered-push-output>, input :: <push-input>)
+  next-method();
+  let demux = output.node;
   with-lock(demux.%lock)
     add!(demux.outputs, output);
   end;
-  output
 end;
 
-define method remove-output
-  (demux :: <demultiplexer>, filter-output :: <filtered-push-output>)
+define method disconnect
+  (output :: <filtered-push-output>, input :: <push-input>)
  => ();
+  let demux = output.node;
   with-lock(demux.%lock)
-    remove!(demux.outputs, filter-output);
+    remove!(demux.outputs, output);
   end;
+  next-method();
 end;
 
 define method push-data-aux (input :: <push-input>,

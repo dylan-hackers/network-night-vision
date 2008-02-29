@@ -97,14 +97,6 @@ define method initialize(node :: <single-push-input-node>, #rest rest, #key, #al
   node.the-input := make(<push-input>, node: node)
 end;
 
-define class <closure-node> (<single-push-input-node>)
-  constant slot closure :: <function>, required-init-keyword: closure:;
-end;
-
-define method push-data-aux (input :: <push-input>, node :: <closure-node>, data) => ()
-  node.closure(data);
-end;
-
 define method get-inputs (node :: <single-input-node>) => (inputs)
   list(node.the-input)
 end;
@@ -166,6 +158,14 @@ define method disconnect (output :: <single-output-node>, input :: <single-input
 end;
 
 define open abstract class <filter> (<single-push-input-node>, <single-push-output-node>)
+end;
+
+define class <closure-node> (<filter>)
+  constant slot closure :: <function>, required-init-keyword: closure:;
+end;
+
+define method push-data-aux (input :: <push-input>, node :: <closure-node>, data) => ()
+  node.closure(data);
 end;
 
 define class <queue> (<single-push-input-node>, <single-pull-output-node>)

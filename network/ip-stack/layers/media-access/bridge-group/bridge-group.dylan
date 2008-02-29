@@ -1,19 +1,16 @@
 module: bridge-group
 
 define layer repeater-group (<layer>)
-  property administrative-state :: <symbol> = #"down";
-  slot sockets :: <stretchy-vector> = make(<stretchy-vector>);
+  property administrative-state :: <symbol> = #"up";
 end;
 
 define class <output-node> (<single-push-output-node>)
 end;
 define method create-socket (repeater :: <repeater-group-layer>, #rest rest, #key, #all-keys)
  => (res :: <socket>)
-  let socket  = make(<flow-node-socket>,
-                     owner: repeater,
-                     flow-node: make(<output-node>));
-  add!(repeater.sockets, socket);
-  socket;
+  make(<flow-node-socket>,
+       owner: repeater,
+       flow-node: make(<output-node>));
 end;
 
 define method check-upper-layer? (lower :: <repeater-group-layer>, upper :: <layer>) => (allowed? :: <boolean>);
@@ -40,8 +37,9 @@ define method register-lower-layer (upper :: <repeater-group-layer>, lower :: <l
                                end
                              end
                            end);
-  connect(ethernet-socket.flow-node, node);
-  add!(upper.sockets, ethernet-socket);
+  connect(ethernet-socket.socket-output, node);
+  connect(node.the-output, ethernet-socket.socket-input);
+  upper.sockets := add!(upper.sockets, ethernet-socket);
 end;
 
 define method deregister-lower-layer (upper :: <repeater-group-layer>, lower :: <layer>)
@@ -49,8 +47,8 @@ define method deregister-lower-layer (upper :: <repeater-group-layer>, lower :: 
                                 map(socket-owner, upper.sockets),
                                 upper.sockets);
   for (s in layer-sockets)
-    disconnect(s.flow-node, s.flow-node.the-output.connected-input);
-    remove!(upper.sockets, s);
+    close-socket(s);
+    upper.sockets := remove!(upper.sockets, s);
   end;
 end;
 
