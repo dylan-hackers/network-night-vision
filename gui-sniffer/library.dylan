@@ -23,4 +23,6 @@ define library gui-sniffer
   use pcap-live-interface;
   use bridge-group;
   use ieee802-1q;
+  use ethernet;
+  use ppp-over-ethernet;
 end library gui-sniffer;

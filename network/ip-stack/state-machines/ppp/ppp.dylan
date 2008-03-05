@@ -7,25 +7,30 @@ end;
 
 define abstract class <pppoe-state> (<protocol-state>) end;
 
-states(<down>, <padi-sent>, <pado-received>, <padr-sent>, <established>; <pppoe-state>);
+states(<down>, <waiting-for-administrative-up>, <waiting-for-carrier>,
+       <padi-sent>, <padr-sent>, <established>; <pppoe-state>);
 
 define constant <pppoe-events>
-  = one-of(#"padi-sent", #"pado-received", #"padr-sent", #"valid-pads-received",
-           #"invalid-pads-received", #"padt-received", #"abort");
+  = one-of(#"lower-layer-up", #"pado-received", #"valid-pads-received",
+           #"invalid-pads-received", #"padt-received", #"lower-layer-down",
+           #"administrative-up", #"administrative-down");
 
-define state-transition-rule <down> #"padi-sent" <padi-sent> end;
+define state-transition-rule <down> #"lower-layer-up" <waiting-for-administrative-up> end;
+define state-transition-rule <waiting-for-carrier> #"lower-layer-up" <padi-sent> end;
+define state-transition-rule <waiting-for-administrative-up> #"administrative-up" <padi-sent> end;
+define state-transition-rule <down> #"administrative-up" <waiting-for-carrier> end;
 
-define state-transition-rule <padi-sent> #"pado-received" <pado-received> end;
-
-define state-transition-rule <pado-received> #"padr-sent" <padr-sent> end;
+define state-transition-rule <padi-sent> #"pado-received" <padr-sent> end;
 
 define state-transition-rule <padr-sent> #"valid-pads-received" <established> end;
 
 define state-transition-rule <padr-sent> #"invalid-pads-received" <down> end;
 
-define state-transition-rule <established> #"padt-received" <down> end;
+define state-transition-rule <established> #"padt-received" <padi-sent> end;
 
-define state-transition-rule <pppoe-state> #"abort" <down> end;
+define state-transition-rule <pppoe-state> #"lower-layer-down" <down> end;
+define state-transition-rule <pppoe-state> #"administrative-down" <waiting-for-administrative-up> end;
+define state-transition-rule <down> #"administrative-down" <down> end;
 
 
 define open class <ppp-abstract-state-machine> (<protocol-state-encapsulation>)

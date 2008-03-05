@@ -905,7 +905,7 @@ define method reinit-gui (frame :: <gui-sniffer-frame>)
 end;
 
 define class <frame-with-metadata> (<object>)
-  constant slot real-frame :: <container-frame>, required-init-keyword: frame:;
+  constant slot real-frame :: <frame>, required-init-keyword: frame:;
   constant slot number :: <integer> = counter();
   constant slot receive-time :: <date> = current-date(), init-keyword: receive-time:;
 end;

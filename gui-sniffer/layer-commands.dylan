@@ -61,13 +61,7 @@ define command-line show-layer => <show-layer-command>
 end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <show-layer-command>)
-  let out = context.context-server.server-output-stream;
-  do(curry(print-property, out), get-properties(command.%layer));
-  format(out, "services: ");
-  do(curry(format, out, "%s "), map(layer-name, command.%layer.upper-layers));
-  format(out, "\nsources: ");
-  do(curry(format, out, "%s "), map(layer-name, command.%layer.lower-layers));
-  format(out, "\n");
+  print-layer(context.context-server.server-output-stream, command.%layer);
 end;
 
 define class <set-l-property-command> (<basic-command>)
@@ -160,6 +154,37 @@ define method do-execute-command (context :: <nnv-context>, command :: <create-c
   let out = context.context-server.server-output-stream;
   format(out, "Layer %s of type %s created\n", layer.layer-name, layer.default-name);
 end;
+
+define class <up-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
+end;
+
+define command-line up => <up-command>
+  (summary: "Set administrative state of layer to 'up'.",
+   documentation: "Set administrative state of layer to 'up'.")
+  argument layer :: <layer> = "Layer to bring up.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <up-command>)
+  let layer = command.%layer;
+  set-property-value(layer, #"administrative-state", #"up");
+end;
+
+define class <down-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
+end;
+
+define command-line down => <down-command>
+  (summary: "Set administrative state of layer to 'down'.",
+   documentation: "Set administrative state of layer to 'down'.")
+  argument layer :: <layer> = "Layer to bring down.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <down-command>)
+  let layer = command.%layer;
+  set-property-value(layer, #"administrative-state", #"down");
+end;
+
 define command-group layer
     (summary: "Layer commands",
      documentation: "The set of commands for managing the layers.")
@@ -170,5 +195,7 @@ define command-group layer
   command connect;
   command disconnect;
   command create;
+  command up;
+  command down;
 end command-group;
 

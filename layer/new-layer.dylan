@@ -107,8 +107,14 @@ define function find-all-layers () => (layers :: <collection>)
   $layer-registry;
 end;
 
-define function print-layer (stream :: <stream>, layer :: <layer>) => ()
-  format(stream, "%s %s\n", layer.default-name, layer.layer-name);
+define function print-layer (out :: <stream>, layer :: <layer>) => ()
+  format(out, "%s %s\n", layer.default-name, layer.layer-name);
+  do(curry(print-property, out), get-properties(layer));
+  format(out, "  services: ");
+  do(curry(format, out, "%s "), map(layer-name, layer.upper-layers));
+  format(out, "\n  sources: ");
+  do(curry(format, out, "%s "), map(layer-name, layer.lower-layers));
+  format(out, "\n\n");
 end;
 
 define function print-config (stream :: <stream>, layer :: <layer>) => ()
@@ -118,7 +124,6 @@ define function print-config (stream :: <stream>, layer :: <layer>) => ()
       if (slot-initialized?(prop, %property-value))
         unless (slot-initialized?(prop, property-default-value)
                 & (prop.property-default-value = prop.property-value))
-          format(stream, "  ");
           print-property(stream, prop);
         end;
       end;
@@ -187,8 +192,8 @@ define macro add-properties-to-table
 
 end;
 define macro layer-class-definer
-  { layer-class-definer(?attr:*; ?:name (?superclass:expression); ?properties:*) }
- => { define ?attr class "<" ## ?name ## "-layer>" (?superclass)
+  { layer-class-definer(?attr:*; ?:name (?superclasses:*); ?properties:*) }
+ => { define ?attr class "<" ## ?name ## "-layer>" (?superclasses)
         inherited slot default-name = ?#"name";
         ?properties
       end }
@@ -204,12 +209,12 @@ define open generic initialize-layer (layer :: <layer>, #key, #all-keys) => ();
 define method initialize-layer (layer :: <layer>, #key, #all-keys) => () end;
 
 define macro layer-definer
- { define ?attr:* layer ?:name (?superclass:expression)
+ { define ?attr:* layer ?:name (?superclasses:*)
      ?properties:*
    end }
  =>
  { layer-getter-and-setter-definer("<" ## ?name ## "-layer>"; ?properties);
-   layer-class-definer(?attr; ?name (?superclass); ?properties);
+   layer-class-definer(?attr; ?name (?superclasses); ?properties);
 
    $layer-type-registry[?#"name"] := "<" ## ?name ## "-layer>";
 
@@ -266,6 +271,12 @@ define inline function register-property-changed-event
     (source :: <layer>, name :: <symbol>, callback :: <function>) => ()
   let prop = get-property(source, name);
   prop.listeners := add!(prop.listeners, callback);
+  if (slot-initialized?(prop, %property-value))
+    let event = make(<property-changed-event>,
+                     property: prop,
+                     old-value: prop.property-value);
+    callback(event);
+  end;
 end;
 
 define inline function deregister-property-changed-event
@@ -293,7 +304,7 @@ define method check-property (owner, property-name :: <symbol>, value) => ()
 end;
 
 define inline function print-property (stream :: <stream>, prop :: <property>) => ()
-  format(stream, "%s: %=\n", prop.property-name, prop.property-value);
+  format(stream, "  %s: %=\n", prop.property-name, prop.property-value);
 end;
 define inline function get-properties
     (object :: <layer>) => (res :: <collection>)

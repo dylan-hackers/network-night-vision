@@ -16,8 +16,9 @@ define module ppp-state-machine
   export <pppoe-client-abstract-state-machine>;
 
   export <down>,  <padi-sent>,
-    <pado-received>, <padr-sent>,
-    <established>, <pppoe-state>;
+    <padr-sent>,
+    <established>, <pppoe-state>,
+    <waiting-for-carrier>, <waiting-for-administrative-up>;
 
   export <ppp-abstract-state-machine>;
 

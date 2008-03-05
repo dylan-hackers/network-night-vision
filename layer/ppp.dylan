@@ -45,7 +45,7 @@ define method state-transition (node :: <pppoe-client>,
   send(node.send-socket, $broadcast-ethernet-address, pppoe-discovery);
 end;
 define method state-transition (node :: <pppoe-client>,
-                                old-state :: <pado-received>,
+                                old-state :: <padi-sent>,
                                 event,
                                 new-state :: <padr-sent>) => ()
   let pppoe = pppoe-discovery(pppoe-code: #"PADR (PPPoE Active Discovery Request)",

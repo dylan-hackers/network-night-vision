@@ -91,9 +91,14 @@ define protocol vlan-tag (header-frame)
   field priority :: <3bit-unsigned-integer> = 0;
   field canonical-format-indicator :: <1bit-unsigned-integer> = 0;
   field vlan-id :: <12bit-unsigned-integer>;
-  layering field type-code :: <2byte-big-endian-unsigned-integer>;
+  field type-code :: <2byte-big-endian-unsigned-integer>,
+    fixup: reverse-lookup-layer(<ethernet-frame>, frame.payload);
   variably-typed-field payload,
     type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
+end;
+
+define method source-address (frame :: <vlan-tag>) => (res :: <mac-address>)
+  frame.parent.source-address;
 end;
 
 define protocol stp-identifier (container-frame)
