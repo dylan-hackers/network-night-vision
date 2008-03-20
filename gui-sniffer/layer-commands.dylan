@@ -1,9 +1,5 @@
 module: layer-commands
 
-begin
-  start-layer();
-end;
-
 define class <show-config-command> (<basic-command>)
 end;
 

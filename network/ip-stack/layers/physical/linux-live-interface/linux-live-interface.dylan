@@ -14,17 +14,18 @@ define layer phy (<physical-layer>)
   property promiscuous? :: <boolean> = #t;
   system property running-state :: <symbol> = #"down";
   system property device-name :: <string>;
-  slot packet-flow-node :: <packet-flow-node>;
-end;
-
-define method create-raw-socket (phy :: <phy-layer>) => (res :: <node>)
-  phy.packet-flow-node
+  slot packet-flow-node :: <packet-flow-node> = make(<packet-flow-node>);
+  slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
+  slot fan-in :: <fan-in> = make(<fan-in>);
+  slot fan-out :: <fan-out> = make(<fan-out>);
 end;
 
 define method initialize-layer (layer :: <phy-layer>,
                                 #key, #all-keys)
  => ()
-  layer.packet-flow-node := make(<packet-flow-node>);
+  connect(layer.packet-flow-node, layer.demultiplexer);
+  connect(layer.fan-in, layer.fan-out);
+  connect(layer.fan-out, layer.packet-flow-node);
   register-c-dylan-object(layer.packet-flow-node);
   register-property-changed-event(layer, #"administrative-state",
                                   toggle-administrative-state);
@@ -41,11 +42,65 @@ define function toggle-administrative-state (event :: <property-changed-event>)
   end;
 end;
 
+define method check-upper-layer? (lower :: <phy-layer>, upper :: <layer>)
+ => (allowed? :: <boolean>);
+  #t
+end;
+
+define method check-socket-arguments? (lower :: <phy-layer>, #rest rest, #key type, #all-keys)
+ => (valid-arguments? :: <boolean>)
+  //XXX: if (valid-type?)
+  type == <ethernet-frame>
+end;
+
+define class <tapping-socket> (<socket>)
+  slot fan-in = make(<fan-in>);
+  slot frame-filter :: <frame-filter>;
+  slot demux-output :: <output>;
+end;
+
+define method close-socket (socket :: <tapping-socket>)
+  socket.socket-owner.sockets := remove!(socket.socket-owner.sockets, socket);
+  disconnect(socket.socket-output, socket.socket-output.connected-input);
+  disconnect(socket.socket-owner.fan-out, socket.frame-filter);
+  disconnect(socket.demux-output, socket.fan-in);
+end;
+
+define method socket-input (socket :: <tapping-socket>) => (res /* :: <input> */);
+  error("Tapping sockets are read-only");
+end;
+
+define method socket-output (socket :: <tapping-socket>) => (res /* :: <output> */);
+  socket.fan-in.the-output;
+end;
+
+define method create-socket (lower :: <phy-layer>, #rest rest, #key type, filter-string, tap?, #all-keys)
+ => (socket :: <socket>)
+  let filter-string = filter-string | "ethernet";
+  if (tap?)
+    let socket = make(<tapping-socket>, owner: lower);
+    socket.frame-filter := make(<frame-filter>, frame-filter: filter-string);
+    connect(lower.fan-out, socket.frame-filter);
+    connect(socket.frame-filter, socket.fan-in);
+    socket.demux-output := create-output-for-filter(lower.demultiplexer, filter-string);
+    connect(socket.demux-output, socket.fan-in);
+    socket;
+  else
+    let input = create-input(lower.fan-in);
+    let output = create-output-for-filter(lower.demultiplexer, filter-string);
+    make(<input-output-socket>, owner: lower, input: input, output: output);
+  end;
+end;
+
+
 define method push-data-aux (input :: <push-input>,
                              node :: <packet-flow-node>,
                              frame :: <ethernet-frame>)
-  send(node.unix-file-descriptor,
-       as(<byte-vector>, assemble-frame(frame).packet));
+  let buffer = as(<byte-vector>, assemble-frame(frame).packet);
+  unix-send-buffer(node.unix-file-descriptor,
+                   buffer-offset(buffer, 0),
+                   buffer.size,
+                   0);
 end;
 
 define function run-interface (layer :: <phy-layer>)
@@ -161,13 +216,6 @@ define method receive (interface :: <packet-flow-node>)
         end method;
   unix-receive();
 end method receive;
-
-define method send (interface :: <integer>, buffer :: <buffer>)
-  unix-send-buffer(interface,
-                   buffer-offset(buffer, 0),
-                   buffer.size,
-                   0);
-end method send;
 
 define function buffer-offset
     (the-buffer :: <buffer>, data-offset :: <integer>)

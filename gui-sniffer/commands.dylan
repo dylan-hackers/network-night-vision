@@ -276,7 +276,7 @@ define method do-execute-command (context :: <nnv-context>, command :: <tap-comm
   if (context.nnv-context.tapping-socket)
     new-close-socket(context.nnv-context.tapping-socket);
   end;
-  let tap = new-create-socket(layer);
+  let tap = new-create-socket(layer, tap?: #t);
   context.nnv-context.tapping-socket := tap;
   connect(tap.new-socket-output, context.nnv-context);
 end;

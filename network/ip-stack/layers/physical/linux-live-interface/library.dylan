@@ -11,6 +11,7 @@ define library pcap-live-interface
   use collection-extensions;
   use functional-dylan;
   use flow;
+  use network-flow;
   use network;
   use packetizer;
   use protocols, import: { ethernet, prism2, ieee80211 };
@@ -19,6 +20,7 @@ end;
 define module pcap-live-interface
   use common-dylan, exclude: { format-to-string, close };
   use new-layer;
+  use socket;
   use physical-layer;
   use dylan-extensions;
   use threads;
@@ -34,6 +36,7 @@ define module pcap-live-interface
   use C-FFI;
   use dylan-direct-c-ffi;
   use flow;
+  use network-flow;
   use packetizer, import: { parse-frame, assemble-frame, packet };
   use ethernet, import: { <ethernet-frame> };
   use ieee80211, import: { <ieee80211-frame> };
