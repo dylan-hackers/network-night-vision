@@ -85,11 +85,8 @@ define method parse-frame (frame == <ieee80211-information-element>,
                            packet :: <byte-sequence>,
                            #next next-method,
                            #key parent)
-  block()
-    next-method(frame, packet, parent: parent, default: #f);
-  exception (e :: <error>)
-    parse-frame(<ieee80211-reserved-field>, packet, parent: parent);
-  end;
+  next-method(frame, packet, parent: parent,
+              default: <ieee80211-reserved-field>);
 end;
 
 define protocol ieee80211-raw-information-element (ieee80211-information-element)

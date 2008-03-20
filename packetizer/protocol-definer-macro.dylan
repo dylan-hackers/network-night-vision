@@ -484,13 +484,17 @@ end;
 define method parse-frame (frame-type :: subclass(<variably-typed-container-frame>),
                            packet :: <byte-sequence>,
                            #key parent :: false-or(<container-frame>),
-                           default = <raw-frame>)
+                           default)
   let superprotocol-frame = next-method();
   let real-type = lookup-layer(frame-type, layer-magic(superprotocol-frame));
   if (real-type & (real-type ~== frame-type))
     parse-frame(real-type, packet, parent: parent);
   else
-    superprotocol-frame
+    if (default)
+      parse-frame(default, packet, parent: parent);
+    else
+      superprotocol-frame
+    end;
   end;
 end;
 
