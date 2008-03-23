@@ -1,7 +1,7 @@
 module: icmp
 
 define abstract protocol icmp-frame (variably-typed-container-frame)
-  summary "ICMP type %= code %=", icmp-type, code;
+  summary "ICMP type %=", icmp-type;
   over <ipv4-frame> 1;
   over <ipv6-frame> #x3a;
   layering field icmp-type :: <unsigned-byte>;
