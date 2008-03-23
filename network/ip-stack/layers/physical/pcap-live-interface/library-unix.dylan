@@ -10,6 +10,7 @@ define library pcap-live-interface
   use collection-extensions;
   use functional-dylan;
   use flow;
+  use network-flow;
   use network;
   use packetizer;
   use protocols, import: { ethernet, ipv4, cidr };
@@ -29,6 +30,7 @@ define module pcap-live-interface
   use machine-words;
   use byte-vector;
   use flow;
+  use network-flow;
   use print;
   use format;
   use threads;
@@ -38,7 +40,7 @@ define module pcap-live-interface
   use packetizer,
     import: { parse-frame,
               <frame>,
-              assemble-frame,
+              assemble-frame!,
               packet,
               <stretchy-vector-subsequence> };
 end;
