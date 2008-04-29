@@ -1,24 +1,26 @@
 module: dylan-user
 
-define library ethernet
+define library ip
   use common-dylan;
+  use io;
   use layer;
   use packetizer;
-  use protocols, rename: { ethernet => ethernet-frame };
+  use protocols;
   use flow;
   use network-flow;
+  use ip-adapter;
+end library;
 
-  export ethernet;
-end;
-
-define module ethernet
+define module ip
   use common-dylan;
+  use format-out;
   use new-layer;
-  use ethernet-frame;
+  use ipv4;
   use packetizer;
   use flow;
   use network-flow;
   use socket;
-
-  export @mac-address;
-end;
+  use cidr;
+  use ip-adapter;
+  use format;
+end module;

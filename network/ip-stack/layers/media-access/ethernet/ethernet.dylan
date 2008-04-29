@@ -52,6 +52,7 @@ define method sendto (socket :: <ethernet-socket>, destination :: <mac-address>,
   let frame = ethernet-frame(destination-address: destination, payload: data);
   send(socket, frame);
 end;
+
 define method check-upper-layer? (lower :: <ethernet-layer>, upper :: <layer>) => (allowed? :: <boolean>);
   #t;
 end;
