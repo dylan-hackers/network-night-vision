@@ -3,9 +3,16 @@ synopsis:
 author: 
 copyright: 
 
+define class <arp-handler> (<filter>)
+  constant slot arp-table :: <vector-table> = make(<vector-table>);
+  constant slot table-lock :: <lock> = make(<lock>);
+  slot send-socket :: <socket>;
+end;
+
+
 define layer arp (<layer>)
   system property running-state :: <symbol> = #"down";
-  slot arp-handler :: <arp-handler> = make(<arp-handler>);
+  slot arp-flow-node :: <arp-handler> = make(<arp-handler>);
 end;
 
 define method check-upper-layer? (lower :: <arp-layer>, upper :: <layer>) => (allowed? :: <boolean>);
@@ -19,26 +26,20 @@ end;
 
 define method register-lower-layer (upper :: <arp-layer>, lower :: <layer>)
   let socket = create-socket(lower, filter-string: "arp");
-  upper.arp-handler.send-socket := socket;
-  connect(socket, upper.arp-handler);
+  upper.arp-flow-node.send-socket := socket;
+  connect(socket, upper.arp-flow-node);
   upper.@running-state := #"up";
 end;
 
 define method deregister-lower-layer (upper :: <arp-layer>, lower :: <layer>)
   for (arp-entry in choose(rcurry(instance?, <outstanding-arp-request>),
-                           upper.arp-handler.arp-table))
+                           upper.arp-flow-node.arp-table))
     cancel(arp-entry.timer);
-    remove!(upper.arp-handler.arp-table, arp-entry);
+    remove!(upper.arp-flow-node.arp-table, arp-entry);
   end;
   upper.@running-state := #"down";
 end;
 
-
-define class <arp-handler> (<filter>)
-  constant slot arp-table :: <vector-table> = make(<vector-table>);
-  constant slot table-lock :: <lock> = make(<lock>);
-  slot send-socket :: <socket>;
-end;
 
 define constant $broadcast-ethernet-address = mac-address("ff:ff:ff:ff:ff:ff");
 
@@ -46,11 +47,11 @@ define function arp-resolve (arp :: <arp-layer>, destination :: <ipv4-address>, 
   if (arp.@running-state == #"down")
     error("arp layer down!");
   end;
-  let arp-entry = element(arp.arp-handler.arp-table, destination, default: #f);
+  let arp-entry = element(arp.arp-flow-node.arp-table, destination, default: #f);
   if (instance?(arp-entry, <known-arp-entry>))
     clos(arp-entry.arp-mac-address);
   else
-    let arp-handler = arp.arp-handler;
+    let arp-handler = arp.arp-flow-node;
     with-lock(arp-handler.table-lock)
       if (arp-entry)
         arp-entry.outstanding-closures := add!(arp-entry.outstanding-closures, clos);

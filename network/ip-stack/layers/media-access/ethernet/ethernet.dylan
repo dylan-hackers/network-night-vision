@@ -62,6 +62,13 @@ define method check-lower-layer? (upper :: <ethernet-layer>, lower :: <layer>) =
     check-socket-arguments?(lower, type: <ethernet-frame>);
 end;
 
+define method check-socket-arguments? (lower :: <ethernet-layer>,
+				       #rest rest, #key type, #all-keys)
+ => (valid-arguments? :: <boolean>)
+  //XXX: if (valid-type?)
+  #t;
+end;
+
 define method register-lower-layer (upper :: <ethernet-layer>, lower :: <layer>)
   upper.@running-state := #"up";
 end;
