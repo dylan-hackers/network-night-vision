@@ -53,6 +53,10 @@ define method sendto (socket :: <ethernet-socket>, destination :: <mac-address>,
   send(socket, frame);
 end;
 
+define method send (socket :: <ethernet-socket>, data)
+  push-data-aux(socket.completer.the-input, socket.completer, data)
+end;
+
 define method check-upper-layer? (lower :: <ethernet-layer>, upper :: <layer>) => (allowed? :: <boolean>);
   #t;
 end;

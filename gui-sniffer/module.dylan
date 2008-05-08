@@ -36,6 +36,8 @@ define module layer-commands
   use commands;
   use command-lines;
   use format;
+  use arp, import: { arp-resolve };
+  use ipv4, import: { <ipv4-address> };
 
   export $layer-command-group;
 end;

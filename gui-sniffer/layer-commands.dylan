@@ -181,6 +181,51 @@ define method do-execute-command (context :: <nnv-context>, command :: <down-com
   set-property-value(layer, #"administrative-state", #"down");
 end;
 
+define class <resolve-arp-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
+  constant slot %ip :: <ipv4-address>, required-init-keyword: ip:;
+end;
+
+define command-line resolve-arp => <resolve-arp-command>
+  (summary: "Resolve ARP.",
+   documentation: "Resolve IP address.")
+  argument layer :: <layer> = "Layer";
+  argument ip :: <ipv4-address> = "IP";
+end;
+
+define method do-execute-command (context :: <nnv-context>,
+				  command :: <resolve-arp-command>)
+  let layer = command.%layer;
+  let out = context.context-server.server-output-stream;
+  arp-resolve(layer, command.%ip,
+	      method(x)
+		  format(out,
+			 "ARP: IP %= is at %=\n",
+			 command.%ip, x);
+	      end);
+end;
+
+/*
+define class <advertise-arp-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
+  constant slot %ip :: <ipv4-address>, required-init-keyword: ip:;
+  constant slot %mac :: <mac-address>, required-init-keyword: mac:;
+end;
+
+define command-line advertise-arp => <advertise-arp-command>
+  (summary: "Advertise given ARP entry.",
+   documentation: "Advertise MAC address on the specific layer with the specified IP address.")
+  argument layer :: <layer> = "Layer";
+  argument ip :: <ipv4-address> = "IP";
+  argument mac :: <mac-address> = "MAC";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <down-command>)
+  let layer = command.%layer;
+  layer.
+end;
+*/
+ 
 define command-group layer
     (summary: "Layer commands",
      documentation: "The set of commands for managing the layers.")
@@ -193,5 +238,6 @@ define command-group layer
   command create;
   command up;
   command down;
+  command resolve-arp;
 end command-group;
 

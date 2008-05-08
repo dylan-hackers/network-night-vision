@@ -9,7 +9,6 @@ define class <arp-handler> (<filter>)
   slot send-socket :: <socket>;
 end;
 
-
 define layer arp (<layer>)
   system property running-state :: <symbol> = #"down";
   slot arp-flow-node :: <arp-handler> = make(<arp-handler>);
@@ -27,7 +26,11 @@ end;
 define method register-lower-layer (upper :: <arp-layer>, lower :: <layer>)
   let socket = create-socket(lower, filter-string: "arp");
   upper.arp-flow-node.send-socket := socket;
-  connect(socket, upper.arp-flow-node);
+  connect(socket.socket-output, upper.arp-flow-node.the-input);
+  upper.arp-flow-node.arp-table[ipv4-address("23.23.23.23")]
+    := make(<advertised-arp-entry>,
+	    mac-address: lower.@mac-address,
+	    ip-address: ipv4-address("23.23.23.23"));
   upper.@running-state := #"up";
 end;
 
@@ -68,6 +71,7 @@ define function arp-resolve (arp :: <arp-layer>, destination :: <ipv4-address>, 
                                source-ip-address: from-ip,
                                target-ip-address: destination,
                                target-mac-address: mac-address("00:00:00:00:00:00"));
+	format-out
         sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
         let outstanding-request = make(<outstanding-arp-request>,
                                        handler: arp-handler,
@@ -146,6 +150,7 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <arp-handler>,
                              frame :: <container-frame>)
+  format-out("received arp frame %=\n", frame);
   if (frame.operation = #"arp-request"
       & frame.target-mac-address = mac-address("00:00:00:00:00:00"))
     let arp-entry = element(node.arp-table, frame.target-ip-address, default: #f);
@@ -214,3 +219,5 @@ define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-a
     sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
   end;
 end;
+
+

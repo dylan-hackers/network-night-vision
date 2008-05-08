@@ -401,7 +401,7 @@ define function show-about-box (x)
   start-dialog(make(<about-box>))
 end;
 
-define variable *debugging?* = #t;
+define variable *debugging?* = #f;
 
 define method safe(func :: <function>)
   method(#rest args)
