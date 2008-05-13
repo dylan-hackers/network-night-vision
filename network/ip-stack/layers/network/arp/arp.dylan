@@ -27,10 +27,10 @@ define method register-lower-layer (upper :: <arp-layer>, lower :: <layer>)
   let socket = create-socket(lower, filter-string: "arp");
   upper.arp-flow-node.send-socket := socket;
   connect(socket.socket-output, upper.arp-flow-node.the-input);
-  upper.arp-flow-node.arp-table[ipv4-address("23.23.23.23")]
+  upper.arp-flow-node.arp-table[ipv4-address("192.168.2.23")]
     := make(<advertised-arp-entry>,
 	    mac-address: lower.@mac-address,
-	    ip-address: ipv4-address("23.23.23.23"));
+	    ip-address: ipv4-address("192.168.2.23"));
   upper.@running-state := #"up";
 end;
 
@@ -71,7 +71,6 @@ define function arp-resolve (arp :: <arp-layer>, destination :: <ipv4-address>, 
                                source-ip-address: from-ip,
                                target-ip-address: destination,
                                target-mac-address: mac-address("00:00:00:00:00:00"));
-	format-out
         sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-request);
         let outstanding-request = make(<outstanding-arp-request>,
                                        handler: arp-handler,
@@ -168,7 +167,9 @@ define method push-data-aux (input :: <push-input>,
       let old-entry = element(node.arp-table, frame.source-ip-address, default: #f);
       if (instance?(old-entry, <outstanding-arp-request>))
         cancel(old-entry.timer);
-        do(rcurry(apply, frame.source-mac-address), old-entry.outstanding-closures);
+	for (out in old-entry.outstanding-closures)
+	  out(frame.source-mac-address);
+	end;
       end;
       maybe-add-response-to-table(old-entry, node, frame);
     end

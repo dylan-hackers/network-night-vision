@@ -94,6 +94,10 @@ define class <fan-out> (<single-push-input-node>)
   constant slot %lock :: <lock> = make(<lock>);
 end;
 
+define method get-outputs (fan-out :: <fan-out>) => (outputs)
+  fan-out.outputs;
+end;
+
 define method create-output
  (fan-out :: <fan-out>)
   let res = make(<push-output>, node: fan-out);
@@ -129,6 +133,10 @@ end;
 define class <filtered-push-output> (<push-output>)
   slot frame-filter :: <filter-expression>,
     required-init-keyword: frame-filter:;
+end;
+
+define method output-label (output :: <filtered-push-output>) => (res)
+  format-to-string("%=", output.frame-filter);
 end;
 
 define class <demultiplexer> (<single-push-input-node>)
@@ -180,6 +188,10 @@ define method push-data-aux (input :: <push-input>,
       push-data(output, frame)
     end
   end
+end;
+
+define method get-outputs (node :: <demultiplexer>) => (outputs)
+  node.outputs;
 end;
 
 define class <frame-filter> (<filter>)

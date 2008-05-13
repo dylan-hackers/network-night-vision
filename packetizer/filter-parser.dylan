@@ -128,7 +128,7 @@ define method print-object (filter :: <or-expression>, stream :: <stream>) => ()
   format(stream, "(%=) | (%=)", filter.left-expression, filter.right-expression);
 end;
 
-define method print-filter (filter :: <not-expression>, stream :: <stream>) => ();
+define method print-object (filter :: <not-expression>, stream :: <stream>) => ();
   format(stream, "~ (%=)", filter.expression);
 end;
 

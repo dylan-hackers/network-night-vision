@@ -18,7 +18,9 @@ define module flow
     push-data-aux, pull-data-aux,
     connect, disconnect, toplevel;
 
-  export 
+  export get-inputs, get-outputs, output-label;
+
+  export
     <single-push-input-node>, <single-pull-input-node>,
     <single-push-output-node>, <single-pull-output-node>,
     <filter>, <closure-node>;

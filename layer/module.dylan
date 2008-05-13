@@ -126,5 +126,7 @@ define module socket
   export <input-output-socket>, socket-input, socket-output;
 
   export send, close-socket, sendto;
+
+  export <tapping-socket>, create-tapping-socket;
 end;
 

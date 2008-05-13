@@ -53,5 +53,42 @@ define class <input-output-socket> (<socket>)
   constant slot socket-output /* :: <output> */, required-init-keyword: output:;
 end;
 
+define class <tapping-socket> (<socket>)
+  slot fan-in = make(<fan-in>);
+  slot socket-fan-out;
+  slot frame-filter :: <frame-filter>;
+  slot demux-output :: <output>;
+end;
 
+define method close-socket (socket :: <tapping-socket>)
+  socket.socket-owner.sockets := remove!(socket.socket-owner.sockets, socket);
+  disconnect(socket.socket-output, socket.socket-output.connected-input);
+  disconnect(socket.socket-fan-out, socket.frame-filter.the-input);
+  disconnect(socket.demux-output, socket.fan-in);
+end;
+
+define method socket-input (socket :: <tapping-socket>) => (res /* :: <input> */);
+  error("Tapping sockets are read-only");
+end;
+
+define method socket-output (socket :: <tapping-socket>) => (res /* :: <output> */);
+  socket.fan-in.the-output;
+end;
+
+define function create-tapping-socket
+    (layer :: <layer>,
+     fan-out :: <fan-out>,
+     demultiplexer :: <demultiplexer>,
+     #key filter-string)
+ => (res :: <tapping-socket>)
+  let socket = make(<tapping-socket>, owner: layer);
+  //XXX: frame-filter should be the frame-type we are interested in
+  socket.frame-filter := make(<frame-filter>, frame-filter: "");
+  socket.socket-fan-out := fan-out;
+  connect(fan-out, socket.frame-filter);
+  connect(socket.frame-filter, socket.fan-in);
+  socket.demux-output := create-output-for-filter(demultiplexer, filter-string);
+  connect(socket.demux-output, socket.fan-in);
+  socket;
+end;
 

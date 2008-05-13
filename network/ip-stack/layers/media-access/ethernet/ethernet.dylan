@@ -16,24 +16,28 @@ define class <ethernet-socket> (<socket>)
   constant slot completer :: <completer>, required-init-keyword: completer:;
 end;
 
-define method create-socket (layer :: <ethernet-layer>, #rest rest, #key filter-string, #all-keys)
+define method create-socket (layer :: <ethernet-layer>, #rest rest, #key filter-string, tap?, #all-keys)
  => (res :: <socket>)
   unless(layer.@running-state == #"up")
     error("Layer down");
   end;
-  let filter = format-to-string("ethernet.destination-address = %s", as(<string>, layer.@mac-address));
+  let filter = format-to-string("(ethernet.destination-address = %s) | (ethernet.destination-address = ff:ff:ff:ff:ff:ff)", as(<string>, layer.@mac-address));
   if (filter-string)
     filter := format-to-string("(%s) & (%s)", filter, filter-string);
   end;
-  let socket = create-socket(layer.lower-layers[0], filter-string: filter);
-  let completer = make(<completer>, template-frame: ethernet-frame(source-address: layer.@mac-address));
-  let res = make(<ethernet-socket>,
-                 owner: layer,
-                 lower-socket: socket,
-                 completer: completer);
-  connect(socket.socket-output, res.decapsulator);
-  connect(completer, socket.socket-input);
-  res
+  if (tap?)
+    create-socket(layer.lower-layers[0], tap?: #t, filter-string: filter);
+  else
+    let socket = create-socket(layer.lower-layers[0], filter-string: filter);
+    let completer = make(<completer>, template-frame: ethernet-frame(source-address: layer.@mac-address));
+    let res = make(<ethernet-socket>,
+		   owner: layer,
+		   lower-socket: socket,
+		   completer: completer);
+    connect(socket.socket-output, res.decapsulator);
+    connect(completer, socket.socket-input);
+    res
+  end;
 end;
 
 define method socket-input (socket :: <ethernet-socket>) => (res :: <input>)

@@ -53,38 +53,12 @@ define method check-socket-arguments? (lower :: <phy-layer>, #rest rest, #key ty
   type == <ethernet-frame>
 end;
 
-define class <tapping-socket> (<socket>)
-  slot fan-in = make(<fan-in>);
-  slot frame-filter :: <frame-filter>;
-  slot demux-output :: <output>;
-end;
-
-define method close-socket (socket :: <tapping-socket>)
-  socket.socket-owner.sockets := remove!(socket.socket-owner.sockets, socket);
-  disconnect(socket.socket-output, socket.socket-output.connected-input);
-  disconnect(socket.socket-owner.fan-out, socket.frame-filter);
-  disconnect(socket.demux-output, socket.fan-in);
-end;
-
-define method socket-input (socket :: <tapping-socket>) => (res /* :: <input> */);
-  error("Tapping sockets are read-only");
-end;
-
-define method socket-output (socket :: <tapping-socket>) => (res /* :: <output> */);
-  socket.fan-in.the-output;
-end;
 
 define method create-socket (lower :: <phy-layer>, #rest rest, #key type, filter-string, tap?, #all-keys)
  => (socket :: <socket>)
   let filter-string = filter-string | "ethernet";
   if (tap?)
-    let socket = make(<tapping-socket>, owner: lower);
-    socket.frame-filter := make(<frame-filter>, frame-filter: filter-string);
-    connect(lower.fan-out, socket.frame-filter);
-    connect(socket.frame-filter, socket.fan-in);
-    socket.demux-output := create-output-for-filter(lower.demultiplexer, filter-string);
-    connect(socket.demux-output, socket.fan-in);
-    socket;
+    create-tapping-socket(lower, lower.fan-out, lower.demultiplexer, filter-string: filter-string);
   else
     let input = create-input(lower.fan-in);
     let output = create-output-for-filter(lower.demultiplexer, filter-string);

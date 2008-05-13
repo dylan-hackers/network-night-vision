@@ -280,10 +280,24 @@ define method do-execute-command (context :: <nnv-context>, command :: <tap-comm
   context.nnv-context.tapping-socket := tap;
   connect(tap.new-socket-output, context.nnv-context);
 end;
+
+define class <flow-printer-command> (<basic-command>)
+end;
+
+define command-line flow-printer => <flow-printer-command>
+  (summary: "Prints flow",
+   documentation: "Prints the complete network flow")
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <flow-printer-command>)
+  print-flow(context.context-server.server-output-stream, *global-flow*);
+end;
+
 define command-group layer-gui
     (summary: "Layer command for the GUI",
      documentation: "The set of commands which connect the layer to the GUI")
   command tap;
+  command flow-printer;
 end;
 
 define command-group nnv

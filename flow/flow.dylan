@@ -43,9 +43,15 @@ end;
 
 define generic process (node :: <node>) => ();
 
-define generic get-inputs (node :: <node>) => (inputs);
+define open generic get-inputs (node :: <node>) => (inputs);
 
-define generic get-outputs (node :: <node>) => (outputs);
+define open generic get-outputs (node :: <node>) => (outputs);
+
+define open generic output-label (output :: <output>) => (res);
+
+define method output-label (output :: <output>) => (res);
+  ""
+end;
 
 define open generic connect (output, input);
 
