@@ -72,6 +72,7 @@ end module layer;
 define module new-layer
   use common-dylan;
   use format;
+  use print;
 
   export <layer>, layer-name, default-name,
     lower-layers, upper-layers,

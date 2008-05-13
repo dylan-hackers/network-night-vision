@@ -149,7 +149,6 @@ end;
 define method push-data-aux (input :: <push-input>,
                              node :: <arp-handler>,
                              frame :: <container-frame>)
-  format-out("received arp frame %=\n", frame);
   if (frame.operation = #"arp-request"
       & frame.target-mac-address = mac-address("00:00:00:00:00:00"))
     let arp-entry = element(node.arp-table, frame.target-ip-address, default: #f);

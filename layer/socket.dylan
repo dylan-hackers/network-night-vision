@@ -62,9 +62,10 @@ end;
 
 define method close-socket (socket :: <tapping-socket>)
   socket.socket-owner.sockets := remove!(socket.socket-owner.sockets, socket);
-  disconnect(socket.socket-output, socket.socket-output.connected-input);
-  disconnect(socket.socket-fan-out, socket.frame-filter.the-input);
+  //disconnect(socket.socket-output, socket.socket-output.connected-input);
+  disconnect(socket.socket-fan-out, socket.fan-in); //socket.frame-filter.the-input);
   disconnect(socket.demux-output, socket.fan-in);
+  disconnect(socket.socket-output, socket.socket-output.connected-input);
 end;
 
 define method socket-input (socket :: <tapping-socket>) => (res /* :: <input> */);
@@ -83,10 +84,10 @@ define function create-tapping-socket
  => (res :: <tapping-socket>)
   let socket = make(<tapping-socket>, owner: layer);
   //XXX: frame-filter should be the frame-type we are interested in
-  socket.frame-filter := make(<frame-filter>, frame-filter: "");
-  socket.socket-fan-out := fan-out;
-  connect(fan-out, socket.frame-filter);
-  connect(socket.frame-filter, socket.fan-in);
+  //socket.frame-filter := make(<frame-filter>, frame-filter: "");
+  socket.socket-fan-out := create-output(fan-out);
+  connect(socket.socket-fan-out, socket.fan-in); //frame-filter);
+//  connect(socket.frame-filter, socket.fan-in);
   socket.demux-output := create-output-for-filter(demultiplexer, filter-string);
   connect(socket.demux-output, socket.fan-in);
   socket;

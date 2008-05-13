@@ -9,6 +9,10 @@ define open abstract class <layer> (<object>)
   slot sockets :: <list> = #();
 end;
 
+define method print-object (layer :: <layer>, stream :: <stream>) => ()
+  format(stream, "%s", layer.layer-name);
+end;
+
 define open generic register-lower-layer (upper :: <layer>, lower :: <layer>);
 define open generic register-upper-layer (lower :: <layer>, upper :: <layer>);
 
@@ -336,6 +340,10 @@ define method read-as (type == <string>, value :: <string>) => (res :: <string>)
   value;
 end;
 
+define method read-as (type == <layer>, value :: <string>) => (res :: <layer>)
+  find-layer(value);
+end;
+
 define method read-as (type == <boolean>, value :: <string>) => (res :: <boolean>)
   if ((value = "#t") | (value = "true") | (value = "t"))
     #t;
@@ -364,7 +372,8 @@ end;
 
 define inline function property-value-setter
     (value, property :: <property>) => (value)
-  let old-value = property.property-value;
+  let old-value = slot-initialized?(property, %property-value) &
+		    property.property-value;
   check-property(property.property-owner, property.property-name, value);
   if (old-value ~= value)
     property.%property-value := value;

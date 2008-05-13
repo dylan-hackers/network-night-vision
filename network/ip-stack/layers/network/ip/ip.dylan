@@ -33,7 +33,7 @@ define method register-lower-layer (upper :: <ip-layer>, lower :: <ip-adapter-la
                    cidr: lower.@ip-address,
                    socket: socket);
   register-route(upper, route);
-  connect(socket, upper.fan-in);
+  connect(socket.socket-output, upper.fan-in);
 end;
 
 define method deregister-lower-layer (upper :: <ip-layer>, lower :: <ip-adapter-layer>)

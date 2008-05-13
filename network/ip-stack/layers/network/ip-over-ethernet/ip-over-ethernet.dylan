@@ -16,6 +16,10 @@ define method check-lower-layer? (upper :: <ip-over-ethernet-layer>, lower :: <l
     check-socket-arguments?(lower, type: <ipv4-frame>);
 end;
 
+define method check-socket-arguments? (layer :: <ip-over-ethernet-layer>, #key type) => (res :: <boolean>)
+  type == <ipv4-frame>
+end;
+
 define method register-lower-layer (upper :: <ip-over-ethernet-layer>, lower :: <layer>)
   upper.@running-state := #"up";
 end;
@@ -36,7 +40,7 @@ define method create-socket (layer :: <ip-over-ethernet-layer>, #key type, #all-
   end;
   let filter = "ipv4";
   let socket = create-socket(layer.lower-layers[0], filter-string: filter);
-  let res = make(<ip-over-ethernet-socket>, owner: layer, lower-socket: socket);
+  make(<ip-over-ethernet-socket>, owner: layer, lower-socket: socket);
 end;
 
 define method socket-input (socket :: <ip-over-ethernet-socket>) => (res :: <input>)
