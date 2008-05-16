@@ -66,7 +66,7 @@ define method register-lower-layer (upper :: <pppoe-client-layer>, lower :: <lay
                                          process-event(upper, #"lower-layer-down")
                                        end;
                                      end;
-  register-property-changed-event(lower, #"running-state", upper.property-changed-callback);
+  register-property-changed-event(lower, #"running-state", upper.property-changed-callback, owner: upper);
 end;
 
 define method deregister-lower-layer (upper :: <pppoe-client-layer>, lower :: <layer>)

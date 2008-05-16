@@ -33,7 +33,8 @@ define module arp
   use date;
   use format;
   use timer;
+  use print;
   use protocols-ethernet;
 
-  export arp-resolve, $broadcast-ethernet-address;
+  export arp-resolve, $broadcast-ethernet-address, print-arp-table;
 end module;

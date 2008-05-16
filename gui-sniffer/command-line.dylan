@@ -1,6 +1,6 @@
 module: command-line
 
-define open class <nnv-shell-mode> (<shell-mode>)
+define class <nnv-shell-mode> (<shell-mode>)
 end class <nnv-shell-mode>;
 
 define method mode-name

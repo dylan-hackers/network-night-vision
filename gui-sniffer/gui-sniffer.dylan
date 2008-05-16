@@ -539,10 +539,10 @@ define frame <gui-sniffer-frame> (<simple-frame>, deuce/<basic-editor-frame>, <f
   layout (frame) vertically()
                    frame.filter-pane;
                    make(<column-splitter>,
-                        children: vector(frame.packet-table,
-                                         frame.packet-tree-view,
+                        children: vector(//frame.packet-table,
+                                         //frame.packet-tree-view,
 //                                         scrolling (scroll-bars: #"both")
-                                           frame.packet-hex-dump,
+                                           //frame.packet-hex-dump,
 //                                         end,
 //                                         scrolling (scroll-bars: #"both")
                                            frame.nnv-shell

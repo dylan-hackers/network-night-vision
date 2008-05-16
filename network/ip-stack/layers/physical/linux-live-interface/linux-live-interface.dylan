@@ -12,8 +12,8 @@ define constant <buffer> = <byte-vector>;
 define layer phy (<physical-layer>)
   property administrative-state :: <symbol> = #"down";
   property promiscuous? :: <boolean> = #t;
+  property device-name :: <string> = "";
   system property running-state :: <symbol> = #"down";
-  system property device-name :: <string>;
   slot packet-flow-node :: <packet-flow-node> = make(<packet-flow-node>);
   slot demultiplexer :: <demultiplexer> = make(<demultiplexer>);
   slot fan-in :: <fan-in> = make(<fan-in>);

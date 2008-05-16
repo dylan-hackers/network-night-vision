@@ -24,25 +24,36 @@ define method check-lower-layer? (upper :: <arp-layer>, lower :: <layer>) => (al
 end;
 
 define method register-lower-layer (upper :: <arp-layer>, lower :: <layer>)
-  let socket = create-socket(lower, filter-string: "arp");
-  upper.arp-flow-node.send-socket := socket;
-  connect(socket.socket-output, upper.arp-flow-node.the-input);
-  upper.arp-flow-node.arp-table[ipv4-address("192.168.2.23")]
-    := make(<advertised-arp-entry>,
-	    mac-address: lower.@mac-address,
-	    ip-address: ipv4-address("192.168.2.23"));
-  upper.@running-state := #"up";
+  register-property-changed-event(lower, #"running-state",
+                                  curry(toggle-running-state, upper),
+                                  owner: upper);
 end;
 
-define method deregister-lower-layer (upper :: <arp-layer>, lower :: <layer>)
-  for (arp-entry in choose(rcurry(instance?, <outstanding-arp-request>),
-                           upper.arp-flow-node.arp-table))
-    cancel(arp-entry.timer);
-    remove!(upper.arp-flow-node.arp-table, arp-entry);
+define function toggle-running-state (upper :: <arp-layer>, event :: <property-changed-event>)
+ => ();
+  let property = event.property-changed-event-property;
+  let lower = property.property-owner;
+  if (property.property-value == #"up")
+    let socket = create-socket(lower, filter-string: "arp");
+    upper.arp-flow-node.send-socket := socket;
+    connect(socket.socket-output, upper.arp-flow-node.the-input);
+    upper.arp-flow-node.arp-table[ipv4-address("192.168.0.42")]
+      := make(<advertised-arp-entry>,
+              mac-address: lower.@mac-address,
+              ip-address: ipv4-address("192.168.0.42"));
+    upper.@running-state := #"up";
+  else
+    let remove-them = list();
+    for (arp-entry in upper.arp-flow-node.arp-table)
+      if (instance?(arp-entry, <outstanding-arp-request>))
+        cancel(arp-entry.timer);
+        remove-them := pair(arp-entry, remove-them);
+      end;
+    end;
+    do(curry(remove-key!, upper.arp-flow-node.arp-table), remove-them);
+    upper.@running-state := #"down";
   end;
-  upper.@running-state := #"down";
 end;
-
 
 define constant $broadcast-ethernet-address = mac-address("ff:ff:ff:ff:ff:ff");
 
@@ -124,8 +135,8 @@ define method print-object (object :: <dynamic-arp-entry>, stream :: <stream>) =
   format(stream, "D %s %s", object.ip-address, object.arp-mac-address);
 end;
 
-define function print-arp-table (stream :: <stream>, arp-handler :: <arp-handler>)
-  for (arp in arp-handler.arp-table)
+define function print-arp-table (stream :: <stream>, layer :: <arp-layer>)
+  for (arp in layer.arp-flow-node.arp-table)
     format(stream, "%=\n", arp);
   end;
 end;
@@ -219,5 +230,6 @@ define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-a
     sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
   end;
 end;
+
 
 

@@ -13,6 +13,47 @@ define method do-execute-command (context :: <nnv-context>, command :: <show-con
   do(curry(print-config, out), find-all-layers());
 end;
 
+define class <save-config-command> (<basic-command>)
+  constant slot %filename :: <string>, required-init-keyword: filename:;
+end;
+
+define command-line save-config => <save-config-command>
+  (summary: "Saves config",
+   documentation: "Saves config of all layers")
+  argument filename :: <string> = "Filename where to save the config"
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <save-config-command>)
+  let filename = if (command.%filename = "")
+                   concatenate(environment-variable("HOME"), "/.nnv-config")
+                 else
+                   copy-sequence(command.%filename, end: command.%filename.size - 1);
+                 end;
+  with-open-file (file = filename, direction: #"output", if-exists?: #"overwrite")
+    do(curry(print-config, file), find-all-layers());
+  end;
+end;
+
+define class <load-config-command> (<basic-command>)
+  constant slot %filename :: <string>, required-init-keyword: filename:;
+end;
+
+define command-line load-config => <load-config-command>
+  (summary: "Load config",
+   documentation: "Loads configuration from a given file")
+  argument filename :: <string> = "Filename where to load the config"
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <load-config-command>)
+  let filename = if (command.%filename = "")
+                   concatenate(environment-variable("HOME"), "/.nnv-config")
+                 else
+                   copy-sequence(command.%filename, end: command.%filename.size - 1);
+                 end;
+  with-open-file (file = filename, direction: #"input")
+    read-config(file);
+  end;
+end;
 
 define class <show-layers-command> (<basic-command>)
 end;
@@ -205,6 +246,67 @@ define method do-execute-command (context :: <nnv-context>,
 	      end);
 end;
 
+define class <show-arp-table-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
+end;
+
+define command-line show-arp-table => <show-arp-table-command>
+  (summary: "Shows ARP table.",
+   documentation: "Shows current ARP table")
+  argument layer :: <layer> = "ARP handler to query.";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <show-arp-table-command>)
+  print-arp-table(context.context-server.server-output-stream,
+                  command.%layer);
+end;
+
+/*
+define class <show-forwarding-table-command> (<basic-command>)
+end;
+
+define command-line show-forwarding-table => <show-forwarding-table-command>
+  (summary: "Shows forwarding table.",
+   documentation: "Prints current forwarding table")
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <show-forwarding-table-command>)
+  print-forwarding-table(context.context-server.server-output-stream,
+                         context.nnv-context.ip-layer);
+end;
+
+define class <add-route-command> (<basic-command>)
+  constant slot %gateway :: <ipv4-address>, required-init-keyword: gateway:;
+  constant slot %network :: <cidr>, required-init-keyword: network:;
+end;
+
+define command-line add-route => <add-route-command>
+  (summary: "Adds route.",
+   documentation: "Adds route to forwarding table")
+  argument network :: <cidr> = "Network";
+  argument gateway :: <ipv4-address> = "Gateway";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <add-route-command>)
+  add-next-hop-route(context.nnv-context.ip-layer, command.%gateway, command.%network);
+end;
+
+define class <delete-route-command> (<basic-command>)
+  constant slot %network :: <cidr>, required-init-keyword: network:;
+end;
+
+define command-line delete-route => <delete-route-command>
+  (summary: "Delete route.",
+   documentation: "Deletes route from forwarding table")
+  argument network :: <cidr> = "Network";
+end;
+
+define method do-execute-command (context :: <nnv-context>, command :: <delete-route-command>)
+  delete-route(context.nnv-context.ip-layer, command.%network);
+end;
+
+*/
+
 /*
 define class <advertise-arp-command> (<basic-command>)
   constant slot %layer :: <layer>, required-init-keyword: layer:;
@@ -230,6 +332,8 @@ define command-group layer
     (summary: "Layer commands",
      documentation: "The set of commands for managing the layers.")
   command show-config;
+  command save-config;
+  command load-config;
   command show-layers;
   command show-layer;
   command !set;
@@ -239,5 +343,6 @@ define command-group layer
   command up;
   command down;
   command resolve-arp;
+  command show-arp-table;
 end command-group;
 

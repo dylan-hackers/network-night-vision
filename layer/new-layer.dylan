@@ -2,7 +2,7 @@ module: new-layer
 
 define open abstract class <layer> (<object>)
   slot layer-name :: <symbol>, init-keyword: name:;
-  slot properties :: <table> = make(<table>);
+  constant slot properties :: <table> = make(<table>);
   constant each-subclass slot default-name :: <symbol>;
   slot upper-layers :: <sequence> = #();
   slot lower-layers :: <sequence> = #();
@@ -74,6 +74,19 @@ define function disconnect-layer (lower :: <layer>, upper :: <layer>) => ();
   deregister-lower-layer(upper, lower);
   lower.upper-layers := remove(lower.upper-layers, upper);
   upper.lower-layers := remove(upper.lower-layers, lower);
+  deregister-all-property-changed-events(lower, upper);
+  deregister-all-property-changed-events(upper, lower);  
+end;
+
+define function delete-layer (layer :: <layer>)
+  layer.@administrative-state := #"invalid";
+  for (upper in layer.upper-layers)
+    disconnect-layer(layer, upper);
+  end;
+  for (lower in layer.lower-layers)
+    disconnect-layer(lower, layer);
+  end;
+  remove-key!($layer-registry, layer.layer-name);
 end;
 
 define constant <socket> = <object>;
@@ -114,15 +127,15 @@ end;
 define function print-layer (out :: <stream>, layer :: <layer>) => ()
   format(out, "%s %s\n", layer.default-name, layer.layer-name);
   do(curry(print-property, out), get-properties(layer));
-  format(out, "  services: ");
+  format(out, "  services ");
   do(curry(format, out, "%s "), map(layer-name, layer.upper-layers));
-  format(out, "\n  sources: ");
+  format(out, "\n  sources ");
   do(curry(format, out, "%s "), map(layer-name, layer.lower-layers));
   format(out, "\n\n");
 end;
 
 define function print-config (stream :: <stream>, layer :: <layer>) => ()
-  format(stream, "%s %s {\n", layer.default-name, layer.layer-name);
+  format(stream, "%s %s\n", layer.default-name, layer.layer-name);
   for (prop in properties(layer))
     if (instance?(prop, <user-property>))
       if (slot-initialized?(prop, %property-value))
@@ -133,10 +146,12 @@ define function print-config (stream :: <stream>, layer :: <layer>) => ()
       end;
     end;
   end;
-  for (upper in layer.upper-layers)
-    format(stream, "  service %s\n", upper.layer-name);
+  if (layer.upper-layers.size > 0)
+    format(stream, "  services ");
+    do(curry(format, stream, "%s "), map(layer-name, layer.upper-layers));
+    format(stream, "\n");
   end;
-  format(stream, "}\n\n");
+  format(stream, "\n");
 end;
 
 define macro layer-getter-and-setter-definer
@@ -248,12 +263,19 @@ define macro layer-definer
    end; }
 end;
 
+layer-getter-and-setter-definer(<layer>; property administrative-state :: <symbol> = #"down";);
+
+define method initialize (layer :: <layer>,
+                          #next next-method, #rest rest, #key name, #all-keys);
+  next-method();
+  add-properties-to-table(layer; property administrative-state :: <symbol> = #"down";);
+end;
+
 define inline function init-properties (layer :: <layer>, args :: <collection>)
   for (i from 0 below args.size by 2)
     unless (args[i] == #"name")
       if (get-property(layer, args[i]))
         let prop = get-property(layer, args[i]);
-        prop.property-default-value := args[i + 1];
         prop.%property-value := args[i + 1];
       end;
     end;
@@ -268,13 +290,13 @@ end;
 
 define inline function event-notify
     (source :: <event-source>, event :: <event>) => ()
-  do(method (x) x(event) end, source.listeners)
+  do(method (x) x(event) end, map(head, source.listeners))
 end;
 
 define inline function register-property-changed-event
-    (source :: <layer>, name :: <symbol>, callback :: <function>) => ()
+    (source :: <layer>, name :: <symbol>, callback :: <function>, #key owner) => ()
   let prop = get-property(source, name);
-  prop.listeners := add!(prop.listeners, callback);
+  prop.listeners := add!(prop.listeners, pair(callback, owner));
   if (slot-initialized?(prop, %property-value))
     let event = make(<property-changed-event>,
                      property: prop,
@@ -286,13 +308,20 @@ end;
 define inline function deregister-property-changed-event
     (source :: <layer>, name :: <symbol>, callback :: <function>) => ()
   let prop = get-property(source, name);
-  prop.listeners := remove!(prop.listeners, callback);
+  prop.listeners := choose(method(x) x.head ~== callback end, prop.listeners);
+end;
+
+define inline function deregister-all-property-changed-events
+    (source :: <layer>, owner) => ()
+  for (prop in source.get-properties)
+    prop.listeners := choose(method(x) x.tail ~== owner end, prop.listeners);
+  end;
 end;
 
 define abstract class <property> (<event-source>)
   constant slot property-name :: <symbol>, init-keyword: name:;
   constant slot property-type :: <type>, init-keyword: type:;
-  slot property-default-value, init-keyword: default:;
+  constant slot property-default-value, init-keyword: default:;
   slot %property-value, init-keyword: value:;
   constant slot property-owner, init-keyword: owner:;
 end;
@@ -307,13 +336,39 @@ define method check-property (owner, property-name :: <symbol>, value) => ()
   //move along
 end;
 
-define inline function print-property (stream :: <stream>, prop :: <property>) => ()
-  format(stream, "  %s: %=\n", prop.property-name, prop.property-value);
+define generic print-property-value (stream :: <stream>, value);
+
+define method print-property-value (stream :: <stream>, value :: <object>);
+  print-object(value, stream);
 end;
+
+define method print-property-value (stream :: <stream>, value :: <symbol>);
+  format(stream, "%s", value);
+end;
+
+define method print-property-value (stream :: <stream>, value :: <string>);
+  format(stream, "%s", value);
+end;
+
+define method print-property-value (stream :: <stream>, value :: <boolean>);
+  if (value)
+    write(stream, "true")
+  else
+    write(stream, "false")
+  end
+end;
+
+define inline function print-property (stream :: <stream>, prop :: <property>) => ()
+  format(stream, "  %s ", prop.property-name);
+  print-property-value(stream, prop.property-value);
+  write(stream, "\n");
+end;
+
 define inline function get-properties
     (object :: <layer>) => (res :: <collection>)
   object.properties
 end;
+
 define inline function get-property
     (object :: <layer>, property-name :: <symbol>)
  => (property :: <property>)
@@ -385,7 +440,6 @@ define inline function property-value-setter
   value
 end;
 
-
 define class <property-changed-event> (<event>)
   constant slot property-changed-event-property :: <property>,
     required-init-keyword: property:;
@@ -393,3 +447,78 @@ define class <property-changed-event> (<event>)
     required-init-keyword: old-value:;
 end;
 
+define function empty-line? (line :: <string>)
+  regex-search("^\\s*$", line) & #t
+end;
+
+define function read-config (stream :: <stream>)
+  flush-config();
+  let property-changes = make(<table>);
+  while(~ stream-at-end?(stream))
+    block(skip)
+      let line = read-line(stream);
+      if (empty-line?(line))
+        skip();
+      end;
+      let (class, name) = apply(values, split(line, ' '));
+      let layer-type = class & find-layer-type(class);
+      unless (layer-type)
+        error("Parse error reading config: unknown layer type %=", class);
+      end;
+      unless (name)
+        error("Parse error reading config: invalid layer name %=", name);
+      end;
+      name := as(<symbol>, name);
+      let layer = find-layer(name) | make(layer-type, name: name);
+      property-changes[layer] := #();
+      block (next)
+        while (~ stream-at-end?(stream))
+          let line = read-line(stream);
+          if (empty-line?(line))
+            next();
+          end;
+          let (_full, property-name, value) = regex-search-strings("^\\s+(\\S*)\\s+(.*)$",
+                                                                   line);
+          unless (property-name)
+            error("Parse error reading config for %s %s: invalid property name", class, name);
+          end;
+          property-name := as(<symbol>, property-name);
+          unless (element(layer.properties, property-name, default: #f) 
+                    | property-name == #"services")
+            error("Parse error reading config for %s %s: unknown property %s", class, name, property-name);
+          end;
+          if (value)
+            property-changes[layer] := pair(pair(property-name, value), property-changes[layer]);
+          end;
+        end;
+      end;
+    end;
+  end;
+  for (layer in key-sequence(property-changes))
+    for (prop in property-changes[layer])
+      unless (prop.head == #"services")
+        read-into-property(get-property(layer, prop.head), prop.tail);
+      end
+    end
+  end;
+  for (layer in key-sequence(property-changes))
+    for (prop in property-changes[layer])
+      if (prop.head == #"services")
+        let uppers = split(prop.tail, " ");
+        for (upper in uppers)
+          unless (empty-line?(upper))
+            connect-layer(layer, find-layer(upper));
+          end
+        end
+      end
+    end
+  end;
+end;
+
+define function flush-config ()
+  let layers = shallow-copy($layer-registry);
+  for (layer in layers)
+    delete-layer(layer);
+  end;
+end;
+ 

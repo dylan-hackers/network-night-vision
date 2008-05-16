@@ -11,7 +11,7 @@ define function main()
   command-enabled?(close-interface, gui-sniffer) := #f;
   gadget-enabled?(gui-sniffer.stop-button) := #f;
   frame-mapped?(gui-sniffer) := #t;
-  //*standard-output* := gui-sniffer.nnv-shell-pane.command-line-server.server-output-stream;
+  *standard-output* := gui-sniffer.nnv-shell-pane.command-line-server.server-output-stream;
   write(*standard-output*, $about-text);
   format(*standard-output*, "\n\nType 'help' down here to get started.\n");
   recenter-window(gui-sniffer.nnv-shell-pane, gui-sniffer.nnv-shell-pane.window-point.bp-line, #"bottom");

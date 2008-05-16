@@ -124,77 +124,6 @@ define method do-execute-command (context :: <nnv-context>, command :: <pppoe-cl
   process-event(pppoe, #"padi-sent");
 end;
 
-define class <set-ip-address-command> (<basic-command>)
-  constant slot %address :: <cidr>, required-init-keyword: address:;
-end;
-
-define command-line set-ip-address => <set-ip-address-command>
-    (summary: "Set IP address.",
-     documentation: "Sets the IP address of the current interface to the specified IP address")
-   argument address :: <cidr> = "IP address and netmask in CIDR notation"
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <set-ip-address-command>)
-  let ip = context.nnv-context.ip-over-ethernet-adapter;
-  set-ip-address(ip, command.%address.cidr-network-address, command.%address.cidr-netmask);
-end;
-
-define class <show-arp-table-command> (<basic-command>)
-end;
-
-define command-line show-arp-table => <show-arp-table-command>
-  (summary: "Shows ARP table.",
-   documentation: "Shows current ARP table")
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <show-arp-table-command>)
-  print-arp-table(context.context-server.server-output-stream,
-                  context.nnv-context.ip-over-ethernet-adapter.arp-handler);
-end;
-
-define class <show-forwarding-table-command> (<basic-command>)
-end;
-
-define command-line show-forwarding-table => <show-forwarding-table-command>
-  (summary: "Shows forwarding table.",
-   documentation: "Prints current forwarding table")
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <show-forwarding-table-command>)
-  print-forwarding-table(context.context-server.server-output-stream,
-                         context.nnv-context.ip-layer);
-end;
-
-define class <add-route-command> (<basic-command>)
-  constant slot %gateway :: <ipv4-address>, required-init-keyword: gateway:;
-  constant slot %network :: <cidr>, required-init-keyword: network:;
-end;
-
-define command-line add-route => <add-route-command>
-  (summary: "Adds route.",
-   documentation: "Adds route to forwarding table")
-  argument network :: <cidr> = "Network";
-  argument gateway :: <ipv4-address> = "Gateway";
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <add-route-command>)
-  add-next-hop-route(context.nnv-context.ip-layer, command.%gateway, command.%network);
-end;
-
-define class <delete-route-command> (<basic-command>)
-  constant slot %network :: <cidr>, required-init-keyword: network:;
-end;
-
-define command-line delete-route => <delete-route-command>
-  (summary: "Delete route.",
-   documentation: "Deletes route from forwarding table")
-  argument network :: <cidr> = "Network";
-end;
-
-define method do-execute-command (context :: <nnv-context>, command :: <delete-route-command>)
-  delete-route(context.nnv-context.ip-layer, command.%network);
-end;
-
 define class <filter-command> (<basic-command>)
   constant slot %filter-expression :: <filter-expression>, required-init-keyword: expression:;
 end;
@@ -253,11 +182,6 @@ define command-group network
   command dhcp-client;
   command pppoe-client;
   command resolve;
-  command set-ip-address;
-  command add-route;
-  command delete-route;
-  command show-arp-table;
-  command show-forwarding-table;
   command filter;
 end command-group;
 

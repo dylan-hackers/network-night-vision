@@ -73,6 +73,8 @@ define module new-layer
   use common-dylan;
   use format;
   use print;
+  use regular-expressions;
+  use streams;
 
   export <layer>, layer-name, default-name,
     lower-layers, upper-layers,
@@ -89,7 +91,7 @@ define module new-layer
     register-property-changed-event, deregister-property-changed-event;
 
   export find-layer, find-layer-type, find-all-layers,
-    print-layer, print-config;
+    print-layer, print-config, read-config;
 
   export create-raw-socket,
     start-layer, register-startup-function;

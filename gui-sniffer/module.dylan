@@ -36,8 +36,10 @@ define module layer-commands
   use commands;
   use command-lines;
   use format;
-  use arp, import: { arp-resolve };
+  use arp, import: { arp-resolve, print-arp-table  };
   use ipv4, import: { <ipv4-address> };
+  use file-system, import: { with-open-file };
+  use operating-system, import: { environment-variable };
 
   export $layer-command-group;
 end;
