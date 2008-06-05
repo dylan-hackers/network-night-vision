@@ -25,6 +25,5 @@ define module ip-adapter
 
   export <ip-adapter-layer>,
     @ip-address, @ip-address-setter,
-    @mtu, @mtu-setter,
-    @running-state, @running-state-setter;
+    @mtu, @mtu-setter;
 end module;

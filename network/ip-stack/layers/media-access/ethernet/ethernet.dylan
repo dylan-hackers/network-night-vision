@@ -1,8 +1,7 @@
 module: ethernet
 
 define layer ethernet (<layer>)
-  property administrative-state :: <symbol> = #"up";
-  system property running-state :: <symbol> = #"down";
+  inherited property administrative-state = #"up";
   property mac-address :: <mac-address> = mac-address("08:00:05:00:00:03"); 
 end;
 
@@ -78,7 +77,11 @@ define method check-socket-arguments? (lower :: <ethernet-layer>,
 end;
 
 define method register-lower-layer (upper :: <ethernet-layer>, lower :: <layer>)
-  upper.@running-state := #"up";
+  register-property-changed-event
+    (lower, #"running-state",
+     method(x)
+	 upper.@running-state := x.property-changed-event-property.property-value;
+     end, owner: upper)
 end;
 
 define method deregister-lower-layer (upper :: <ethernet-layer>, lower :: <layer>)

@@ -1,15 +1,9 @@
 module: ppp-over-ethernet
 
-define open generic @administrative-state (layer :: <pppoe-client-layer>) => (res :: <symbol>);
-define open generic @administrative-state-setter (new-value :: <symbol>, layer :: <pppoe-client-layer>) => (res :: <symbol>);
-define open generic @running-state (layer :: <pppoe-client-layer>) => (res :: <symbol>);
-define open generic @running-state-setter (new-value :: <symbol>, layer :: <pppoe-client-layer>) => (res :: <symbol>);
 define open generic @session-id (layer :: <pppoe-client-layer>) => (res :: <integer>);
 define open generic @session-id-setter (new-value :: <integer>, layer :: <pppoe-client-layer>) => (res :: <integer>);
 
 define layer pppoe-client (<layer>, <pppoe-client-abstract-state-machine>)
-  property administrative-state :: <symbol> = #"down";
-  system property running-state :: <symbol> = #"down";
   system property session-id :: <integer> = 0;
   slot lower-discovery-socket :: false-or(<socket>) = #f;
   slot lower-session-socket :: false-or(<socket>) = #f;

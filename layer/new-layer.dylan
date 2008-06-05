@@ -54,13 +54,19 @@ define function connect-layer (lower :: <layer>, upper :: <layer>) => ();
     error("Upper layer refused new lower")
   end;
   
-  register-upper-layer(lower, upper);
+  lower.upper-layers := add(lower.upper-layers, upper);
+  upper.lower-layers := add(upper.lower-layers, lower);
   block ()
-    register-lower-layer(upper, lower);
-    lower.upper-layers := add(lower.upper-layers, upper);
-    upper.lower-layers := add(upper.lower-layers, lower);
+    register-upper-layer(lower, upper);
+    block ()
+      register-lower-layer(upper, lower);
+    exception (e :: <error>)
+      deregister-upper-layer(lower, upper);
+      signal(e);
+    end;
   exception (e :: <error>)
-    deregister-upper-layer(lower, upper);
+    lower.upper-layers := remove(lower.upper-layers, upper);
+    upper.lower-layers := remove(upper.lower-layers, lower);
     signal(e);
   end;
 end;
@@ -72,10 +78,10 @@ define function disconnect-layer (lower :: <layer>, upper :: <layer>) => ();
   end;
   deregister-upper-layer(lower, upper);
   deregister-lower-layer(upper, lower);
-  lower.upper-layers := remove(lower.upper-layers, upper);
-  upper.lower-layers := remove(upper.lower-layers, lower);
   deregister-all-property-changed-events(lower, upper);
   deregister-all-property-changed-events(upper, lower);  
+  lower.upper-layers := remove(lower.upper-layers, upper);
+  upper.lower-layers := remove(upper.lower-layers, lower);
 end;
 
 define function delete-layer (layer :: <layer>)
@@ -138,9 +144,8 @@ define function print-config (stream :: <stream>, layer :: <layer>) => ()
   format(stream, "%s %s\n", layer.default-name, layer.layer-name);
   for (prop in properties(layer))
     if (instance?(prop, <user-property>))
-      if (slot-initialized?(prop, %property-value))
-        unless (slot-initialized?(prop, property-default-value)
-                & (prop.property-default-value = prop.property-value))
+      if (property-set?(prop.property-value))
+        unless (prop.property-default-value = prop.property-value)
           print-property(stream, prop);
         end;
       end;
@@ -154,17 +159,42 @@ define function print-config (stream :: <stream>, layer :: <layer>) => ()
   format(stream, "\n");
 end;
 
+define constant $unset = pair($unset, $unset);
+
+define inline function property-set?(object) => (unset? :: <boolean>)
+  object ~== $unset
+end;
+
+define inline function unset-or (type)
+  type-union(singleton($unset), type);
+end;
+
 define macro layer-getter-and-setter-definer
     { layer-getter-and-setter-definer(?:name) }
       => {  }
     { layer-getter-and-setter-definer(?:name; slot ?rest2:*; ?rest:*) }
       => { layer-getter-and-setter-definer(?name; ?rest) }
-    { layer-getter-and-setter-definer(?:name; ?attr:* property ?pname:name :: ?type:expression ?foo:*; ?rest:*) }
+    { layer-getter-and-setter-definer(?:name; inherited property ?rest2:*; ?rest:*) }
+      => { layer-getter-and-setter-definer(?name; ?rest) }
+    { layer-getter-and-setter-definer(?:name; ?attr:* property ?pname:name :: ?type:expression = ?default:*; ?rest:*) }
       => { 
        define method "@" ## ?pname (lay :: ?name) => (res :: ?type)
          get-property-value(lay, ?#"pname");
        end;
-       define method "@" ## ?pname ## "-setter" (new-val :: ?type, lay :: ?name) => (res :: ?type)
+       define method "@" ## ?pname ## "-setter" (new-val :: unset-or(?type), lay :: ?name) => (res :: ?type)
+	 if (new-val == $unset)
+	   set-property-value(lay, ?#"pname", ?default)
+	 else
+	   set-property-value(lay, ?#"pname", new-val)
+	 end;
+       end;
+       layer-getter-and-setter-definer(?name; ?rest) }
+    { layer-getter-and-setter-definer(?:name; ?attr:* property ?pname:name :: ?type:expression ?foo:*; ?rest:*) }
+      => { 
+       define method "@" ## ?pname (lay :: ?name) => (res :: unset-or(?type))
+         get-property-value(lay, ?#"pname");
+       end;
+       define method "@" ## ?pname ## "-setter" (new-val :: unset-or(?type), lay :: ?name) => (res :: ?type)
          set-property-value(lay, ?#"pname", new-val)
        end;
        layer-getter-and-setter-definer(?name; ?rest) }
@@ -180,6 +210,10 @@ define macro add-properties-to-table
   properties:
     { } => { }
     { slot ?rest:*; ... } => { ... }
+    { inherited property ?:name = ?default:expression; ... } =>
+       { owner.properties[?#"name"].property-default-value := ?default;
+	 owner.properties[?#"name"].property-value := ?default;
+	 ... }
     { system property ?:name :: ?type:expression; ... } =>
        { owner.properties[?#"name"] := make(<system-property>,
                                            name: ?#"name",
@@ -264,23 +298,26 @@ define macro layer-definer
 end;
 
 layer-getter-and-setter-definer(<layer>; property administrative-state :: <symbol> = #"down";);
+layer-getter-and-setter-definer(<layer>; system property running-state :: <symbol> = #"down";);
 
 define method initialize (layer :: <layer>,
                           #next next-method, #rest rest, #key name, #all-keys);
   next-method();
   add-properties-to-table(layer; property administrative-state :: <symbol> = #"down";);
+  add-properties-to-table(layer; system property running-state :: <symbol> = #"down";);
 end;
 
 define inline function init-properties (layer :: <layer>, args :: <collection>)
   for (i from 0 below args.size by 2)
     unless (args[i] == #"name")
-      if (get-property(layer, args[i]))
+      if (element(layer.properties, args[i], default: #f))
         let prop = get-property(layer, args[i]);
         prop.%property-value := args[i + 1];
       end;
     end;
   end;
 end;
+
 define abstract class <event> (<object>)
 end;
 
@@ -297,7 +334,7 @@ define inline function register-property-changed-event
     (source :: <layer>, name :: <symbol>, callback :: <function>, #key owner) => ()
   let prop = get-property(source, name);
   prop.listeners := add!(prop.listeners, pair(callback, owner));
-  if (slot-initialized?(prop, %property-value))
+  if (property-set?(prop.property-value))
     let event = make(<property-changed-event>,
                      property: prop,
                      old-value: prop.property-value);
@@ -321,9 +358,9 @@ end;
 define abstract class <property> (<event-source>)
   constant slot property-name :: <symbol>, init-keyword: name:;
   constant slot property-type :: <type>, init-keyword: type:;
-  constant slot property-default-value, init-keyword: default:;
-  slot %property-value, init-keyword: value:;
-  constant slot property-owner, init-keyword: owner:;
+  slot property-default-value = $unset, init-keyword: default:;
+  slot %property-value = $unset, init-keyword: value:;
+  constant slot property-owner :: <layer>, init-keyword: owner:;
 end;
 
 define class <system-property> (<property>) end;
@@ -356,6 +393,10 @@ define method print-property-value (stream :: <stream>, value :: <boolean>);
   else
     write(stream, "false")
   end
+end;
+
+define method print-property-value (stream :: <stream>, value == $unset);
+  write(stream, "not set")
 end;
 
 define inline function print-property (stream :: <stream>, prop :: <property>) => ()
@@ -427,8 +468,7 @@ end;
 
 define inline function property-value-setter
     (value, property :: <property>) => (value)
-  let old-value = slot-initialized?(property, %property-value) &
-		    property.property-value;
+  let old-value = property.property-value;
   check-property(property.property-owner, property.property-name, value);
   if (old-value ~= value)
     property.%property-value := value;

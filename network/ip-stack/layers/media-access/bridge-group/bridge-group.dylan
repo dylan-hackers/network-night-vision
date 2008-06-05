@@ -1,7 +1,7 @@
 module: bridge-group
 
 define layer repeater-group (<layer>)
-  property administrative-state :: <symbol> = #"up";
+  inherited property administrative-state = #"up";
 end;
 
 define class <output-node> (<single-push-output-node>)

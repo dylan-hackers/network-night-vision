@@ -4,7 +4,7 @@ author:
 copyright: 
 
 define layer ip (<layer>)
-  property administrative-state :: <symbol> = #"up";
+  inherited property administrative-state = #"up";
   slot routes = make(<stretchy-vector>);
   slot fan-in = make(<fan-in>);
 end;

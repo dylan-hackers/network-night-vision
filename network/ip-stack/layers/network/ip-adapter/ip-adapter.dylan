@@ -4,8 +4,7 @@ author:
 copyright: 
 
 define open layer ip-adapter (<layer>)
-  property administrative-state :: <symbol> = #"up";
-  system property running-state :: <symbol> = #"down";
+  inherited property administrative-state = #"up";
   property ip-address :: <cidr>;
   property mtu :: <integer> = 1524;
 end;

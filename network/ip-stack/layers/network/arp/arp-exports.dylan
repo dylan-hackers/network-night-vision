@@ -36,5 +36,6 @@ define module arp
   use print;
   use protocols-ethernet;
 
-  export arp-resolve, $broadcast-ethernet-address, print-arp-table;
+  export arp-resolve, $broadcast-ethernet-address, print-arp-table,
+    add-advertised-arp-entry, remove-arp-entry;
 end module;

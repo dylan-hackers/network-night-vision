@@ -8,7 +8,7 @@ define class <dot1q-decapsulator> (<filter>)
 end;
 
 define layer vlan (<layer>)
-  property administrative-state :: <symbol> = #"up";
+  inherited property administrative-state = #"up";
   property vlan-id :: <integer> = 0;
   slot dot1q-decapsulator :: <dot1q-decapsulator> = make(<dot1q-decapsulator>);
   slot dot1q-encapsulator :: <dot1q-encapsulator> = make(<dot1q-encapsulator>);

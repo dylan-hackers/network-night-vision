@@ -10,8 +10,8 @@ define class <arp-handler> (<filter>)
 end;
 
 define layer arp (<layer>)
-  system property running-state :: <symbol> = #"down";
   slot arp-flow-node :: <arp-handler> = make(<arp-handler>);
+  inherited property administrative-state = #"up";
 end;
 
 define method check-upper-layer? (lower :: <arp-layer>, upper :: <layer>) => (allowed? :: <boolean>);
@@ -21,6 +21,20 @@ end;
 define method check-lower-layer? (upper :: <arp-layer>, lower :: <layer>) => (allowed? :: <boolean>);
   upper.@running-state == #"down" &
     check-socket-arguments?(lower, type: <arp-frame>);
+end;
+
+define function add-advertised-arp-entry
+    (arp-layer :: <arp-layer>, ip-address :: <ipv4-address>, mac-address :: <mac-address>)
+  let arp-entry = make(<advertised-arp-entry>,
+		       mac-address: mac-address,
+		       ip-address: ip-address);
+  arp-layer.arp-flow-node.arp-table[ip-address] := arp-entry;
+  send-gratitious-arp(arp-layer.arp-flow-node, arp-entry);
+end;
+
+define function remove-arp-entry
+    (arp-layer :: <arp-layer>, ip-address :: <ipv4-address>)
+  remove-key!(arp-layer.arp-flow-node.arp-table, ip-address);
 end;
 
 define method register-lower-layer (upper :: <arp-layer>, lower :: <layer>)
@@ -37,10 +51,6 @@ define function toggle-running-state (upper :: <arp-layer>, event :: <property-c
     let socket = create-socket(lower, filter-string: "arp");
     upper.arp-flow-node.send-socket := socket;
     connect(socket.socket-output, upper.arp-flow-node.the-input);
-    upper.arp-flow-node.arp-table[ipv4-address("192.168.0.42")]
-      := make(<advertised-arp-entry>,
-              mac-address: lower.@mac-address,
-              ip-address: ipv4-address("192.168.0.42"));
     upper.@running-state := #"up";
   else
     let remove-them = list();
@@ -205,6 +215,7 @@ end;
 define method maybe-add-response-to-table
     (old-entry :: <static-arp-entry>, node :: <arp-handler>, frame :: <arp-frame>)
   ignore(old-entry, node, frame);
+  //XXX: print warning?
 end;
 
 define method maybe-add-response-to-table
@@ -218,17 +229,14 @@ define method maybe-add-response-to-table
   add-response-to-table(node, frame)
 end;
 
-define function send-gratitious-arp (arp-handler :: <arp-handler>, ip :: <ipv4-address>)
-  let arp-entry = element(arp-handler.arp-table, ip, default: #f);
-  if (arp-entry)
-    let arp-frame = make(<arp-frame>,
-                         operation: #"arp-request",
-                         source-mac-address: arp-entry.arp-mac-address,
-                         source-ip-address: arp-entry.ip-address,
-                         target-mac-address: mac-address("00:00:00:00:00:00"),
-                         target-ip-address: arp-entry.ip-address);
-    sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
-  end;
+define function send-gratitious-arp (arp-handler :: <arp-handler>, arp-entry :: <advertised-arp-entry>)
+  let arp-frame = make(<arp-frame>,
+		       operation: #"arp-request",
+		       source-mac-address: arp-entry.arp-mac-address,
+		       source-ip-address: arp-entry.ip-address,
+		       target-mac-address: mac-address("00:00:00:00:00:00"),
+		       target-ip-address: arp-entry.ip-address);
+  sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
 end;
 
 

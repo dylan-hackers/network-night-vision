@@ -57,7 +57,7 @@ define method shell-execute-code
   block ()
     let handler (<serious-condition>)
       = method (condition :: <serious-condition>, next-handler :: <function>)
-	  if (#t /* debugger? */)
+	  if (#f /* debugger? */)
 	    next-handler()
 	  else
 	    display-condition(server.server-context, condition);

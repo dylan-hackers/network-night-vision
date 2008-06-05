@@ -8,9 +8,7 @@ define constant $ethernet-buffer-size = 1600;
 define constant $timeout = 100;
 
 define layer pcap (<physical-layer>)
-  property administrative-state :: <symbol> = #"down";
   property promiscuous? :: <boolean> = #t;
-  system property running-state :: <symbol> = #"down";
   system property device-id :: <string>;
   system property device-description :: <string>;
   slot pcap-flow-node :: <pcap-flow-node> = make(<pcap-flow-node>);

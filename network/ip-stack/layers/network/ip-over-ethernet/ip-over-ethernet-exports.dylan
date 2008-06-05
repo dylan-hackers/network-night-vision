@@ -10,6 +10,7 @@ define library ip-over-ethernet
   use network-flow;
   use ip-adapter;
   use arp;
+  use ethernet, prefix: "layer-";
 end library;
 
 define module ip-over-ethernet
@@ -24,5 +25,6 @@ define module ip-over-ethernet
   use socket;
   use ip-adapter;
   use ethernet;
+  use layer-ethernet;
   use arp;
 end module;

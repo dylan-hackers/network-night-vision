@@ -85,6 +85,8 @@ define module new-layer
     deregister-lower-layer, deregister-upper-layer,
     check-lower-layer?, check-upper-layer?;
 
+  export @running-state, @running-state-setter,
+    @administrative-state, @administrative-state-setter;
 
   export <event>, <event-source>,
     event-notify, register-event, deregister-event,
@@ -100,7 +102,7 @@ define module new-layer
     property-type, property-default-value,
     property-value, property-value-setter,
     property-owner, read-into-property,
-    read-as;
+    read-as, property-set?, $unset;
 
   export get-property, get-properties,
     set-property-value, get-property-value,
