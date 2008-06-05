@@ -172,7 +172,7 @@ end;
 define macro layer-getter-and-setter-definer
     { layer-getter-and-setter-definer(?:name) }
       => {  }
-    { layer-getter-and-setter-definer(?:name; slot ?rest2:*; ?rest:*) }
+    { layer-getter-and-setter-definer(?:name; ?attrs:* slot ?rest2:*; ?rest:*) }
       => { layer-getter-and-setter-definer(?name; ?rest) }
     { layer-getter-and-setter-definer(?:name; inherited property ?rest2:*; ?rest:*) }
       => { layer-getter-and-setter-definer(?name; ?rest) }
@@ -209,7 +209,7 @@ define macro add-properties-to-table
 
   properties:
     { } => { }
-    { slot ?rest:*; ... } => { ... }
+    { ?attrs:* slot ?rest:*; ... } => { ... }
     { inherited property ?:name = ?default:expression; ... } =>
        { owner.properties[?#"name"].property-default-value := ?default;
 	 owner.properties[?#"name"].property-value := ?default;
@@ -253,7 +253,7 @@ define macro layer-class-definer
 
   properties:
     { } => { }
-    { slot ?rest:*; ... } => { slot ?rest; ... }
+    { ?attrs:* slot ?rest:*; ... } => { ?attrs slot ?rest; ... }
     { ?attr:* property ?foo:*; ... } => { ... }
 end;
 

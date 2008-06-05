@@ -5,8 +5,8 @@ copyright:
 
 define layer ip (<layer>)
   inherited property administrative-state = #"up";
-  slot routes = make(<stretchy-vector>);
-  slot fan-in = make(<fan-in>);
+  constant slot routes = make(<stretchy-vector>);
+  constant slot fan-in = make(<fan-in>);
 end;
 
 define method initialize-layer (layer :: <ip-layer>, #key, #all-keys) => () 
@@ -43,7 +43,7 @@ end;
 
 //XXX: probably should use radix trees
 //http://www.matasano.com/log/1009/aguri-coolest-data-structure-youve-never-heard-of/
-define class <route> (<object>)
+define abstract class <route> (<object>)
   constant slot cidr :: <cidr>, required-init-keyword: cidr:;
 end;
 

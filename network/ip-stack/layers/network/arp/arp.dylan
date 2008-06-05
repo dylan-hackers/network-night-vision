@@ -11,7 +11,7 @@ end;
 
 define layer arp (<layer>)
   slot arp-flow-node :: <arp-handler> = make(<arp-handler>);
-  inherited property administrative-state = #"up";
+  inherited property administrative-state = #"up"
 end;
 
 define method check-upper-layer? (lower :: <arp-layer>, upper :: <layer>) => (allowed? :: <boolean>);
@@ -29,7 +29,9 @@ define function add-advertised-arp-entry
 		       mac-address: mac-address,
 		       ip-address: ip-address);
   arp-layer.arp-flow-node.arp-table[ip-address] := arp-entry;
-  send-gratitious-arp(arp-layer.arp-flow-node, arp-entry);
+  if (arp-layer.@running-state == #"up")
+    send-gratitious-arp(arp-layer.arp-flow-node, arp-entry);
+  end;
 end;
 
 define function remove-arp-entry
@@ -52,6 +54,7 @@ define function toggle-running-state (upper :: <arp-layer>, event :: <property-c
     upper.arp-flow-node.send-socket := socket;
     connect(socket.socket-output, upper.arp-flow-node.the-input);
     upper.@running-state := #"up";
+    send-gratitious-arps(upper.arp-flow-node);
   else
     let remove-them = list();
     for (arp-entry in upper.arp-flow-node.arp-table)
@@ -229,6 +232,14 @@ define method maybe-add-response-to-table
   add-response-to-table(node, frame)
 end;
 
+define function send-gratitious-arps (arp-handler :: <arp-handler>)
+  for (arp-entry in arp-handler.arp-table)
+    if (instance?(arp-entry, <advertised-arp-entry>))
+      send-gratitious-arp(arp-handler, arp-entry)
+    end;
+  end;
+end;
+
 define function send-gratitious-arp (arp-handler :: <arp-handler>, arp-entry :: <advertised-arp-entry>)
   let arp-frame = make(<arp-frame>,
 		       operation: #"arp-request",
@@ -238,6 +249,4 @@ define function send-gratitious-arp (arp-handler :: <arp-handler>, arp-entry :: 
 		       target-ip-address: arp-entry.ip-address);
   sendto(arp-handler.send-socket, $broadcast-ethernet-address, arp-frame);
 end;
-
-
 
