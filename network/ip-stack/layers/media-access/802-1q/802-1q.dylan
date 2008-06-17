@@ -81,6 +81,12 @@ define method register-lower-layer (upper :: <vlan-layer>, lower :: <layer>)
   connect(ethernet-socket.socket-output, upper.dot1q-decapsulator);
   connect(upper.dot1q-encapsulator, ethernet-socket.socket-input);
   upper.lower-socket := ethernet-socket;
+  register-property-changed-event(lower,
+                                  #"running-state",
+                                  method(x)
+                                      upper.@running-state := x.property-changed-event-property.property-value
+                                  end,
+                                  owner: upper);
 end;
 
 define method deregister-lower-layer (upper :: <vlan-layer>, lower :: <layer>)

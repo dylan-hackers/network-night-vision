@@ -30,7 +30,7 @@ define module command-line
 end;
 
 define module layer-commands
-  use common-dylan;
+  use common-dylan, exclude: { format-to-string };
   use new-layer;
   use command-line;
   use commands;
@@ -40,6 +40,8 @@ define module layer-commands
   use ipv4, import: { <ipv4-address> };
   use file-system, import: { with-open-file };
   use operating-system, import: { environment-variable };
+  use ip;
+  use cidr;
 
   export $layer-command-group;
 end;

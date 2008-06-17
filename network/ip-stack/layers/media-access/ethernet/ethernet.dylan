@@ -80,11 +80,7 @@ define method register-lower-layer (upper :: <ethernet-layer>, lower :: <layer>)
   register-property-changed-event
     (lower, #"running-state",
      method(x)
-	 if (x.property-changed-event-property.property-value == #"up")
-	   upper.@running-state := #"up"
-	 else
-	   upper.@running-state := #"down"
-	 end
+         upper.@running-state := x.property-changed-event-property.property-value
      end, owner: upper)
 end;
 

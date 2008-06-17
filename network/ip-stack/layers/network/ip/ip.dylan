@@ -5,8 +5,10 @@ copyright:
 
 define layer ip (<layer>)
   inherited property administrative-state = #"up";
+  inherited property running-state = #"up";
   constant slot routes = make(<stretchy-vector>);
   constant slot fan-in = make(<fan-in>);
+  constant slot demultiplexer = make(<demultiplexer>);
 end;
 
 define method initialize-layer (layer :: <ip-layer>, #key, #all-keys) => () 
@@ -28,21 +30,37 @@ define method check-lower-layer? (upper :: <ip-layer>, lower :: <layer>) => (all
 end;
 
 define method register-lower-layer (upper :: <ip-layer>, lower :: <ip-adapter-layer>)
-  let socket = create-socket(lower, type: <ipv4-frame>);
-  let route = make(<connected-route>,
-                   cidr: lower.@ip-address,
-                   socket: socket);
-  register-route(upper, route);
-  connect(socket.socket-output, upper.fan-in);
+  register-property-changed-event(lower, #"running-state",
+                                  rcurry(toggle-running-state, upper, lower),
+                                  owner: upper)
+end;
+
+define function toggle-running-state (event :: <property-changed-event>,
+                                      upper :: <ip-layer>, lower :: <ip-adapter-layer>)
+  if (event.property-changed-event-property.property-value == #"up")
+    let socket = create-socket(lower, type: <ipv4-frame>);
+    let route = make(<connected-route>,
+                     cidr: lower.@ip-address,
+                     socket: socket);
+    register-route(upper, route);
+    connect(socket.socket-output, upper.fan-in);
+  else
+    if (event.property-changed-event-old-value == #"up")
+      delete-route(upper, lower.@ip-address);
+      close-socket(lower.sockets[0]);
+    end
+  end
 end;
 
 define method deregister-lower-layer (upper :: <ip-layer>, lower :: <ip-adapter-layer>)
-  delete-route(upper, lower.@ip-address);
-  close-socket(lower.sockets[0]);
+  if (lower.@running-state == #"up")
+    delete-route(upper, lower.@ip-address);
+    close-socket(lower.sockets[0]);
+  end;
 end;
 
 //XXX: probably should use radix trees
-//http://www.matasano.com/log/1009/aguri-coolest-data-structure-youve-never-heard-of/
+
 define abstract class <route> (<object>)
   constant slot cidr :: <cidr>, required-init-keyword: cidr:;
 end;
@@ -71,6 +89,12 @@ end;
 define method register-route (ip :: <ip-layer>, route :: <route>)
   add!(ip.routes, route);
   sort!(ip.routes, test: method(x, y) x.cidr.cidr-netmask > y.cidr.cidr-netmask end)
+end;
+
+define function add-next-hop-route (ip-layer :: <ip-layer>, cidr :: <cidr>, next-hop :: <ipv4-address>)
+  register-route(ip-layer, make(<next-hop-route>,
+                                next-hop: next-hop,
+                                cidr: cidr));
 end;
 
 define function delete-route (ip-layer :: <ip-layer>, mycidr :: <cidr>)

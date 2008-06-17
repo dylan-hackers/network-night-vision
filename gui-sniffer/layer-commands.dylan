@@ -261,21 +261,23 @@ define method do-execute-command (context :: <nnv-context>, command :: <show-arp
                   command.%layer);
 end;
 
-/*
 define class <show-forwarding-table-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
 end;
 
 define command-line show-forwarding-table => <show-forwarding-table-command>
   (summary: "Shows forwarding table.",
    documentation: "Prints current forwarding table")
+  argument layer :: <layer> = "IP Layer to operate on";
 end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <show-forwarding-table-command>)
   print-forwarding-table(context.context-server.server-output-stream,
-                         context.nnv-context.ip-layer);
+                         command.%layer);
 end;
 
 define class <add-route-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
   constant slot %gateway :: <ipv4-address>, required-init-keyword: gateway:;
   constant slot %network :: <cidr>, required-init-keyword: network:;
 end;
@@ -283,29 +285,30 @@ end;
 define command-line add-route => <add-route-command>
   (summary: "Adds route.",
    documentation: "Adds route to forwarding table")
+  argument layer :: <layer> = "IP Layer to operate on";
   argument network :: <cidr> = "Network";
   argument gateway :: <ipv4-address> = "Gateway";
 end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <add-route-command>)
-  add-next-hop-route(context.nnv-context.ip-layer, command.%gateway, command.%network);
+  add-next-hop-route(command.%layer, command.%network, command.%gateway);
 end;
 
 define class <delete-route-command> (<basic-command>)
+  constant slot %layer :: <layer>, required-init-keyword: layer:;
   constant slot %network :: <cidr>, required-init-keyword: network:;
 end;
 
 define command-line delete-route => <delete-route-command>
   (summary: "Delete route.",
    documentation: "Deletes route from forwarding table")
+  argument layer :: <layer> = "IP Layer to operate on";
   argument network :: <cidr> = "Network";
 end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <delete-route-command>)
-  delete-route(context.nnv-context.ip-layer, command.%network);
+  delete-route(command.%layer, command.%network);
 end;
-
-*/
 
 /*
 define class <advertise-arp-command> (<basic-command>)
@@ -344,5 +347,8 @@ define command-group layer
   command down;
   command resolve-arp;
   command show-arp-table;
+  command show-forwarding-table;
+  command add-route;
+  command delete-route;
 end command-group;
 

@@ -80,7 +80,7 @@ define function run-interface (layer :: <phy-layer>)
     let node = layer.packet-flow-node;
     let handle = socket($PF-PACKET, $SOCK-RAW, htons($ETH-P-ALL));
     if (handle == -1)
-      layer.@running-state := #"error";
+      layer.@running-state := #"down";
       return();
     end;
     node.unix-file-descriptor := handle;
@@ -89,7 +89,7 @@ define function run-interface (layer :: <phy-layer>)
       ifreq.ifr-name := layer.@device-name;
       let res = ioctl(node.unix-file-descriptor, $SIOCGIFFLAGS, ifreq);
       if (res == -1)
-        layer.@running-state := #"error";
+        layer.@running-state := #"down";
         return();
       else
         ifreq.ifr-flags := logior(ifreq.ifr-flags,
@@ -100,7 +100,7 @@ define function run-interface (layer :: <phy-layer>)
                                                   end));
         let result = ioctl(node.unix-file-descriptor, $SIOCSIFFLAGS, ifreq);
         if (result == -1)
-          layer.@running-state := #"error";
+          layer.@running-state := #"down";
           return();
         end if;
       end if;
@@ -112,7 +112,7 @@ define function run-interface (layer :: <phy-layer>)
       sockaddr.sll-ifindex  := name-to-index(node.unix-file-descriptor,
                                              layer.@device-name);
       if (bind(node.unix-file-descriptor, sockaddr, size-of(<sockaddr-ll>)) == -1)
-        layer.@running-state := #"error";
+        layer.@running-state := #"down";
         return();
       end if;
     end;

@@ -9,12 +9,15 @@ define library ip
   use flow;
   use network-flow;
   use ip-adapter;
+
+  export ip;
 end library;
 
 define module ip
-  use common-dylan;
+  use common-dylan, exclude: { format-to-string };
   use format-out;
   use new-layer;
+  use print;
   use ipv4;
   use packetizer;
   use flow;
@@ -23,4 +26,6 @@ define module ip
   use cidr;
   use ip-adapter;
   use format;
+
+  export print-forwarding-table, add-next-hop-route, delete-route;
 end module;
