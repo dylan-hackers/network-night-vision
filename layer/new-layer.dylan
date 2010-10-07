@@ -488,7 +488,7 @@ define class <property-changed-event> (<event>)
 end;
 
 define function empty-line? (line :: <string>)
-  regex-search("^\\s*$", line) & #t
+  regex-search(compile-regex("^\\s*$"), line) & #t
 end;
 
 define function read-config (stream :: <stream>)
@@ -517,8 +517,8 @@ define function read-config (stream :: <stream>)
           if (empty-line?(line))
             next();
           end;
-          let (_full, property-name, value) = regex-search-strings("^\\s+(\\S*)\\s+(.*)$",
-                                                                   line);
+	  let regex = compile-regex("^\\s+(\\S*)\\s+(.*)$");
+          let (_full, property-name, value) = regex-search-strings(regex, line);
           unless (property-name)
             error("Parse error reading config for %s %s: invalid property name", class, name);
           end;
