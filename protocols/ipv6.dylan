@@ -1,4 +1,7 @@
 module: ipv6
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define n-byte-vector(ipv6-address, 16) end;
 

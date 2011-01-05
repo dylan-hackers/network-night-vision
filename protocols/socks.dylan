@@ -1,5 +1,7 @@
 module: socks
-author: Hannes Mehnert
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 //rfc1928
 define protocol socks5-version/method-selection (container-frame)

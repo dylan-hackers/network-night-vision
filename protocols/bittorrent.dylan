@@ -1,6 +1,7 @@
 module: bittorrent
-Author: Hannes Mehnert
-Copyright: (C) 2008,  All rights reserved. Free for non-commercial use.
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 //incomplete from http://xbtt.sourceforge.net/udp_tracker_protocol.html
 define protocol bittorrent-announce (container-frame)

@@ -1,7 +1,7 @@
 module: timer
-synopsis: 
-author: 
-copyright: 
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define class <recurrent-timer> (<object>)
   constant slot interval :: <integer>, required-init-keyword: interval:;

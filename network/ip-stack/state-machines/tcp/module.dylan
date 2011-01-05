@@ -1,7 +1,8 @@
 Module:    dylan-user
 Synopsis:  A brief description of the project.
-Author:    Andreas Bogk, Hannes Mehnert
-Copyright: (C) 2006,  All rights reserved.
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define module tcp-state-machine
   use common-dylan, exclude: { close };

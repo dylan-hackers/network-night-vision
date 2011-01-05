@@ -1,4 +1,7 @@
 module: ppp-over-ethernet
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define open generic @session-id (layer :: <pppoe-client-layer>) => (res :: <integer>);
 define open generic @session-id-setter (new-value :: <integer>, layer :: <pppoe-client-layer>) => (res :: <integer>);

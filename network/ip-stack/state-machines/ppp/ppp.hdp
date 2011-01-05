@@ -1,6 +1,5 @@
 Format-Version:   2
 Library:          ppp-state-machine
-Copyright:        (c) 2008 Dylan Hackers
 Major-Version:    1
 Minor-Version:    0
 Files:            library

@@ -1,4 +1,7 @@
 module: icmp
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define abstract protocol icmp-frame (variably-typed-container-frame)
   summary "ICMP type %=", icmp-type;

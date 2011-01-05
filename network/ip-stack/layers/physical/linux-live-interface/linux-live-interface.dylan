@@ -1,6 +1,7 @@
 module: pcap-live-interface
-Author:    Andreas Bogk, Hannes Mehnert
-Copyright: (C) 2005, 2006, 2008, All rights reserved. Free for non-commercial use.
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define class <packet-flow-node> (<filter>)
   slot unix-file-descriptor :: <integer>;

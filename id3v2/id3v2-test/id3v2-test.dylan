@@ -1,6 +1,7 @@
 module: id3v2-test
-Author:    Andreas Bogk, Hannes Mehnert
-Copyright: (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
+author: mb, Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 mb, Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in the parent directory
 
 define function main()
   let input-stream = make(<file-stream>, locator: "test.mp3", direction: #"input");

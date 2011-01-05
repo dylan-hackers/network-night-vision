@@ -1,8 +1,6 @@
 Format-Version:   2
 Library:          flow
 Synopsis:         A brief description of the project.
-Author:           Andreas Bogk, Hannes Mehnert
-Copyright:        (C) 2006,  All rights reserved.
 Major-Version:    1
 Minor-Version:    0
 Files:            library

@@ -1,6 +1,7 @@
 module:         id3v2
-Author:         Andreas Bogk, Hannes Mehnert, mb
-Copyright:      (C) 2005, 2006,  All rights reserved. Free for non-commercial use.
+author: mb, Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 mb, Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 define class <id3v2-reader> (<single-push-output-node>)
   slot file-stream :: <stream>, required-init-keyword: stream:;
