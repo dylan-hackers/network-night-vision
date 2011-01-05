@@ -1,7 +1,8 @@
 Module:    state-machine
 Synopsis:  State Machine definition macros
-Author:    Hannes Mehnert
-Copyright: (C) 2007,  All rights reversed.
+author: Andreas Bogk and Hannes Mehnert
+copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
+license: see license.txt in this directory
 
 
 define open abstract class <protocol-state> (<object>) end;
