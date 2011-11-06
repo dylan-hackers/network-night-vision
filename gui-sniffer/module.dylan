@@ -89,5 +89,5 @@ define module gui-sniffer
   use timer;
   use new-layer, prefix: "new-";
   use socket, prefix: "new-";
-  use flow-printer;
+  //use flow-printer;
 end module gui-sniffer;

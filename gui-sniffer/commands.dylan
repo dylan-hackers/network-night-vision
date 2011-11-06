@@ -217,7 +217,7 @@ define command-line flow-printer => <flow-printer-command>
 end;
 
 define method do-execute-command (context :: <nnv-context>, command :: <flow-printer-command>)
-  print-flow(context.context-server.server-output-stream, *global-flow*);
+  //print-flow(context.context-server.server-output-stream, *global-flow*);
 end;
 
 define command-group layer-gui

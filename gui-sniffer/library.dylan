@@ -29,5 +29,5 @@ define library gui-sniffer
   use arp;
   use ip;
   use ip-over-ethernet;
-  use flow-printer;
+  //use flow-printer;
 end library gui-sniffer;

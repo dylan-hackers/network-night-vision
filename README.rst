@@ -26,7 +26,8 @@ Building
 * source code of Dylan https://github.com/dylan-lang/opendylan
 * monday https://github.com/dylan-lang/monday
 * command-line-parser https://github.com/dylan-lang/command-line-parser
-* pcap implementation (on FreeBSD, MacOSX, Win32: https://www.winpcap.org/), raw sockets on Linux
+* regular-expressions https://github.com/dylan-lang/regular-expressions
+* pcap implementation (on FreeBSD, MacOSX, Win32 - be sure to download the developer version from https://www.winpcap.org/devel.htm ), raw sockets on Linux
 
 Eiher in the IDE open the project gui-sniffer, or use the command line:
 ::
