@@ -10,21 +10,21 @@ and then write the logics of protocols in a concise way.
 
 There is even a GUI, similar to Wireshark, but with a shell to setup your layering.
 
-This project used ideas from the click modular router project, defstorage, scapy,
-wireshark and most likely others.
+This project used ideas from the click modular router (http://www.read.cs.ucla.edu/click/Click), defstorage, scapy (http://www.secdev.org/projects/scapy/), wireshark (http://www.wireshark.org/) and others.
 
 There are two documents about this project:
+
 * Secure networking [2006] - http://opendylan.org/~hannes/secure-networking.pdf
 * A domain-specific language for manipulation of binary data in Dylan [2007] - http://www.opendylan.org/~hannes/ilc07.pdf
 
 Building
 ======================
 
- first get Opendylan from http://www.opendylan.org
- you will also need the source, https://github.com/dylan-lang/opendylan
- and monday https://github.com/dylan-lang/monday
- and command-line-parser https://github.com/dylan-lang/command-line-parser
- and a pcap implementation (on FreeBSD, MacOSX, Win32), raw sockets on Linux
+* get an opendylan compiler from http://www.opendylan.org
+* source code of Dylan https://github.com/dylan-lang/opendylan
+* monday https://github.com/dylan-lang/monday
+* command-line-parser https://github.com/dylan-lang/command-line-parser
+* pcap implementation (on FreeBSD, MacOSX, Win32: https://www.winpcap.org/), raw sockets on Linux
 
 Eiher in the IDE open the project gui-sniffer, or use the command line:
 ::
