@@ -1,6 +1,8 @@
 Welcome to Network Night Vision
 ======================
 
+Screenshot is available here: http://opendylan.org/~hannes/gui-sniffer.png
+
 This is network night vision, consisting of a domain-specific language for
 describing binary protocols, which generates readers and writers into a
 high-level object.
