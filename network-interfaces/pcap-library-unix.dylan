@@ -8,7 +8,7 @@ define library network-interfaces
   use c-ffi;
   use io;
   use collection-extensions;
-  use functional-dylan;
+  use dylan;
   use flow;
   use network;
   use packetizer;

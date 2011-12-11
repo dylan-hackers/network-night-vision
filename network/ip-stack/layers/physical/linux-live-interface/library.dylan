@@ -12,7 +12,7 @@ define library pcap-live-interface
   use system;
   use io;
   use collection-extensions;
-  use functional-dylan;
+  use dylan;
   use flow;
   use network-flow;
   use network;
@@ -32,8 +32,7 @@ define module pcap-live-interface
   use subseq;
   use format;
   use standard-io;
-  use functional-dylan, import: { <byte-character> };
-  use dylan-extensions, import: { <byte> };
+  use dylan-extensions, import: { <byte>, <byte-character> };
   use unix-sockets, exclude: { send, connect };
   use sockets, import: { interruptible-system-call };
   use C-FFI;

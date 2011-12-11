@@ -11,7 +11,7 @@ define library pcap-live-interface
   use system;
   use io;
   use collection-extensions;
-  use functional-dylan;
+  use dylan;
   use flow;
   use network-flow;
   use network;

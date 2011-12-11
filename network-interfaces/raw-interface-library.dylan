@@ -5,7 +5,7 @@ license: see license.txt in this directory
 
 define library network-interfaces
   use common-dylan;
-  use functional-dylan;
+  use dylan;
   use network;
   use C-FFI;
   use io;
@@ -25,8 +25,7 @@ define module network-interfaces
   use subseq;
   use format;
   use standard-io;
-  use functional-dylan, import: { <byte-character> };
-  use dylan-extensions, import: { <byte> };
+  use dylan-extensions, import: { <byte>, <byte-character> };
   use unix-sockets, exclude: { send, connect };
   use sockets, import: { interruptible-system-call };
   use C-FFI;
