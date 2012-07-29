@@ -1,7 +1,7 @@
 module: layer
 author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in this directory
+license: see license.txt in this distribution
 
 define class <dhcp-client> (<filter>, <dhcp-client-state>)
   slot send-socket, init-keyword: send-socket:;

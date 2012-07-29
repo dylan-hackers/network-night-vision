@@ -2,7 +2,7 @@ module: packetizer-test
 Synopsis:  Test library for packetizer
 author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in the parent directory
+license: see license.txt in this distribution
 
 define test byte-vector-subsequence-read ()
   let sbv = as(<stretchy-byte-vector-subsequence>, #(#x00, #x01, #x02, #x03));

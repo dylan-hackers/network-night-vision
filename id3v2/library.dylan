@@ -1,7 +1,7 @@
 module: dylan-user
 author: mb, Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 mb, Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in this directory
+license: see license.txt in this distribution
 
 define library id3v2
   use common-dylan;

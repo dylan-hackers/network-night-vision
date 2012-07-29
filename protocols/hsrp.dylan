@@ -1,7 +1,7 @@
 module: hsrp
 author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in this directory
+license: see license.txt in this distribution
 
 //Cisco Hot Standby Router Protocol (HSRP) RFC 2281 
 define abstract protocol hsrp (variably-typed-container-frame)

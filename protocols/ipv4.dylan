@@ -1,7 +1,7 @@
 module: ipv4
 author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in this directory
+license: see license.txt in this distribution
 
 define abstract protocol ip-option-frame (variably-typed-container-frame)
   field copy-flag :: <1bit-unsigned-integer>;

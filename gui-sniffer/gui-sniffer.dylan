@@ -1,7 +1,7 @@
 Module:    gui-sniffer
 author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
-license: see license.txt in this directory
+license: see license.txt in this distribution
 
 define constant $packet-list-lock = make(<lock>);
 define method frame-children-predicate (frame :: <leaf-frame>)
