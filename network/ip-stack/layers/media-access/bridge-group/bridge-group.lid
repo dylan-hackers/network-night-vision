@@ -1,3 +1,4 @@
 library: bridge-group
 files: library
-       bridge-group
+  bridge-group
+target-type: dll

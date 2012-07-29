@@ -1,4 +1,4 @@
 library: ip
-executable: ip
-files: ip-exports
+target-type: dll
+files: library
   ip

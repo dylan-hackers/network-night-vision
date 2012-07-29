@@ -1,0 +1,6 @@
+library: network-interfaces
+files: pcap-library-win32
+  pcap
+  pcap-win32
+c-libraries: wpcap.lib
+target-type: dll

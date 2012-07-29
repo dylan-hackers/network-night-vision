@@ -7,7 +7,7 @@ define library network-interfaces
   use common-dylan;
   use c-ffi;
   use io;
-  use collection-extensions;
+//  use collection-extensions;
   use dylan;
   use flow;
   use network;

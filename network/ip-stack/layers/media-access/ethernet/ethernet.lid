@@ -1,3 +1,4 @@
 library: ethernet
 files: library
-       ethernet
+  ethernet
+target-type: dll

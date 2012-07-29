@@ -1,4 +1,4 @@
 library: ip-adapter
-executable: ip-adapter
-files: ip-adapter-exports
+target-type: dll
+files: library
   ip-adapter

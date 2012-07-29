@@ -1,3 +1,4 @@
 library: physical-layer
 files:	library
-	physical
+  physical
+target-type: dll

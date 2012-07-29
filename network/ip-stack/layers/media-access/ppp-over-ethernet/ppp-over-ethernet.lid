@@ -1,3 +1,4 @@
 library: ppp-over-ethernet
 files: library
-       ppp-over-ethernet
+  ppp-over-ethernet
+target-type: dll

@@ -9,3 +9,9 @@ define library packetizer-test
   use testworks;
   use packetizer;
 end library packetizer-test;
+
+define module packetizer-test
+  use common-dylan;
+  use packetizer, exclude: { type-code, data };
+  use testworks;
+end module packetizer-test;

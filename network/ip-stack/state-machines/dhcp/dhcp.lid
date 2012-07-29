@@ -1,3 +1,4 @@
-Library: dhcp-state-machine
-Files: library
-       dhcp
+library: dhcp-state-machine
+files: library
+  dhcp
+target-type: dll

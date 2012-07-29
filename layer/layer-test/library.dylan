@@ -10,6 +10,15 @@ define library layer-test
   use testworks;
   use layer;
 
-  // Add any more module exports here.
   export layer-test;
 end library layer-test;
+
+define module layer-test
+  use dylan;
+  use format;
+  use format-out;
+  use standard-io;
+  use streams;
+  use new-layer;
+  use testworks;
+end module layer-test;

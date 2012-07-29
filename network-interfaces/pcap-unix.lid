@@ -1,0 +1,6 @@
+library: network-interfaces
+files: pcap-library-unix
+  pcap
+  pcap-unix
+c-libraries: -lpcap
+target-type: dll

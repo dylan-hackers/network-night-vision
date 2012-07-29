@@ -1,4 +1,4 @@
 library: flow-printer
-executable: flow-printer
-files: flow-printer-exports
+target-type: dll
+files: library
   flow-printer

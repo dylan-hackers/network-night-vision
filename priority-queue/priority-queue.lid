@@ -1,3 +1,4 @@
 library: priority-queue
 files: library
-       priority-queue
+  priority-queue
+target-type: dll

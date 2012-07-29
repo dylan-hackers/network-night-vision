@@ -1,4 +1,4 @@
 library: arp
-executable: arp
-files: arp-exports
+target-type: dll
+files: library
   arp

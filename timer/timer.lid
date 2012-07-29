@@ -1,5 +1,6 @@
 library: timer
-files: timer-exports
-       timer
-       recurrent-timer
-       timer-test
+files: library
+  timer
+  recurrent-timer
+  timer-test
+target-type: dll

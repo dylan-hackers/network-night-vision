@@ -1,4 +1,4 @@
 library: ip-over-ethernet
-executable: ip-over-ethernet
-files: ip-over-ethernet-exports
+target-type: dll
+files: library
   ip-over-ethernet
