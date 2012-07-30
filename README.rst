@@ -22,8 +22,7 @@ There are two documents about this project:
 Building
 ======================
 
-* get an opendylan compiler from http://www.opendylan.org
-* source code of Dylan https://github.com/dylan-lang/opendylan
+* get an opendylan compiler from http://opendylan.org/download/
 * monday https://github.com/dylan-lang/monday
 * command-line-parser https://github.com/dylan-lang/command-line-parser
 * regular-expressions https://github.com/dylan-lang/regular-expressions
@@ -32,5 +31,5 @@ Building
 Eiher in the IDE open the project gui-sniffer, or use the command line:
 ::
 
-  opendylan -build sniffer
+  dylan-compiler -build sniffer
 
