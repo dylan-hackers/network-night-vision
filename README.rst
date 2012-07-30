@@ -17,15 +17,14 @@ This project used ideas from the click modular router (http://www.read.cs.ucla.e
 There are two documents about this project:
 
 * Secure networking [2006] - http://opendylan.org/~hannes/secure-networking.pdf
-* A domain-specific language for manipulation of binary data in Dylan [2007] - http://www.opendylan.org/~hannes/ilc07-final.pdf
+* A domain-specific language for manipulation of binary data in Dylan [2007] - http://opendylan.org/~hannes/ilc07-final.pdf
 
 Building
 ======================
 
 * get an opendylan compiler from http://opendylan.org/download/
+* opendylan source code https://github.com/dylan-lang/opendylan (including command-line-parser and regular-expressions)
 * monday https://github.com/dylan-lang/monday
-* command-line-parser https://github.com/dylan-lang/command-line-parser
-* regular-expressions https://github.com/dylan-lang/regular-expressions
 * pcap implementation (on FreeBSD, MacOSX, Win32 - be sure to download the developer version from https://www.winpcap.org/devel.htm ), raw sockets on Linux
 
 Eiher in the IDE open the project gui-sniffer, or use the command line:
