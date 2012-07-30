@@ -367,10 +367,6 @@ define method frame-size (frame :: <container-frame>) => (res :: <integer>)
   end;
 end;
 
-define method assemble-frame (frame :: <unparsed-container-frame>) => (packet :: <unparsed-container-frame>);
-  frame;
-end;
-
 define method assemble-frame (frame :: <container-frame>) => (packet :: <unparsed-container-frame>);
   let f = copy-frame(frame);
   assemble-frame!(f);

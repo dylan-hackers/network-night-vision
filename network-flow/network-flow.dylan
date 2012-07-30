@@ -283,7 +283,7 @@ define method push-data-aux (input :: <push-input>,
       node.pcap-writer := make(<pcap-file-writer>, stream: node.file-stream);
     end;
     //uh, we should somehow be connected to the pcap-writer
-    push-data-aux(node.pcap-writer.the-input, frame)
+    push-data(node.pcap-writer.the-input, frame)
   end;
 end;
 

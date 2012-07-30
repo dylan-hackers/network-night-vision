@@ -7,7 +7,7 @@ define class <graph> (<object>)
   slot nodes :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
-define class <node> (<object>)
+define abstract class <node> (<object>)
   slot graph :: <graph> = *global-flow*, init-keyword: graph:;
 end;
 
