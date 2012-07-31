@@ -481,8 +481,19 @@ end;
 
 define method assemble-frame-into (frame :: <unparsed-container-frame>,
                                    to-packet :: <stretchy-vector-subsequence>) => (res :: <integer>)
-  copy-bytes(to-packet, 0, frame.packet, 0, frame.packet.size);
-  frame.packet.size * 8;
+  let ff = frame.concrete-frame-fields;
+  let start = if (ff.size > 0 & ff[0] & ff[0].start-offset)
+                byte-offset(ff[0].start-offset);
+              else
+                0
+              end;
+  let len = if (ff.size > 0)
+              byte-offset(ff[ff.size - 1].end-offset)
+            else
+              frame.packet.size
+            end;
+  copy-bytes(to-packet, 0, frame.packet, start, len);
+  (len - start) * 8;
 end;
 
 define method assemble-field-into(field :: <enum-field>,
