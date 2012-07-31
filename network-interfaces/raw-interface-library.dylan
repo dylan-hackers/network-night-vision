@@ -9,7 +9,6 @@ define library network-interfaces
   use network;
   use C-FFI;
   use io;
-  use collection-extensions;
   use flow;
   use packetizer;
   use protocols, import: { ethernet, prism2, ieee80211 };

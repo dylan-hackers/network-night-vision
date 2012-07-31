@@ -8,7 +8,6 @@ define library packetizer
   use dylan;
   use io;
   use collections;
-  use collection-extensions;
   use system;
 
   use source-location;

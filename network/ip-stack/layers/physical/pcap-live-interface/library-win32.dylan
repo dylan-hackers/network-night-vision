@@ -10,7 +10,6 @@ define library pcap-live-interface
   use c-ffi;
   use system;
   use io;
-  use collection-extensions;
   use dylan;
   use flow;
   use network-flow;
