@@ -127,12 +127,6 @@ define method assemble-frame-as
   end
 end;
 
-define generic print-frame (frame :: <frame>, stream :: <stream>) => ();
-
-define method print-frame (frame :: <frame>, stream :: <stream>) => ();
-  write(stream, as(<string>, frame))
-end;
-
 define open generic high-level-type (low-level-type :: subclass(<frame>)) => (res :: <type>);
 
 define inline method high-level-type (object :: subclass(<frame>)) => (res :: <type>)
@@ -277,7 +271,7 @@ end;
 
 define open abstract class <unparsed-container-frame> (<container-frame>)
   slot packet :: <byte-sequence>, init-keyword: packet:;
-  slot cache :: <container-frame>, init-keyword: cache:;
+  constant slot cache :: <container-frame>, init-keyword: cache:;
 end;
 
 define method initialize (class :: <unparsed-container-frame>,
@@ -584,7 +578,7 @@ define class <frame-field> (<position-mixin>)
 end;
 
 define class <repeated-frame-field> (<frame-field>)
-  slot frame-field-list :: <stretchy-vector> = make(<stretchy-vector>);
+  constant slot frame-field-list :: <stretchy-vector> = make(<stretchy-vector>);
 end;
 
 define method make (class == <frame-field>, #rest rest, #key field, #all-keys) => (res :: <frame-field>)
