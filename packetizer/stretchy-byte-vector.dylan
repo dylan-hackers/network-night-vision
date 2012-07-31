@@ -176,9 +176,8 @@ define inline method element-setter (value :: <byte>, seq :: <stretchy-byte-vect
   seq.real-data[key + seq.start-index] := value;
 end;
 
-define class <bit> (<object>)
-//NYI
-end;
+define constant <bit> = limited(<integer>, min: 0, max: 1);
+
 define class <stretchy-bit-vector-subsequence> (<stretchy-vector-subsequence>)
 end;
 
