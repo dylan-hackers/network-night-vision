@@ -511,7 +511,7 @@ define method parse-frame (frame-type :: subclass(<container-frame>),
       let fr-length = container-frame-size(frame);
       if (fr-length)
         frame.packet := subsequence(frame.packet, length: fr-length);
-        ret(apply(values, frame, fr-length));
+        ret(values(frame, fr-length));
       end;
     exception (e :: <error>)
       frame;
