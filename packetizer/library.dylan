@@ -150,6 +150,12 @@ define module packetizer
     byte-offset,
     bit-offset;
 
+  //utilities
+  export find-frame-field,
+    compute-absolute-offset,
+    compute-length,
+    find-frame-at-offset;
+
   export protocol-definer;
   //XXX: we shouldn't need to export those
   export real-class-definer, decoded-class-definer, gen-classes,

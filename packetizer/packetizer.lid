@@ -8,4 +8,5 @@ files: library
   protocol-definer-macro
   filter
   filter-parser
+  frame-utils
 target-type: dll
