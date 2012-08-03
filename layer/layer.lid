@@ -7,4 +7,4 @@ files: library
   udp
   dhcp
   ppp
-target-type: library
+target-type: dll
