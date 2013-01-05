@@ -10,3 +10,4 @@ files: library
   filter-parser
   frame-utils
 target-type: dll
+compilation-mode: loose
