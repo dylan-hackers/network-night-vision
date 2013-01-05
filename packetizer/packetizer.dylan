@@ -234,7 +234,7 @@ define method layer-magic (frame :: <container-frame>) => (res)
 end;
 
 define open abstract class <decoded-container-frame> (<container-frame>)
-  slot concrete-frame-fields :: <vector>;
+  slot concrete-frame-fields :: <vector>, init-keyword: ff:;
   slot parent :: false-or(<container-frame>) = #f, init-keyword: parent:;
 end;
 
@@ -264,9 +264,11 @@ end;
 
 
 define method initialize (frame :: <decoded-container-frame>,
-                          #rest rest, #key, #all-keys)
+                          #rest rest, #key ff, #all-keys)
   next-method();
-  frame.concrete-frame-fields := make(<vector>, size: field-count(frame.object-class), fill: #f);
+  unless (ff)
+    frame.concrete-frame-fields := make(<vector>, size: field-count(frame.object-class), fill: #f);
+  end
 end;
 
 define open abstract class <unparsed-container-frame> (<container-frame>)
@@ -396,23 +398,30 @@ define method as(type == <string>, frame :: <container-frame>) => (string :: <st
             end, fields(frame)))
 end;
 
-define method copy-frame (frame :: <unparsed-container-frame>) => (res :: <container-frame>)
-  let my-cache = copy-frame(frame.cache);
+define method copy-frame (frame :: <unparsed-container-frame>, #key par = #f) => (res :: <container-frame>)
+  let my-cache = copy-frame(frame.cache, par: par);
   make(unparsed-class(frame.object-class),
        cache: my-cache,
-       packet: as(<stretchy-byte-vector-subsequence>, (copy-sequence(frame.packet))),
-       parent: frame.parent);
+       packet: as(<stretchy-byte-vector-subsequence>, copy-sequence(frame.packet)),
+       parent: par | frame.parent);
 end;
 
-define method copy-frame (frame :: <decoded-container-frame>) => (res :: <decoded-container-frame>)
-  let res = make(decoded-class(frame.object-class));
+define method copy-frame (frame :: <decoded-container-frame>, #key par = #f) => (res :: <decoded-container-frame>)
+  let res = make(decoded-class(frame.object-class),
+                 ff: copy-sequence(frame.concrete-frame-fields));
   for (field in frame.fields)
-    field.setter(copy-frame(field.getter(frame)), res);
+    if (instance?(field, <repeated-field>))
+      let r = map(method(x) copy-frame(x, par: res) end, field.getter(frame));
+      field.setter(r, res);
+    else
+      field.setter(copy-frame(field.getter(frame), par: res), res);
+    end;
   end;
+  if (par) res.parent := par; end;
   res;
 end;
 
-define method copy-frame (frame) => (res)
+define method copy-frame (frame, #key par) => (res)
   frame;
 end;
 
@@ -481,7 +490,7 @@ define method assemble-frame-into (frame :: <unparsed-container-frame>,
               else
                 0
               end;
-  let len = if (ff.size > 0)
+  let len = if (ff.size > 0 & element(ff, ff.size - 1, default: #f))
               byte-offset(ff[ff.size - 1].end-offset)
             else
               frame.packet.size
