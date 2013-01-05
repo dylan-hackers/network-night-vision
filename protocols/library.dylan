@@ -415,10 +415,13 @@ define module dhcp
 end;
 
 define module dns
-  use common-dylan;
+  use format;
+  use format-out;
+  use standard-io;
+  use streams;
+  use common-dylan, exclude: { format-to-string };
   use packetizer;
   use byte-vector, import: { copy-bytes };
-  use simple-io;
   use ipv4, import: { <ipv4-address>, <udp-frame> };
 
   export <dns-frame>, dns-frame,
@@ -461,6 +464,7 @@ define module dns
     rdata, rdata-setter;
 
   export <a-host-address>,
+    a-host-address,
     ipv4-address, ipv4-address-setter;
 
   export <name-server>,
