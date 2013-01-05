@@ -32,10 +32,6 @@ define protocol security-ip-option-frame (ip-option-frame)
 end;
 
 
-define method print-object (object :: <frame>, stream :: <stream>) => ()
-  write(stream, as(<string>, object));
-end;
-
 define function calculate-checksum (frame :: <byte-sequence>,
                                     count :: <integer>) => (res :: <integer>)
   let checksum = 0.0d0;
