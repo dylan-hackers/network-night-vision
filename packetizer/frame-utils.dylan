@@ -6,11 +6,11 @@ license: see license.txt in this distribution
 define function find-frame-field (frame :: <container-frame>, search :: type-union(<container-frame>, <raw-frame>))
  => (res :: false-or(type-union(<frame-field>, <rep-frame-field>)))
   block(ret)
-    for (ff in sorted-frame-fields(frame))
-      if (ff.value == search)
+    for (ff in frame.concrete-frame-fields)
+      if (ff.value = search)
         ret(ff)
       end;
-      if (instance?(ff.value, <collection>))
+      if (instance?(ff, <repeated-frame-field>))
         let framefield = choose-by(curry(\=, search),
                                    ff.value,
                                    ff.frame-field-list);

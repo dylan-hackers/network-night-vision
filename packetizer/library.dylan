@@ -31,6 +31,7 @@ define module packetizer
 
   export <stretchy-vector-subsequence>,
     <stretchy-byte-vector-subsequence>,
+    <stretchy-byte-vector>,
     subsequence,
     start-index, end-index,
     <out-of-bound-error>,
@@ -125,8 +126,8 @@ define module packetizer
     decoded-class,
     field-count,
     fixup!,
-    parent,
-    packet,
+    parent, parent-setter,
+    packet, packet-setter,
     cache,
     source-address, source-address-setter,
     destination-address, destination-address-setter,
