@@ -43,8 +43,8 @@ define generic domain-names (q-or-rr :: type-union(<dns-question>, <dns-resource
 
 
 define method find-offset (search :: <frame>, current :: <container-frame>) => (offset :: <integer>)
-  //format-out("find-offset, searching for %= in %=\n", search, current);
-  //force-output(*standard-output*);
+  format-out("find-offset, searching for %= in %=\n", search.object-class, current.object-class);
+  force-output(*standard-output*);
   let ff = find-frame-field(current, search);
   let off1 =
     if (instance?(current, <dns-frame>))
@@ -70,6 +70,7 @@ define method fixup!(dns-frame :: <unparsed-dns-frame>,
   format-out("fixup: %=\n", dns-frame);
   force-output(*standard-output*);
   let names = make(<string-table>);
+  let comp :: <integer> = 0;
   local method collect-and-maybe-replace (dn :: <domain-name>)
           let frags = #();
           block(done)
@@ -95,23 +96,30 @@ define method fixup!(dns-frame :: <unparsed-dns-frame>,
                   format-out("created lo %=\n", lo);
                   force-output(*standard-output*);
                   frags := pair(lo, frags);
-                  let off = byte-offset(start-offset(ff)) + off-till-dn;
+                  let off = byte-offset(start-offset(ff)) + off-till-dn - comp;
                   let bv = assemble-frame(lo).packet;
                   format-out("replacing (at %d) %d with %d %d\n", off, dns-frame.packet[off], bv[0], bv[1]);
                   let oldlen = byte-offset(ff.parent-frame-field.length - ff.start-offset);
-                  format-out("oldlen would have been %d\n", oldlen);
+                  format-out("oldlen would have been %d, comp is %d\n", oldlen, comp);
                   force-output(*standard-output*);
                   dns-frame.packet[off] := bv[0];
                   dns-frame.packet[off + 1] := bv[1];
+                  format-out("off + oldlen is %d, size is %d\n", (off + oldlen), dns-frame.packet.size);
+                  force-output(*standard-output*);
+                  let tl =
+                    if (dns-frame.packet.size > off + oldlen)
+                      copy-sequence(dns-frame.packet, start: off + oldlen)
+                    else
+                      as(<stretchy-byte-vector>, #())
+                    end;
                   dns-frame.packet :=
                     make(<stretchy-vector-subsequence>,
                          data: as(<stretchy-byte-vector>,
-                                  concatenate(copy-sequence(dns-frame.packet, end: off + 2),
-                                              copy-sequence(dns-frame.packet, start: off + oldlen))));
-                  format-out("pack %=\n", copy-sequence(dns-frame.packet, start: off - 3, end: off + 4));
+                                  concatenate(copy-sequence(dns-frame.packet, end: off + 2), tl)));
+                  format-out("pack %=\n", copy-sequence(dns-frame.packet, start: off - 3, end: off + 2));
                   format-out("dne\n"); force-output(*standard-output*);
-                  //fixup assembled subsequence - shrink it
-                  //need to fixup frame fields...
+                  //need to fixup succeeding frame fields...
+                  comp := comp + (oldlen - 2);
                   done();
                 else
                   let off = byte-offset(start-offset(ff)) + off-till-dn;
@@ -132,14 +140,40 @@ define method fixup!(dns-frame :: <unparsed-dns-frame>,
         end method;
   local method maybe-replace (dns :: type-union(<dns-question>, <dns-resource-record>))
           let dnss = domain-names(dns);
+          let save = 0;
+          let first = #t;
+          let curc = comp;
           map(method (x)
+                let oldcomp = comp;
                 collect-and-maybe-replace(x.head(dns));
+                if (first)
+                  curc := comp;
+                else
+                  save := save + (comp - oldcomp)
+                end;
+                first := #f;
                 //format-out("replacing with %= (using x.tail %= and dns %=)\n", as(<string>, replacement), x.tail, dns);
                 //force-output(*standard-output*);
                 //let rpl = assemble-frame!(replacement).packet;
                 //let ff = get-frame-field(0, replacement);
                 //x.tail(replacement, dns);
               end, domain-names(dns));
+          if (instance?(dns, type-union(<name-server>, <canonical-name>, <start-of-authority>, <domain-name-pointer>, <mail-exchange>)))
+            //need to adjust the rdlength!
+            let nl = dns.rdlength - save;
+            format-out("adjusting rdlength from %d to %d\n", dns.rdlength, nl);
+            force-output(*standard-output*);
+            dns.rdlength := nl;
+
+            let off-till = byte-offset(find-offset(dns, dns.parent));
+            let rdl-ff = get-frame-field(4, dns);
+            //freely assert that nl is below 255...
+            let st = byte-offset(rdl-ff.start-offset);
+            let myoff = off-till + st + 1 - curc;
+            format-out("adjusting size at %d, from %d to %d\n", myoff, dns-frame.packet[myoff], as(<byte>, nl));
+            force-output(*standard-output*);
+            dns-frame.packet[myoff] := as(<byte>, nl);
+          end
         end method;
   map(maybe-replace, dns-frame.questions);
   format-out("now answers\n");
@@ -222,12 +256,13 @@ define function find-label (label-offset :: <label-offset>)
         end;
   let dns-frame = find-dns-frame(label-offset);
   if (dns-frame)
-    let dns-frame-size = dns-frame.packet.size;
+    #f
+/*    let dns-frame-size = dns-frame.packet.size;
     if (label-offset.offset < dns-frame-size)
       parse-frame(<domain-name>,
                   subsequence(dns-frame.packet, start: label-offset.offset * 8),
                   parent: label-offset.parent)
-    end;
+    end; */
   end;
 end;
 

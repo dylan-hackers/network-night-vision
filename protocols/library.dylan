@@ -468,6 +468,7 @@ define module dns
     ipv4-address, ipv4-address-setter;
 
   export <name-server>,
+    name-server,
     ns-name, ns-name-setter;
 
   export <canonical-name>,

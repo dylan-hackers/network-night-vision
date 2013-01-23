@@ -33,14 +33,25 @@ define method push-data-aux
       d2.parent := answer;
       format-out("answer is %=\n", answer);
       force-output(*standard-output*);
+      let d3 = as(<domain-name>, nam);
+      let d4 = as(<domain-name>, concatenate("ns.", nam));
+      let ns = name-server(domainname: d3,
+                           ttl: big-endian-unsigned-integer-4byte(#(#x0, #x0, #x0, #x1)),
+                           ns-name: d4);
+      d3.parent := ns;
+      d4.parent := ns;
+      format-out("NS is %=\n", ns);
+      force-output(*standard-output*);
       let res = dns-frame(identifier: data.identifier,
                           query-or-response: #"response",
                           authoritative-answer: #t,
                           recursion-available: #t,
                           questions: list(quest),
-                          answers: list(answer));
+                          answers: list(answer),
+                          name-servers: list(ns));
       quest.parent := res;
       answer.parent := res;
+      ns.parent := res;
       format-out("sending %=\n", res);
       force-output(*standard-output*);
       push-data(node.the-output, res);
