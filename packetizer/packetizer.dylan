@@ -450,34 +450,42 @@ define method assemble-frame-into (frame :: <container-frame>,
       //           field.field-name, field.static-start, offset);
       offset := field.static-start;
     end;
-    let length = offset + assemble-field-into(field, frame, subsequence(packet, start: offset));
-    frame.concrete-frame-fields[field.index].%start-offset := offset;
+    let ff = make(<frame-field>, field: field, frame: frame, start: offset);
+    frame.concrete-frame-fields[field.index] := ff;
+    let length = assemble-field-into(field, frame, subsequence(packet, start: offset));
+    frame.concrete-frame-fields[field.index].%length := length;
+    let end-off = offset + length;
     if (field.dynamic-end)
       let real-frame-end = field.dynamic-end(frame);
       if (real-frame-end ~= length)
         //pad!
         //format-out("Need dynamic padding at end of %s : %d ~= %d\n",
-        //           field.field-name, real-frame-end, length);
+        //           field.field-name, real-frame-end, end-off);
       end;
-      length := real-frame-end;
+      end-off := real-frame-end;
     end;
-    if ((field.static-length ~= $unknown-at-compile-time) & (field.static-length + offset ~= length))
-      length := offset + field.static-length;
+    if ((field.static-length ~= $unknown-at-compile-time) & (field.static-length  ~= length))
+      end-off := offset + field.static-length;
     end;
-    if ((field.static-end ~= $unknown-at-compile-time) & (field.static-end ~= length))
+    if ((field.static-end ~= $unknown-at-compile-time) & (field.static-end ~= end-off))
       //format-out("Need static padding at end of %s : %d ~= %d\n",
-      //           field.field-name, field.static-end, length);
-      length := field.static-end;
+      //           field.field-name, field.static-end, end-off);
+      end-off := field.static-end;
     end;
-    frame.concrete-frame-fields[field.index].%end-offset := length;
+    if (offset + length ~= end-off)
+      //format-out("also adjusting length of ff %d -> %d!\n",
+      //           length, end-off - offset);
+      frame.concrete-frame-fields[field.index].%length := end-off - offset;
+    end;
+    frame.concrete-frame-fields[field.index].%end-offset := end-off;
     if (instance?(field.getter(frame), <decoded-container-frame>))
       let unparsed = make(unparsed-class(field.getter(frame).object-class),
                           cache: field.getter(frame),
-                          packet: subsequence(packet, start: offset, length: length),
+                          packet: subsequence(packet, start: offset, length: end-off),
                           parent: frame);
       field.setter(unparsed, frame);
     end;
-    offset := length;
+    offset := end-off;
   end;
   offset;
 end;
@@ -506,43 +514,34 @@ define method assemble-field-into(field :: <enum-field>,
   if (instance?(value, <symbol>))
     value := enum-field-symbol-to-int(field, value)
   end;
-  let length = assemble-aux(field.type, value, packet);
-  let ff = make(<frame-field>, field: field, frame: frame, length: length);
-  frame.concrete-frame-fields[field.index] := ff;
-  length;  
+  assemble-aux(field.type, value, packet);
 end;
 
 define method assemble-field-into(field :: <single-field>,
                                   frame :: <container-frame>,
                                   packet :: <stretchy-vector-subsequence>)
-  let length = assemble-aux(field.type, field.getter(frame), packet);
-  let ff = make(<frame-field>, field: field, frame: frame, length: length);
-  frame.concrete-frame-fields[field.index] := ff;
-  length;
+  assemble-aux(field.type, field.getter(frame), packet);
 end;
 
 define method assemble-field-into(field :: <variably-typed-field>,
                                   frame :: <container-frame>,
                                   packet :: <stretchy-vector-subsequence>)
-  let length = assemble-frame-into(field.getter(frame), packet);
-  let ff = make(<frame-field>, field: field, frame: frame, length: length);
-  frame.concrete-frame-fields[field.index] := ff;
-  length;
+  assemble-frame-into(field.getter(frame), packet);
 end;
 
 define method assemble-field-into(field :: <repeated-field>,
                                   frame :: <container-frame>,
                                   packet :: <stretchy-vector-subsequence>)
   let offset :: <integer> = 0;
-  let repeated-ff = make(<repeated-frame-field>, field: field, frame: frame);
+  let repeated-ff = frame.concrete-frame-fields[field.index];
   for (ele in field.getter(frame))
-    let length = assemble-aux(field.type, ele, subsequence(packet, start: offset));
-    let ff = make(<rep-frame-field>, start: offset, parent: repeated-ff, frame: frame, end: length);
+    let ff = make(<rep-frame-field>, start: offset, parent: repeated-ff, frame: frame);
     add!(repeated-ff.frame-field-list, ff);
+    let length = assemble-aux(field.type, ele, subsequence(packet, start: offset));
+    ff.%end-offset := offset + length;
+    ff.%length := length;
     offset := length + offset;
   end;
-  repeated-ff.%length := offset;
-  frame.concrete-frame-fields[field.index] := repeated-ff;
   offset;
 end;
 
