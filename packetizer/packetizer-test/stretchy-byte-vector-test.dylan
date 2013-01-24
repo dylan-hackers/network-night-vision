@@ -275,6 +275,6 @@ define suite stretchy-byte-vector-suite ()
 end;
 
 begin
-  run-test-application(stretchy-byte-vector-suite, arguments: #("-debug"));
+  run-test-application(stretchy-byte-vector-suite); //, arguments: #("-debug"));
 end;
 
