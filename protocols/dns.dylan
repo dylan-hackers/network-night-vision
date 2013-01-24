@@ -3,7 +3,19 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define protocol dns-frame (container-frame)
+define abstract class <container-frame-with-metadata> (<container-frame>)
+  constant slot fragment-table :: <string-table> = make(<string-table>);
+end;
+
+define abstract class <decoded-container-frame-with-metadata>
+ (<container-frame-with-metadata>, <decoded-container-frame>)
+end;
+
+define abstract class <unparsed-container-frame-with-metadata>
+ (<container-frame-with-metadata>, <unparsed-container-frame>)
+end;
+
+define protocol dns-frame (container-frame-with-metadata)
   over <udp-frame> 53;
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
@@ -39,21 +51,13 @@ define protocol dns-frame (container-frame)
     count: frame.additional-count;
 end;
 
-define generic domain-names (q-or-rr :: type-union(<dns-question>, <dns-resource-record>)) => (l :: <list>);
-
 
 define method find-offset (search :: <frame>, current :: <container-frame>) => (offset :: <integer>)
-  format-out("find-offset, searching for %= in %=\n", search.object-class, current.object-class);
-  force-output(*standard-output*);
   let ff = find-frame-field(current, search);
   let off1 =
     if (instance?(current, <dns-frame>))
-      format-out("searching for offset where c = t %d\n", ff.start-offset);
-      force-output(*standard-output*);
       0
     else
-      format-out("recursing to parent, off is %d\n", ff.start-offset);
-      force-output(*standard-output*);
       find-offset(current, current.parent);
     end;
   let off2 =
@@ -65,153 +69,58 @@ define method find-offset (search :: <frame>, current :: <container-frame>) => (
   off1 + off2
 end;
 
-define method fixup!(dns-frame :: <unparsed-dns-frame>,
-                     #next next-method)
-  format-out("fixup: %=\n", dns-frame);
-  force-output(*standard-output*);
-  let names = make(<string-table>);
-  let comp :: <integer> = 0;
-  local method collect-and-maybe-replace (dn :: <domain-name>)
-          let frags = #();
-          block(done)
-            format-out("I'm collecting domainname %s\n", as(<string>, dn));
-            force-output(*standard-output*);
-            let off-till-dn = byte-offset(find-offset(dn, dn.parent));
-            format-out("collecting (%d): %s\n", off-till-dn, as(<string>, dn));
-            force-output(*standard-output*);
-            for (label in dn.fragment,
-                 i from 0,
-                 ff in dn.concrete-frame-fields[0].frame-field-list)
-              if (as(<string>, label) == "")
-                frags := pair(label, frags);
-              else
-                let strings = map(curry(as, <string>), copy-sequence(dn.fragment, start: i));
-                let string = reduce1(method(a, b) concatenate(a, ".",  b) end, strings);
-                format-out("starting with %s\n", string);
-                force-output(*standard-output*);
-                if (element(names, string, default: #f))
-                  format-out("using offset for %s: %d\n", string, names[string]);
-                  force-output(*standard-output*);
-                  let lo = make(<label-offset>, offset: names[string], parent: label.parent);
-                  format-out("created lo %=\n", lo);
-                  force-output(*standard-output*);
-                  frags := pair(lo, frags);
-                  let off = byte-offset(start-offset(ff)) + off-till-dn - comp;
-                  let bv = assemble-frame(lo).packet;
-                  format-out("replacing (at %d) %d with %d %d\n", off, dns-frame.packet[off], bv[0], bv[1]);
-                  let oldlen = byte-offset(ff.parent-frame-field.length - ff.start-offset);
-                  format-out("oldlen would have been %d, comp is %d\n", oldlen, comp);
-                  force-output(*standard-output*);
-                  dns-frame.packet[off] := bv[0];
-                  dns-frame.packet[off + 1] := bv[1];
-                  format-out("off + oldlen is %d, size is %d\n", (off + oldlen), dns-frame.packet.size);
-                  force-output(*standard-output*);
-                  let tl =
-                    if (dns-frame.packet.size > off + oldlen)
-                      copy-sequence(dns-frame.packet, start: off + oldlen)
-                    else
-                      as(<stretchy-byte-vector>, #())
-                    end;
-                  dns-frame.packet :=
-                    make(<stretchy-vector-subsequence>,
-                         data: as(<stretchy-byte-vector>,
-                                  concatenate(copy-sequence(dns-frame.packet, end: off + 2), tl)));
-                  format-out("pack %=\n", copy-sequence(dns-frame.packet, start: off - 3, end: off + 2));
-                  format-out("dne\n"); force-output(*standard-output*);
-                  //need to fixup succeeding frame fields...
-                  comp := comp + (oldlen - 2);
-                  done();
-                else
-                  let off = byte-offset(start-offset(ff)) + off-till-dn;
-                  format-out("inserting offset for %s at %d\n", string, off);
-                  force-output(*standard-output*);
-                  names[string] := off;
-                  frags := pair(label, frags);
-                end if;
-              end if;
-            end for;
-          end block;
-          dn.fragment := reverse!(frags);
-          //let res = make(<domain-name>, fragment: reverse!(frags));
-          //format-out("result is %s\n", as(<string>, dn));
-          //force-output(*standard-output*);
-          //res;
-          //dn;
-        end method;
-  local method maybe-replace (dns :: type-union(<dns-question>, <dns-resource-record>))
-          let dnss = domain-names(dns);
-          let save = 0;
-          let first = #t;
-          let curc = comp;
-          map(method (x)
-                let oldcomp = comp;
-                collect-and-maybe-replace(x.head(dns));
-                if (first)
-                  curc := comp;
-                else
-                  save := save + (comp - oldcomp)
-                end;
-                first := #f;
-                //format-out("replacing with %= (using x.tail %= and dns %=)\n", as(<string>, replacement), x.tail, dns);
-                //force-output(*standard-output*);
-                //let rpl = assemble-frame!(replacement).packet;
-                //let ff = get-frame-field(0, replacement);
-                //x.tail(replacement, dns);
-              end, domain-names(dns));
-          if (instance?(dns, type-union(<name-server>, <canonical-name>, <start-of-authority>, <domain-name-pointer>, <mail-exchange>)))
-            //need to adjust the rdlength!
-            let nl = dns.rdlength - save;
-            format-out("adjusting rdlength from %d to %d\n", dns.rdlength, nl);
-            force-output(*standard-output*);
-            dns.rdlength := nl;
-
-            let off-till = byte-offset(find-offset(dns, dns.parent));
-            let rdl-ff = get-frame-field(4, dns);
-            //freely assert that nl is below 255...
-            let st = byte-offset(rdl-ff.start-offset);
-            let myoff = off-till + st + 1 - curc;
-            format-out("adjusting size at %d, from %d to %d\n", myoff, dns-frame.packet[myoff], as(<byte>, nl));
-            force-output(*standard-output*);
-            dns-frame.packet[myoff] := as(<byte>, nl);
-          end
-        end method;
-  map(maybe-replace, dns-frame.questions);
-  format-out("now answers\n");
-  force-output(*standard-output*);
-  map(maybe-replace, dns-frame.answers);
-  format-out("now name-servers\n");
-  force-output(*standard-output*);
-  map(maybe-replace, dns-frame.name-servers);
-  format-out("now additional-records\n");
-  force-output(*standard-output*);
-  map(maybe-replace, dns-frame.additional-records);
-  format-out("now finished!\n");
-  force-output(*standard-output*);
-end method;
-
-/*
 define method assemble-frame-into
  (frame :: <domain-name>, packet :: <stretchy-byte-vector-subsequence>)
  => (res :: <integer>)
   //assumption: frame.parent.parent is the <dns-frame>!
-  let name-table = frame.parent.parent.symbol-table;
+  let name-table = frame.parent.parent.fragment-table;
   let offset = 0;
-  local method encode-fragments (frags :: <collection>) => (res :: <integer>)
-          let strings = map(curry(as, <string>), frags);
-          let name =  reduce1(method(a, b) concatenate(a, ".", b) end, strings);
-          let offset = element(name-table, name, default: #f);
-          if (offset)
-            assemble-frame-into(make(<label-offset>, offset: offset), packet);
-          else
-            name-table[name] := packet.start-index + offset;
-            offset := offset + assemble-frame-into(frags[0], packet);
-            encode-fragments(subsequence(frags, start: 1));
+  let off-in-dns = byte-offset(find-offset(frame, frame.parent));
+
+  let frags = #();
+  local method encode-fragments (frag :: <collection>)
+          if (frag.size > 0)
+            let strings = map(curry(as, <string>), frag);
+            let name = reduce1(method(a, b) concatenate(a, ".", b) end, strings);
+            let cached-offset = element(name-table, name, default: #f);
+            if (cached-offset)
+              let label = make(<label-offset>, offset: cached-offset);
+              frags := pair(label, frags);
+              offset := offset + assemble-frame-into(label, subsequence(packet, start: offset));
+            else
+              let off = byte-offset(offset) + off-in-dns;
+              if (name ~= "")
+                name-table[name] := off;
+              end;
+              offset := offset + assemble-frame-into(frag[0], subsequence(packet, start: offset));
+              frags := pair(frag[0], frags);
+              encode-fragments(copy-sequence(frag, start: 1));
+            end;
           end;
         end;
+
   encode-fragments(frame.fragment);
+  frame.fragment := reverse(frags);
   offset;
 end;
-*/
+
+define method fixup! (f :: <unparsed-dns-frame>, #next next-method)
+  let p = f.packet;
+  let off = 0;
+  local method g (i :: <integer>)
+          off := 0;
+          let ff = get-frame-field(i, f);
+          method (x)
+            off := off + fixup-dnsrr(x, subsequence(p, start: ff.start-offset), off)
+          end;
+        end;
+  let h = g(14);
+  do(h, f.answers);
+  h := g(15);
+  do(h, f.name-servers);
+  h := g(16);
+  do(h, f.additional-records);
+end;
 
 define protocol domain-name (container-frame)
   summary "%=", curry(as, <string>);
@@ -256,13 +165,12 @@ define function find-label (label-offset :: <label-offset>)
         end;
   let dns-frame = find-dns-frame(label-offset);
   if (dns-frame)
-    #f
-/*    let dns-frame-size = dns-frame.packet.size;
+    let dns-frame-size = dns-frame.packet.size;
     if (label-offset.offset < dns-frame-size)
       parse-frame(<domain-name>,
                   subsequence(dns-frame.packet, start: label-offset.offset * 8),
                   parent: label-offset.parent)
-    end; */
+    end;
   end;
 end;
 
@@ -311,10 +219,6 @@ define protocol dns-question (container-frame)
   field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
-define method domain-names (question :: <dns-question>) => (l :: <list>);
-  list(pair(domainname, domainname-setter))
-end;
-
 define abstract protocol dns-resource-record (variably-typed-container-frame)
   length frame.rdlength * 8 + 80 + frame.domainname.frame-size;
   field domainname :: <domain-name>;
@@ -325,8 +229,23 @@ define abstract protocol dns-resource-record (variably-typed-container-frame)
     fixup: frame.frame-size.byte-offset - 10 - frame.domainname.frame-size.byte-offset;
 end;
 
-define method domain-names (resource-record :: <dns-resource-record>) => (l :: <list>);
-  list(pair(domainname, domainname-setter))
+define function fixup-dnsrr
+    (dnsrr :: <dns-resource-record>,
+     packet :: <stretchy-byte-vector-subsequence>,
+     offset :: <integer>) =>
+    (len :: <integer>)
+  let ff = dnsrr.concrete-frame-fields;
+  let off = byte-offset(ff[ff.size - 1].end-offset);
+  let length = off - 10 - byte-offset(dnsrr.domainname.frame-size);
+  if (length ~= dnsrr.rdlength)
+    dnsrr.rdlength := length;
+    let idx = byte-offset(get-frame-field(4, dnsrr).start-offset);
+    if (length > 255)
+      packet[idx + offset] := as(<byte>, logand(#xff, ash(length, -8)));
+    end;
+    packet[idx + 1 + offset] := as(<byte>, logand(#xff, length));
+  end;
+  length + 10 + byte-offset(dnsrr.domainname.frame-size);
 end;
 
 define protocol a-host-address (dns-resource-record)
@@ -341,18 +260,10 @@ define protocol name-server (dns-resource-record)
   field ns-name :: <domain-name>;
 end;
 
-define method domain-names (name-server :: <name-server>) => (l :: <list>);
-  list(pair(domainname, domainname-setter), pair(ns-name, ns-name-setter))
-end;
-
 define protocol canonical-name (dns-resource-record)
   summary "%= CNAME %=", domainname, cname; 
   over <dns-resource-record> 5;
   field cname :: <domain-name>;
-end;
-
-define method domain-names (canonical-name :: <canonical-name>) => (l :: <list>);
-  list(pair(domainname, domainname-setter), pair(cname, cname-setter))
 end;
 
 define protocol start-of-authority (dns-resource-record)
@@ -367,18 +278,10 @@ define protocol start-of-authority (dns-resource-record)
   field minimum :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define method domain-names (soa :: <start-of-authority>) => (l :: <list>);
-  list(pair(domainname, domainname-setter), pair(nameserver, nameserver-setter), pair(hostmaster, hostmaster-setter))
-end;
-
 define protocol domain-name-pointer (dns-resource-record)
   summary "%= PTR %=", domainname, ptr-name;
   over <dns-resource-record> 12;
   field ptr-name :: <domain-name>;
-end;
-
-define method domain-names (ptr :: <domain-name-pointer>) => (l :: <list>);
-  list(pair(domainname, domainname-setter), pair(ptr-name, ptr-name-setter))
 end;
 
 define protocol character-string (container-frame)
@@ -404,10 +307,6 @@ define protocol mail-exchange (dns-resource-record)
   over <dns-resource-record> 15;
   field preference :: <2byte-big-endian-unsigned-integer>;
   field exchange :: <domain-name>;
-end;
-
-define method domain-names (mx :: <mail-exchange>) => (l :: <list>);
-  list(pair(domainname, domainname-setter), pair(exchange, exchange-setter))
 end;
 
 define protocol text-strings (dns-resource-record)
