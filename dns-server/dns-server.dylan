@@ -42,13 +42,22 @@ define method push-data-aux
       d4.parent := ns;
       format-out("NS is %=\n", ns);
       force-output(*standard-output*);
+      let d5 = as(<domain-name>, nam);
+      let d6 = as(<domain-name>, concatenate("ns2.", nam));
+      let ns2 = name-server(domainname: d5,
+                            ttl: big-endian-unsigned-integer-4byte(#(#x0, #x0, #x0, #x1)),
+                            ns-name: d6);
+      d5.parent := ns2;
+      d6.parent := ns2;
+      format-out("NS2 is %=\n", ns2);
+      force-output(*standard-output*);
       let res = dns-frame(identifier: data.identifier,
                           query-or-response: #"response",
                           authoritative-answer: #t,
                           recursion-available: #t,
                           questions: list(quest),
                           answers: list(answer),
-                          name-servers: list(ns));
+                          name-servers: list(ns, ns2));
       quest.parent := res;
       answer.parent := res;
       ns.parent := res;
