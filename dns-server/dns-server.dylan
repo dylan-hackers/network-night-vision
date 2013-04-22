@@ -1,80 +1,86 @@
 module: dns-server
-synopsis: 
-author: 
-copyright: 
 
 define class <dns-server> (<filter>)
+  constant slot zone :: <zone>, required-init-keyword: zone:;
 end;
 
 define method push-data-aux
     (input :: <push-input>, node :: <dns-server>, data :: <dns-frame>) => ()
-  format-out("BALH\n");
-  format-out("received %=\n", data);
+  //dbg("received %=\n", data);
   if (data.query-or-response == #"query" &
         data.question-count == 1)
-    format-out("FIRST CHECK\n");
     let question = data.questions.first;
-    format-out("question is %s\n", as(<string>, question.domainname));
-    if ( //as(<string>, question.domainname) = "foo.de." &
-          question.question-type == #"A")
-      format-out("BUILDING ANSWER\n");
-      force-output(*standard-output*);
-      let na = as(<string>, question.domainname);
-      let nam = copy-sequence(na, end: na.size - 1);
-      let d1 = as(<domain-name>, nam);
+    let q = as(<string>, question.domainname);
+    let que = copy-sequence(q, end: q.size - 1); //cut off '.'
+    let type = question.question-type;
+
+    //TODO: check authority!
+
+    dbg("question: ?%s%s\n", dns-query-entry(question.question-type), que);
+    let poss-entries = choose(method (x)
+                                x.fully-qualified-domain-name = que
+                              end, node.zone.entries);
+    let real-entries =
+      if (type == #"ANY")
+        poss-entries;
+      else
+        choose(method (x)
+                 x.entry-type == type
+               end, poss-entries);
+      end;
+
+    let cnames =
+      if ((type == #"CNAME") | (type == #"ANY"))
+        #(); //don't answer several times!
+      else
+        choose(method (x)
+                 x.entry-type == #"CNAME"
+               end, poss-entries);
+      end;
+    //dbg("cname-entries %=\n", cnames);
+    //dbg("real-entries %=\n", real-entries);
+    let answers = concatenate(cnames, real-entries);
+
+    for (x in answers, i from 0)
+      dbg("answer %d: %=\n", i, x);
+    end;
+
+    if (answers.size > 0)
+      let d1 = as(<domain-name>, que);
       let quest = dns-question(domainname: d1,
                                question-type: question.question-type,
                                question-class: question.question-class);
       d1.parent := quest;
-      let d2 = as(<domain-name>, nam);
-      let answer = a-host-address(domainname: d2,
-                                  ttl: big-endian-unsigned-integer-4byte(#(#x0, #x0, #x0, #x1)),
-                                  ipv4-address: ipv4-address("127.0.0.1"));
-      d2.parent := answer;
-      format-out("answer is %=\n", answer);
-      force-output(*standard-output*);
-      let d3 = as(<domain-name>, nam);
-      let d4 = as(<domain-name>, concatenate("ns.", nam));
-      let ns = name-server(domainname: d3,
-                           ttl: big-endian-unsigned-integer-4byte(#(#x0, #x0, #x0, #x1)),
-                           ns-name: d4);
-      d3.parent := ns;
-      d4.parent := ns;
-      format-out("NS is %=\n", ns);
-      force-output(*standard-output*);
-      let d5 = as(<domain-name>, nam);
-      let d6 = as(<domain-name>, concatenate("ns2.", nam));
-      let ns2 = name-server(domainname: d5,
-                            ttl: big-endian-unsigned-integer-4byte(#(#x0, #x0, #x0, #x1)),
-                            ns-name: d6);
-      d5.parent := ns2;
-      d6.parent := ns2;
-      format-out("NS2 is %=\n", ns2);
-      force-output(*standard-output*);
+
+      let frs = map(produce-frame, answers);
+
       let res = dns-frame(identifier: data.identifier,
                           query-or-response: #"response",
                           authoritative-answer: #t,
                           recursion-available: #t,
                           questions: list(quest),
-                          answers: list(answer),
-                          name-servers: list(ns, ns2));
+                          answers: frs);
       quest.parent := res;
-      answer.parent := res;
-      ns.parent := res;
-      format-out("sending %=\n", res);
-      force-output(*standard-output*);
+      do(method(x) x.parent := res end, frs);
       push-data(node.the-output, res);
-    else
-      format-out("not asked for foo.de a\n");
     end;
   else
     format-out("not a question or multiple.\n")
   end;
 end;
 
+define function dbg (#rest args)
+  apply(format-out, args);
+  force-output(*standard-output*);
+end;
+
 define function main()
   let s = make(<flow-socket>, port: 53, frame-type: <dns-frame>);
-  let dns = make(<dns-server>);
+  let data = read-zone("myzone.txt");
+  for (x in data.entries, i from 0)
+    dbg("entry[%d]: %=\n", i, x)
+  end;
+  let dns = make(<dns-server>, zone: data);
   connect(s, dns);
   connect(dns, s);
   toplevel(s);

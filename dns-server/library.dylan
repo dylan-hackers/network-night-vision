@@ -8,11 +8,16 @@ define library dns-server
   use flow;
   use network-flow;
   use socket-flow;
+  use system;
 end library;
 
 define module dns-server
-  use common-dylan;
+  use common-dylan, exclude: { format-to-string };
   use format-out;
+  use print;
+  use streams;
+  use format;
+  use file-system;
   use packetizer;
   use dns;
   use ipv4;
