@@ -80,9 +80,9 @@ define method push-data-aux
     let data = as(<byte-vector>, assemble-frame(payload).packet);
 //    with-stack-structure (sockaddr-size :: <socklen-t*>)
 //      pointer-value(sockaddr-size) := size-of(<sockaddr-in>);
-      format-out("sending\n");
+      format-out("sending DNS response:\n");
       for (x in data)
-        format-out("%x ", x);
+        format-out("0x%s ", integer-to-string(x, base: 16, size: 2));
       end;
   format-out("\n");
       force-output(*standard-output*);
@@ -108,15 +108,15 @@ end function;
 define method toplevel (s :: <flow-socket>)
   while (s.running?)
     let packet = flow-socket-receive(s);
-    format-out("received a packet\n");
+    format-out("received DNS query:\n");
     for (x in packet)
-      format-out("%x ", x);
+      format-out("0x%s ", integer-to-string(x, base: 16, size: 2));
     end;
     format-out("\n");
     force-output(*standard-output*);
     let parsed = parse-frame(s.frame-type, packet);
-    format-out("received a packet %=\n", summary(parsed));
-    force-output(*standard-output*);
+    //format-out("received a packet %=\n", summary(parsed));
+    //force-output(*standard-output*);
     push-data(s.the-output, parsed);
   end;
   flow-socket-close(s);
