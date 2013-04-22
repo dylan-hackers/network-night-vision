@@ -215,7 +215,8 @@ define protocol dns-question (container-frame)
                 12 <=> #"PTR",
                 13 <=> #"HINFO",
                 15 <=> #"MX",
-                16 <=> #"TXT" };
+                16 <=> #"TXT",
+                255 <=> #"ANY" };
   field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
@@ -261,7 +262,7 @@ define protocol name-server (dns-resource-record)
 end;
 
 define protocol canonical-name (dns-resource-record)
-  summary "%= CNAME %=", domainname, cname; 
+  summary "%= CNAME %=", domainname, cname;
   over <dns-resource-record> 5;
   field cname :: <domain-name>;
 end;
@@ -293,6 +294,12 @@ end;
 define method as (class == <string>, frame :: <character-string>)
  => (res :: <string>)
   as(<string>, frame.string-data);
+end;
+
+define method as (class == <character-string>, data :: <string>)
+ => (res :: <character-string>)
+  let str = as(<externally-delimited-string>, data);
+  character-string(data-length: data.size, string-data: str)
 end;
 
 define protocol host-information (dns-resource-record)

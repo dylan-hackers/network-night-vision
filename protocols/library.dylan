@@ -472,9 +472,11 @@ define module dns
     ns-name, ns-name-setter;
 
   export <canonical-name>,
+    canonical-name,
     cname, cname-setter;
 
   export <start-of-authority>,
+    start-of-authority,
     nameserver, nameserver-setter,
     hostmaster, hostmaster-setter,
     serial, serial-setter,
@@ -484,6 +486,7 @@ define module dns
     minimum, minimum-setter;
 
   export <domain-name-pointer>,
+    domain-name-pointer,
     ptr-name, ptr-name-setter;
 
   export <character-string>,
@@ -495,10 +498,12 @@ define module dns
     operating-system, operating-system-setter;
 
   export <mail-exchange>,
+    mail-exchange,
     preference, preference-setter,
     exchange, exchange-setter;
 
   export <text-strings>,
+    text-strings,
     text-data, text-data-setter;
 end;
 
