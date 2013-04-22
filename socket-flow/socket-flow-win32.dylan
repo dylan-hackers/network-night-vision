@@ -30,7 +30,7 @@ define method initialize
       sockaddr.sin-port-value   := htons(port);
       sockaddr.sin-addr-value   := as(<machine-word>, $INADDR-ANY);
       if (bind(packet-socket, sockaddr, size-of(<sockaddr-in>)) == $SOCKET-ERROR)
-        format-out("Couldn't bind\n");
+        error("Couldn't bind\n");
       end if;
     end;
   end if;
@@ -77,14 +77,6 @@ define method push-data-aux
     sockaddr.sin-port-value   := node.reply-port;
     sockaddr.sin-addr-value   := node.reply-addr;
     let data = as(<byte-vector>, assemble-frame(payload).packet);
-//    with-stack-structure (sockaddr-size :: <socklen-t*>)
-//      pointer-value(sockaddr-size) := size-of(<sockaddr-in>);
-      format-out("sending\n");
-      for (x in data)
-        format-out("%x ", x);
-      end;
-  format-out("\n");
-      force-output(*standard-output*);
       win32-send-buffer-to(node.unix-file-descriptor,
                            buffer-offset(data, 0),
                            data.size,
@@ -92,7 +84,6 @@ define method push-data-aux
                            sockaddr,
                            size-of(<sockaddr-in>));
     end;
-//  end;
 end;
 
 define function buffer-offset
@@ -107,15 +98,7 @@ end function;
 define method toplevel (s :: <flow-socket>)
   while (s.running?)
     let packet = flow-socket-receive(s);
-    format-out("received a packet\n");
-    for (x in packet)
-      format-out("%x ", x);
-    end;
-    format-out("\n");
-    force-output(*standard-output*);
     let parsed = parse-frame(s.frame-type, packet);
-    format-out("received a packet %=\n", summary(parsed));
-    force-output(*standard-output*);
     push-data(s.the-output, parsed);
   end;
   flow-socket-close(s);
