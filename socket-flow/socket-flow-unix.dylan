@@ -3,18 +3,6 @@ synopsis:
 author: 
 copyright: 
 
-define class <flow-socket> (<filter>)
-  slot running? :: <boolean> = #t;
-  slot unix-file-descriptor :: <integer>;
-  constant slot port :: <integer>,
-    required-init-keyword: port:;
-  constant slot frame-type :: subclass(<container-frame>),
-    required-init-keyword: frame-type:;
-  //maybe: address, protocol?
-  slot reply-addr;
-  slot reply-port;
-end;
-
 define method initialize
     (flow-socket :: <flow-socket>, #next next-method, #key port, #all-keys)
   => ()
@@ -38,8 +26,6 @@ end method initialize;
 define method flow-socket-close (flow-socket :: <flow-socket>)
   close(flow-socket.unix-file-descriptor);
 end;
-
-define constant <buffer> = <byte-vector>;
 
 define method flow-socket-receive (flow-socket :: <flow-socket>)
   => (buffer)
@@ -71,37 +57,5 @@ define method flow-socket-receive (flow-socket :: <flow-socket>)
   unix-receive();
 end method flow-socket-receive;
 
-define method push-data-aux
-    (input :: <push-input>, node :: <flow-socket>, payload :: <container-frame>)
-  with-stack-structure (sockaddr :: <sockaddr-in*>)
-    sockaddr.sin-family-value := $AF-INET;
-    sockaddr.sin-port-value   := node.reply-port;
-    sockaddr.sin-addr-value   := node.reply-addr;
-    let data = as(<byte-vector>, assemble-frame(payload).packet);
-    unix-send-buffer-to(node.unix-file-descriptor,
-                        buffer-offset(data, 0),
-                        data.size,
-                        0,
-                        sockaddr,
-                        size-of(<sockaddr-in>));
-  end;
-end;
-
-define function buffer-offset
-    (the-buffer :: <buffer>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
-
-define method toplevel (s :: <flow-socket>)
-  while (s.running?)
-    let packet = flow-socket-receive(s);
-    let parsed = parse-frame(s.frame-type, packet);
-    push-data(s.the-output, parsed);
-  end;
-  flow-socket-close(s);
-end;
-
+define constant <sin*> = <sockaddr-in*>;
+define constant sendto = unix-send-buffer-to;
