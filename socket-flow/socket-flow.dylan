@@ -24,12 +24,12 @@ define method push-data-aux
     sockaddr.sin-port-value   := node.reply-port;
     sockaddr.sin-addr-value   := node.reply-addr;
     let data = as(<byte-vector>, assemble-frame(payload).packet);
-    sendto(node.unix-file-descriptor,
-           buffer-offset(data, 0),
-           data.size,
-           0,
-           sockaddr,
-           size-of(<sockaddr-in>));
+    msendto(node.unix-file-descriptor,
+            buffer-offset(data, 0),
+            data.size,
+            0,
+            sockaddr,
+            size-of(<sockaddr-in>));
   end;
 end;
 
@@ -45,15 +45,7 @@ end function;
 define method toplevel (s :: <flow-socket>)
   while (s.running?)
     let packet = flow-socket-receive(s);
-    format-out("received a packet\n");
-    for (x in packet)
-      format-out("%x ", x);
-    end;
-    format-out("\n");
-    force-output(*standard-output*);
     let parsed = parse-frame(s.frame-type, packet);
-    format-out("received a packet %=\n", summary(parsed));
-    force-output(*standard-output*);
     push-data(s.the-output, parsed);
   end;
   flow-socket-close(s);

@@ -57,4 +57,4 @@ define method flow-socket-receive (flow-socket :: <flow-socket>)
 end method flow-socket-receive;
 
 define constant <sin*> = <lpsockaddr-in>;
-define constant sendto = win32-send-buffer-to;
+define constant msendto = win32-send-buffer-to;

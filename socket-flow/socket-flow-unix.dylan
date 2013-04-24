@@ -58,4 +58,4 @@ define method flow-socket-receive (flow-socket :: <flow-socket>)
 end method flow-socket-receive;
 
 define constant <sin*> = <sockaddr-in*>;
-define constant sendto = unix-send-buffer-to;
+define constant msendto = unix-send-buffer-to;
