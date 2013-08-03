@@ -17,53 +17,30 @@ define method push-data-aux
     //TODO: check authority!
 
     dbg("question: ?%s%s\n", dns-query-entry(question.question-type), que);
-    let poss-entries = choose(method (x)
-                                x.fully-qualified-domain-name = que
-                              end, node.zone.entries);
-    let real-entries =
-      if (type == #"ANY")
-        poss-entries;
-      else
-        choose(method (x)
-                 x.entry-type == type
-               end, poss-entries);
-      end;
+    let answers = choose(rcurry(entry-matches?, type, que), node.zone.entries);
 
-    let cnames =
-      if ((type == #"CNAME") | (type == #"ANY"))
-        #(); //don't answer several times!
-      else
-        choose(method (x)
-                 x.entry-type == #"CNAME"
-               end, poss-entries);
-      end;
-    //dbg("cname-entries %=\n", cnames);
-    //dbg("real-entries %=\n", real-entries);
-    let answers = concatenate(cnames, real-entries);
-
+    dbg("answers: %d\n", answers.size);
     for (x in answers, i from 0)
       dbg("answer %d: %=\n", i, x);
     end;
 
-    if (answers.size > 0)
-      let d1 = as(<domain-name>, que);
-      let quest = dns-question(domainname: d1,
-                               question-type: question.question-type,
-                               question-class: question.question-class);
-      d1.parent := quest;
+    let d1 = as(<domain-name>, que);
+    let quest = dns-question(domainname: d1,
+                             question-type: question.question-type,
+                             question-class: question.question-class);
+    d1.parent := quest;
 
-      let frs = map(produce-frame, answers);
+    let frs = map(rcurry(produce-frame, que), answers);
 
-      let res = dns-frame(identifier: data.identifier,
-                          query-or-response: #"response",
-                          authoritative-answer: #t,
-                          recursion-available: #t,
-                          questions: list(quest),
-                          answers: frs);
-      quest.parent := res;
-      do(method(x) x.parent := res end, frs);
-      push-data(node.the-output, res);
-    end;
+    let res = dns-frame(identifier: data.identifier,
+                        query-or-response: #"response",
+                        authoritative-answer: #t,
+                        recursion-available: #t,
+                        questions: list(quest),
+                        answers: frs);
+    quest.parent := res;
+    do(method(x) x.parent := res end, frs);
+    push-data(node.the-output, res);
   else
     format-out("not a question or multiple.\n")
   end;
@@ -71,19 +48,6 @@ end;
 
 define function dbg (#rest args)
   apply(format-out, args);
-  force-output(*standard-output*);
+  force-out();
 end;
 
-define function main()
-  let s = make(<flow-socket>, port: 53, frame-type: <dns-frame>);
-  let data = read-zone("myzone.txt");
-  for (x in data.entries, i from 0)
-    dbg("entry[%d]: %=\n", i, x)
-  end;
-  let dns = make(<dns-server>, zone: data);
-  connect(s, dns);
-  connect(dns, s);
-  toplevel(s);
-end function main;
-
-main();

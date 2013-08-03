@@ -24,6 +24,26 @@ define abstract class <entry> (<object>)
   constant slot dns-time-to-live :: <integer> = 86400, init-keyword: ttl:;
 end;
 
+define generic entry-matches? (entry :: <entry>, type :: <symbol>, question :: <string>) => (matches? :: <boolean>);
+
+define method entry-matches? (entry :: <entry>, type :: <symbol>, question :: <string>) => (matches? :: <boolean>)
+  (entry.entry-type == #"CNAME" | entry.entry-type = type) &
+    domain-name-matches?(entry.fully-qualified-domain-name, question)
+end;
+
+define function domain-name-matches? (domain-name :: <string>, question :: <string>) => (res :: <boolean>)
+  //dbg("comparing %s with %s\n", domain-name, question);
+  if (domain-name[0] == '*')
+    copy-sequence(domain-name, start: 2) = join(copy-sequence(split(question, "."), start: 1), ".");
+  else
+    domain-name = question
+  end
+end;
+
+define method entry-matches? (entry :: <entry>, type == #"ANY", question :: <string>) => (matches? :: <boolean>)
+  #t
+end;
+
 define constant $tbv = compose(big-endian-unsigned-integer-4byte, float-to-byte-vector-be, curry(as, <float>));
 
 define class <a-entry> (<entry>)
@@ -35,8 +55,8 @@ define method print-object (e :: <a-entry>, stream :: <stream>) => ()
   format(stream, "+%s:%s:%d", e.fully-qualified-domain-name, e.ip-address, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <a-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
+define method produce-frame (e :: <a-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
   let res = a-host-address(domainname: dn,
                            ttl: $tbv(e.dns-time-to-live),
                            ipv4-address: ipv4-address(e.ip-address));
@@ -53,9 +73,18 @@ define method print-object (e :: <ns-entry>, stream :: <stream>) => ()
   format(stream, "&%s::%s:%d", e.fully-qualified-domain-name, e.nameserver-name, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <ns-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
-  let dn2 = as(<domain-name>, e.nameserver-name);
+define function string-to-domain-name (s :: <string>) => (domain :: <domain-name>)
+  if (copy-sequence(s, end: 2) = "*.")
+    let r = random(100000);
+    as(<domain-name>, concatenate(integer-to-string(r, base: 16), copy-sequence(s, start: 1)))
+  else
+    as(<domain-name>, s);
+  end;
+end;
+
+define method produce-frame (e :: <ns-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
+  let dn2 = string-to-domain-name(e.nameserver-name);
   let res = name-server(domainname: dn, ttl: $tbv(e.dns-time-to-live), ns-name: dn2);
   dn.parent := res;
   dn2.parent := res;
@@ -71,9 +100,9 @@ define method print-object (e :: <cname-entry>, stream :: <stream>) => ()
   format(stream, "C%s:%s:%d", e.fully-qualified-domain-name, e.real-name, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <cname-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
-  let dn2 = as(<domain-name>, e.real-name);
+define method produce-frame (e :: <cname-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
+  let dn2 = string-to-domain-name(e.real-name);
   let res = canonical-name(domainname: dn, ttl: $tbv(e.dns-time-to-live), cname: dn2);
   dn.parent := res;
   dn2.parent := res;
@@ -95,10 +124,10 @@ define method print-object (e :: <soa-entry>, stream :: <stream>) => ()
   format(stream, "Z%s:%s:%s:%d:%d:%d:%d:%d:%d", e.fully-qualified-domain-name, e.primary-name-server, e.soa-hostmaster, e.soa-serial, e.soa-refresh, e.soa-retry, e.soa-expiry, e.soa-minimum, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <soa-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
-  let dn2 = as(<domain-name>, e.primary-name-server);
-  let dn3 = as(<domain-name>, e.soa-hostmaster);
+define method produce-frame (e :: <soa-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
+  let dn2 = string-to-domain-name(e.primary-name-server);
+  let dn3 = string-to-domain-name(e.soa-hostmaster);
   let res = start-of-authority(domainname: dn, nameserver: dn2, hostmaster: dn3,
                                ttl: $tbv(e.dns-time-to-live),
                                serial: $tbv(e.soa-serial),
@@ -121,9 +150,9 @@ define method print-object (e :: <ptr-entry>, stream :: <stream>) => ()
   format(stream, "^%s:%s:%d", e.fully-qualified-domain-name, e.ptr-entry-name, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <ptr-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
-  let dn2 = as(<domain-name>, e.ptr-entry-name);
+define method produce-frame (e :: <ptr-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
+  let dn2 = string-to-domain-name(e.ptr-entry-name);
   let res = domain-name-pointer(domainname: dn, ttl: $tbv(e.dns-time-to-live), ptr-name: dn2);
   dn.parent := res;
   dn2.parent := res;
@@ -140,9 +169,9 @@ define method print-object (e :: <mx-entry>, stream :: <stream>) => ()
   format(stream, "@%s::%s:%d:%d", e.fully-qualified-domain-name, e.mx-name, e.mx-priority, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <mx-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
-  let dn2 = as(<domain-name>, e.mx-name);
+define method produce-frame (e :: <mx-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
+  let dn2 = string-to-domain-name(e.mx-name);
   let res = mail-exchange(domainname: dn, ttl: $tbv(e.dns-time-to-live), exchange: dn2, preference: e.mx-priority);
   dn.parent := res;
   dn2.parent := res;
@@ -158,15 +187,15 @@ define method print-object (e :: <txt-entry>, stream :: <stream>) => ()
   format(stream, "'%s:%s:%d", e.fully-qualified-domain-name, e.text, e.dns-time-to-live)
 end;
 
-define method produce-frame (e :: <txt-entry>) => (f :: <dns-resource-record>)
-  let dn = as(<domain-name>, e.fully-qualified-domain-name);
+define method produce-frame (e :: <txt-entry>, question :: <string>) => (f :: <dns-resource-record>)
+  let dn = as(<domain-name>, question);
   let res = text-strings(domainname: dn, ttl: $tbv(e.dns-time-to-live),
                          text-data: as(<character-string>, e.text));
   dn.parent := res;
   res;
 end;
 
-define variable *modification-date* :: <integer> = 1366287700;
+define variable *modification-date* :: <integer> = 13662877;
 
 define method read-zone (filename :: <string>) => (res :: <zone>)
   let res = make(<zone>);

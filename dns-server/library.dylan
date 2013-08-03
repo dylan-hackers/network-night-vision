@@ -9,6 +9,7 @@ define library dns-server
   use network-flow;
   use socket-flow;
   use system;
+  use command-line-parser;
 end library;
 
 define module dns-server
@@ -26,4 +27,6 @@ define module dns-server
   use socket-flow;
   use streams, import: { force-output };
   use standard-io, import: { *standard-output* };
+  use command-line-parser;
+  use simple-random;
 end module;
