@@ -24,7 +24,7 @@ Building
 
 * get an opendylan compiler from http://opendylan.org/download/
 * opendylan source code https://github.com/dylan-lang/opendylan (including command-line-parser and regular-expressions)
-* monday https://github.com/dylan-lang/monday
+* be sure that you recursively cloned this repository so that you have ext/monday.
 * pcap implementation (on FreeBSD, MacOSX, Win32 - be sure to download the developer version from https://www.winpcap.org/devel.htm ), raw sockets on Linux
 
 Either in the IDE open the project gui-sniffer, or use the command line::
