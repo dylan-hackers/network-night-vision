@@ -6,8 +6,6 @@ files: library
   fields
   util
   protocol-definer-macro
-  filter
-  filter-parser
   frame-utils
 target-type: dll
 compilation-mode: loose

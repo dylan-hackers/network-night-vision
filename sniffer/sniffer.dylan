@@ -3,29 +3,41 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define argument-parser <sniffer-argument-parser> ()
-  synopsis print-synopsis,
-    usage: "sniffer [options]",
+define command-line <sniffer-argument-parser> ()
+  synopsis "sniffer [options]",
     description: "Capture and display packets from a network interface.";
-  option verbose?, "Verbose output, print whole packet",
-    short: "v", long: "verbose";
-  option interface = "eth0", "Interface to listen on (defaults to eth0)",
-    kind: <parameter-option-parser>, long: "interface", short: "i";
-  option read-pcap, "Dump packets from given pcap file",
-    kind: <parameter-option-parser>, long: "read-pcap", short: "r";
-  option show-ethernet, "Show Ethernet header information",
-    long: "show-ethernet", short: "e";
-  option write-pcap, "Also write packets to given pcap file",
-    kind: <parameter-option-parser>, long: "write-pcap", short: "w";
-  option filter, "Filter, ~, |, &, and bracketed filters",
-    kind: <parameter-option-parser>, long: "filter", short: "f";
+  option verbose?,
+    help: "Verbose output, print whole packet",
+    names: #("verbose", "v");
+  option interface = "eth0",
+    help: "Interface to listen on (defaults to eth0)",
+    kind: <parameter-option>,
+    names: #("interface", "i");
+  option read-pcap,
+    help: "Dump packets from given pcap file",
+    kind: <parameter-option>,
+    names: #("read-pcap", "r");
+  option show-ethernet,
+    help: "Show Ethernet header information",
+    names: #("show-ethernet", "e");
+  option write-pcap,
+    help: "Also write packets to given pcap file",
+    kind: <parameter-option>,
+    names: #("write-pcap", "w");
+  option filter,
+    help: "Filter, ~, |, &, and bracketed filters",
+    kind: <parameter-option>,
+    names: #("filter", "f");
 end;
 
 define function main()
   let parser = make(<sniffer-argument-parser>);
-  unless(parse-arguments(parser, application-arguments()))
-    print-synopsis(parser, *standard-output*);
+  block ()
+    parse-command-line(parser, application-arguments());
+  exception (ex :: <help-requested>)
     exit-application(0);
+  exception (ex :: <usage-error>)
+    exit-application(2);
   end;
   let input-stream = if (parser.read-pcap)
                        make(<file-stream>,

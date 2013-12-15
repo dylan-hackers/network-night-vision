@@ -10,12 +10,7 @@ define library packetizer
   use collections;
   use system;
 
-  use source-location;
-  use grammar;
-  use simple-parser;
-  use regular;
-
-  export packetizer, packet-filter;
+  export packetizer;
 end library packetizer;
 
 define module packetizer
@@ -165,26 +160,3 @@ define module packetizer
 
   export protocol-module-definer;
 end module packetizer;
-
-define module packet-filter
-  use common-dylan, exclude: { format-to-string };
-  use format;
-  use format-out;
-  use print;
-  use simple-parser;
-  use source-location;
-  use source-location-rangemap;
-  use grammar;
-  use simple-lexical-scanner;
-  use packetizer;
-
-  export 
-    <filter-expression>,
-    <field-equals>,
-    <and-expression>,
-    <or-expression>,
-    <not-expression>,
-    matches?,
-    parse-filter,
-    build-frame-filter;
-end;

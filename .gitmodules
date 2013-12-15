@@ -1,0 +1,3 @@
+[submodule "ext/monday"]
+	path = ext/monday
+	url = git://github.com/dylan-lang/monday.git
