@@ -27,8 +27,7 @@ Building
 * monday https://github.com/dylan-lang/monday
 * pcap implementation (on FreeBSD, MacOSX, Win32 - be sure to download the developer version from https://www.winpcap.org/devel.htm ), raw sockets on Linux
 
-Eiher in the IDE open the project gui-sniffer, or use the command line:
-::
+Either in the IDE open the project gui-sniffer, or use the command line::
 
   dylan-compiler -build sniffer
 
