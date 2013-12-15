@@ -8,6 +8,7 @@ define library network-flow
   use common-dylan;
   use flow;
   use packetizer;
+  use packet-filter;
   use io;
   use system;
   use protocols, import: { pcap };

@@ -9,6 +9,7 @@ define library layer
   use network-flow;
   use flow;
   use packetizer;
+  use packet-filter;
   use timer;
   use network-interfaces;
   use vector-table;

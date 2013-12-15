@@ -15,6 +15,7 @@ define library gui-sniffer
   use commands;
   use environment-commands;
   use packetizer;
+  use packet-filter;
   use flow;
   use network-flow;
   use protocols;
