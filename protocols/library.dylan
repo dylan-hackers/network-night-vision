@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 define library protocols
   use common-dylan;
   use system;
-  use packetizer;
+  use binary-data;
   use io;
   use dylan;
   export logical-link,
@@ -32,7 +32,7 @@ end;
 
 define module logical-link
   use dylan;
-  use packetizer;
+  use binary-data;
 
   export <link-control>,
     dsap, dsap-setter,
@@ -44,7 +44,7 @@ end;
 
 define module hdlc
   use dylan;
-  use packetizer;
+  use binary-data;
   use format;
   use format-out;
 
@@ -53,7 +53,7 @@ end;
 
 define module ethernet
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use hdlc, import: { <cisco-hdlc-frame> };
 
   use common-extensions;
@@ -70,7 +70,7 @@ end;
 
 define module ppp
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use ethernet, import: { <ipv4-address> };
 
   export <ppp>;
@@ -99,7 +99,7 @@ end;
 
 define module pppoe
   use common-dylan;
-  use packetizer;
+  use binary-data;
 
   use ethernet, import: { <ethernet-frame> };
   use ppp, import: { <ppp> };
@@ -120,7 +120,7 @@ end;
 
 define module ieee80211
   use dylan;
-  use packetizer;
+  use binary-data;
 
   use ethernet, import: { <mac-address> };
   use logical-link, import: { <link-control> };
@@ -190,7 +190,7 @@ end;
 
 define module prism2
   use dylan;
-  use packetizer;
+  use binary-data;
   use ieee80211;
 
   export <prism2-header-item>,
@@ -225,7 +225,7 @@ end;
 
 define module pcap
   use dylan;
-  use packetizer;
+  use binary-data;
   use date;
 
   use ethernet, import: { <ethernet-frame> };
@@ -260,7 +260,7 @@ end;
 
 define module ipv4
   use common-dylan, exclude: { format-to-string };
-  use packetizer;
+  use binary-data;
   use streams-protocol;
   use format;
 
@@ -327,7 +327,7 @@ end;
 
 define module bittorrent
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use ipv4;
 
   export <bittorrent-announce>;
@@ -335,7 +335,7 @@ end;
 
 define module ipv6
   use common-dylan, exclude: { format-to-string };
-  use packetizer;
+  use binary-data;
   use streams-protocol;
   use format;
 
@@ -347,7 +347,7 @@ end;
 
 define module tcp
   use common-dylan, exclude: { format-to-string };
-  use packetizer;
+  use binary-data;
   use streams-protocol;
   use format;
   use ipv4, import: { <ipv4-frame>, <ipv4-address>, calculate-checksum };
@@ -380,7 +380,7 @@ end;
 
 define module icmp
   use common-dylan, exclude: { format-to-string };
-  use packetizer;
+  use binary-data;
   use streams-protocol;
   use format;
 
@@ -396,7 +396,7 @@ define module icmp
 end;
 define module dhcp
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use ipv4, import: { <ipv4-address>, <udp-frame>, ipv4-address, operation };
   export <dhcp-message>,
     <dhcp-message-type-option>,
@@ -420,7 +420,7 @@ define module dns
   use standard-io;
   use streams;
   use common-dylan, exclude: { format-to-string };
-  use packetizer;
+  use binary-data;
   use byte-vector, import: { copy-bytes };
   use ipv4, import: { <ipv4-address>, <udp-frame> };
 
@@ -509,7 +509,7 @@ end;
 
 define module rip
   use dylan;
-  use packetizer;
+  use binary-data;
   use ipv4, import: { <udp-frame>, <ipv4-address> };
 
   export <rip-v1>, <rip-v2>,
@@ -543,7 +543,7 @@ define module cidr
   use print;
   use format;
   use format-out;
-  use packetizer;
+  use binary-data;
   use common-extensions, exclude: { format-to-string };
 
   export <cidr>,
@@ -555,7 +555,7 @@ end;
 
 define module hsrp
   use dylan;
-  use packetizer;
+  use binary-data;
   use format;
 
   use ipv4, import: { <ipv4-address>, <udp-frame> };
@@ -563,7 +563,7 @@ end;
 
 define module ntp
   use dylan;
-  use packetizer;
+  use binary-data;
   use date;
   use format;
 
@@ -573,7 +573,7 @@ end;
 
 define module socks
   use dylan;
-  use packetizer;
+  use binary-data;
   use ipv4, import: { <ipv4-address> };
   use ipv6, import: { <ipv6-address> };
   use dns, import: { <domain-name> };
@@ -581,7 +581,7 @@ end;
 
 define module eigrp
   use dylan;
-  use packetizer;
+  use binary-data;
   
   use ipv4, import: { <ipv4-frame>, <ipv4-address> };
 end;

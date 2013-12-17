@@ -8,7 +8,7 @@ define library layer
   use io;
   use network-flow;
   use flow;
-  use packetizer;
+  use binary-data;
   use packet-filter;
   use timer;
   use network-interfaces;
@@ -34,7 +34,7 @@ define module layer
   use format-out;
   use threads;
   use network-flow;
-  use packetizer;
+  use binary-data;
   use packet-filter;
   use timer;
   use flow;

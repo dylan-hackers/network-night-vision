@@ -8,7 +8,7 @@ define library arp
   use io;
   use system;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols, rename: { ethernet => protocols-ethernet };
   use flow;
   use network-flow;
@@ -27,7 +27,7 @@ define module arp
   use new-layer;
   use ipv4;
   use cidr;
-  use packetizer;
+  use binary-data;
   use flow;
   use network-flow;
   use socket;

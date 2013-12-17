@@ -3,7 +3,7 @@ module: dylan-user
 define library dns-server
   use common-dylan;
   use io;
-  use packetizer;
+  use binary-data;
   use protocols;
   use flow;
   use network-flow;
@@ -19,7 +19,7 @@ define module dns-server
   use streams;
   use format;
   use file-system;
-  use packetizer;
+  use binary-data;
   use dns;
   use ipv4;
   use flow;

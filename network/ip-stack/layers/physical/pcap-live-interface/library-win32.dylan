@@ -14,7 +14,7 @@ define library pcap-live-interface
   use flow;
   use network-flow;
   use network;
-  use packetizer;
+  use binary-data;
   use protocols, import: { ethernet, ipv4, cidr };
 end;
 
@@ -39,7 +39,7 @@ define module pcap-live-interface
   use ethernet, import: { <ethernet-frame> };
   use ipv4, import: { <ipv4-address> };
   use cidr, import: { <cidr>, netmask-from-byte-vector };
-  use packetizer,
+  use binary-data,
     import: { parse-frame,
               <frame>,
               assemble-frame!,

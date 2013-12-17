@@ -7,7 +7,7 @@ define library ip
   use common-dylan;
   use io;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols;
   use flow;
   use network-flow;
@@ -22,7 +22,7 @@ define module ip
   use new-layer;
   use print;
   use ipv4;
-  use packetizer;
+  use binary-data;
   use flow;
   use network-flow;
   use socket;

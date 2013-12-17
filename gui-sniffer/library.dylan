@@ -14,7 +14,7 @@ define library gui-sniffer
   use system;
   use commands;
   use environment-commands;
-  use packetizer;
+  use binary-data;
   use packet-filter;
   use flow;
   use network-flow;
@@ -93,7 +93,7 @@ define module gui-sniffer
   use date;
   use file-system;
   use operating-system;
-  use packetizer, exclude: { hexdump };
+  use binary-data, exclude: { hexdump };
   use packet-filter;
   use network-flow;
   use flow;

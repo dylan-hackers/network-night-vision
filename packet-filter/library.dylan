@@ -15,7 +15,7 @@ define library packet-filter
   use simple-parser;
   use regular;
 
-  use packetizer;
+  use binary-data;
 
   export packet-filter;
 end library packet-filter;
@@ -30,7 +30,7 @@ define module packet-filter
   use source-location-rangemap;
   use grammar;
   use simple-lexical-scanner;
-  use packetizer;
+  use binary-data;
 
   export 
     <filter-expression>,

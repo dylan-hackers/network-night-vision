@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 define library ethernet
   use common-dylan;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols, rename: { ethernet => ethernet-frame };
   use flow;
   use network-flow;
@@ -18,7 +18,7 @@ define module ethernet
   use common-dylan;
   use new-layer;
   use ethernet-frame;
-  use packetizer;
+  use binary-data;
   use flow;
   use network-flow;
   use socket;

@@ -7,7 +7,7 @@ license: see license.txt in this distribution
 define library network-flow
   use common-dylan;
   use flow;
-  use packetizer;
+  use binary-data;
   use packet-filter;
   use io;
   use system;
@@ -23,7 +23,7 @@ define module network-flow
   use streams;
   use standard-io;
   use flow;
-  use packetizer;
+  use binary-data;
   use packet-filter;
   use file-system;
   use pcap, import: { packets, <pcap-file-header>, <pcap-packet>, <pcap-file> };

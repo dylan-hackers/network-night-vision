@@ -7,7 +7,7 @@ define library ip-over-ethernet
   use common-dylan;
   use io;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols;
   use flow;
   use network-flow;
@@ -22,7 +22,7 @@ define module ip-over-ethernet
   use new-layer;
   use ipv4;
   use cidr;
-  use packetizer;
+  use binary-data;
   use flow;
   use network-flow;
   use socket;

@@ -15,7 +15,7 @@ define library pcap-live-interface
   use flow;
   use network-flow;
   use network;
-  use packetizer;
+  use binary-data;
   use protocols, import: { ethernet, prism2, ieee80211 };
 end;
 
@@ -38,7 +38,7 @@ define module pcap-live-interface
   use dylan-direct-c-ffi;
   use flow;
   use network-flow;
-  use packetizer, import: { parse-frame, assemble-frame, packet };
+  use binary-data, import: { parse-frame, assemble-frame, packet };
   use ethernet, import: { <ethernet-frame> };
   use ieee80211, import: { <ieee80211-frame> };
   use prism2, import: { <prism2-frame>, <bsd-80211-radio-frame> };

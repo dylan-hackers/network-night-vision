@@ -5,7 +5,7 @@ license: see license.txt in this distribution
 
 define library vector-table
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use collections, import: { table-extensions };
 
   export vector-table;
@@ -13,7 +13,7 @@ end;
 
 define module vector-table
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use table-extensions;
 
   export <vector-table>;

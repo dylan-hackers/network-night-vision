@@ -1,3 +1,6 @@
 [submodule "ext/monday"]
 	path = ext/monday
 	url = git://github.com/dylan-lang/monday.git
+[submodule "ext/binary-data"]
+	path = ext/binary-data
+	url = git://github.com/dylan-lang/binary-data.git

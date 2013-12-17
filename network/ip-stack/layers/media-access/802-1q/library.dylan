@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 define library ieee802-1q
   use common-dylan;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols;
   use flow;
   use network-flow;
@@ -16,7 +16,7 @@ define module ieee802-1q
   use common-dylan;
   use new-layer;
   use ethernet;
-  use packetizer;
+  use binary-data;
   use flow;
   use network-flow;
   use socket;

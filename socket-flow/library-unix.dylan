@@ -3,7 +3,7 @@ module: dylan-user
 define library socket-flow
   use dylan;
   use common-dylan;
-  use packetizer;
+  use binary-data;
   use network;
   use network-flow;
   use flow;
@@ -15,7 +15,7 @@ end library;
 
 define module socket-flow
   use common-dylan, exclude: { close };
-  use packetizer;
+  use binary-data;
   use unix-sockets, exclude: { connect };
   use network-flow;
   use flow;

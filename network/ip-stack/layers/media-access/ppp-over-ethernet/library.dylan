@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 define library ppp-over-ethernet
   use common-dylan;
   use layer;
-  use packetizer;
+  use binary-data;
   use protocols;
   use flow;
   use network-flow;
@@ -18,7 +18,7 @@ define module ppp-over-ethernet
   use common-dylan;
   use new-layer;
   use pppoe, rename: { session-id => pppoe-session-id };
-  use packetizer;
+  use binary-data;
   use ethernet, import: { mac-address };
   use flow;
   use network-flow;
