@@ -3,13 +3,13 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define protocol ppp (header-frame)
+define binary-data ppp (header-frame)
   layering field protocol :: <2byte-big-endian-unsigned-integer>;
   variably-typed-field payload,
     type-function: payload-type(frame);
 end;
 
-define abstract protocol link-control-protocol (variably-typed-container-frame)
+define abstract binary-data link-control-protocol (variably-typed-container-frame)
   length frame.lcp-length * 8;
   over <ppp> #xc021;
   layering field lcp-code :: <unsigned-byte>;
@@ -18,7 +18,7 @@ define abstract protocol link-control-protocol (variably-typed-container-frame)
     fixup: byte-offset(frame-size(frame));
 end;
 
-define abstract protocol ip-control-protocol (variably-typed-container-frame)
+define abstract binary-data ip-control-protocol (variably-typed-container-frame)
   length frame.ipcp-length * 8;
   over <ppp> #x8021;
   layering field ipcp-code :: <unsigned-byte>;
@@ -30,46 +30,46 @@ end;
 define macro lcp-protocol-definer
   { define lcp-protocol ?:name (?short:name) end }
     => {
-define protocol ?short ## "-configure-request" (?name)
+define binary-data ?short ## "-configure-request" (?name)
   over "<" ## ?name ## ">" 1;
   repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol ?short ## "-configure-ack" (?name)
+define binary-data ?short ## "-configure-ack" (?name)
   over "<" ## ?name ## ">" 2;
   repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol ?short ## "-configure-nak" (?name)
+define binary-data ?short ## "-configure-nak" (?name)
   over "<" ## ?name ## ">" 3;
   repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol ?short ## "-configure-reject" (?name)
+define binary-data ?short ## "-configure-reject" (?name)
   over "<" ## ?name ## ">" 4;
   repeated field configuration-options :: "<" ## ?short ## "-option>",
     reached-end?: #f;
 end;
 
-define protocol ?short ## "-terminate-request" (?name)
+define binary-data ?short ## "-terminate-request" (?name)
   over "<" ## ?name ## ">" 5;
   field custom-data :: <raw-frame>;
 end;
 
-define protocol ?short ## "-terminate-ack" (?name)
+define binary-data ?short ## "-terminate-ack" (?name)
   over "<" ## ?name ## ">" 6;
   field custom-data :: <raw-frame>;
 end;
 
-define protocol ?short ## "-code-reject" (?name)
+define binary-data ?short ## "-code-reject" (?name)
   over "<" ## ?name ## ">" 7;
   field rejected-packet :: <raw-frame>; //? <link-control-protocol>;
 end;
 
-define abstract protocol ?short ## "-option" (variably-typed-container-frame)
+define abstract binary-data ?short ## "-option" (variably-typed-container-frame)
   length ?short ## "-option-length" (frame) * 8;
   layering field ?short ## "-option-type" :: <unsigned-byte>;
   field ?short ## "-option-length" :: <unsigned-byte>,
@@ -82,37 +82,37 @@ end;
 define lcp-protocol link-control-protocol (lcp) end;
 
 
-define protocol lcp-protocol-reject (link-control-protocol)
+define binary-data lcp-protocol-reject (link-control-protocol)
   over <link-control-protocol> 8;
   //?field rejected-packet :: <ppp>;
   field rejected-protocol :: <2byte-big-endian-unsigned-integer>;
   field rejected-information :: <raw-frame>; //? <link-control-protocol>;
 end;
 
-define protocol lcp-magic-custom (link-control-protocol)
+define binary-data lcp-magic-custom (link-control-protocol)
   field magic-number :: <big-endian-unsigned-integer-4byte>;
   field custom-data :: <raw-frame>;
 end;
 
-define protocol lcp-echo-request (lcp-magic-custom)
+define binary-data lcp-echo-request (lcp-magic-custom)
   over <link-control-protocol> 9;
 end;
 
-define protocol lcp-echo-reply (lcp-magic-custom)
+define binary-data lcp-echo-reply (lcp-magic-custom)
   over <link-control-protocol> 10;
 end;
 
-define protocol lcp-discard-request (lcp-magic-custom)
+define binary-data lcp-discard-request (lcp-magic-custom)
   over <link-control-protocol> 11;
 end;
 
-define protocol lcp-identification (link-control-protocol)
+define binary-data lcp-identification (link-control-protocol)
   over <link-control-protocol> 12;
   field magic-number :: <big-endian-unsigned-integer-4byte>;
   field message :: <externally-delimited-string>;
 end;
 
-define protocol lcp-time-remaining (link-control-protocol)
+define binary-data lcp-time-remaining (link-control-protocol)
   over <link-control-protocol> 13;
   field magic-number :: <big-endian-unsigned-integer-4byte>;
   field seconds-remaining :: <big-endian-unsigned-integer-4byte>;
@@ -120,16 +120,16 @@ define protocol lcp-time-remaining (link-control-protocol)
 end;
 
 
-define protocol lcp-reserved (lcp-option)
+define binary-data lcp-reserved (lcp-option)
   over <lcp-option> 0;
 end;
 
-define protocol lcp-maximum-receive-unit (lcp-option)
+define binary-data lcp-maximum-receive-unit (lcp-option)
   over <lcp-option> 1;
   field maximum-receive-unit :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define protocol lcp-authentication-protocol (lcp-option)
+define binary-data lcp-authentication-protocol (lcp-option)
   over <lcp-option> 3;
   enum field authentication-protocol :: <2byte-big-endian-unsigned-integer>,
     mappings: { #xc023 <=> #"password authentication protocol",
@@ -137,27 +137,27 @@ define protocol lcp-authentication-protocol (lcp-option)
   field custom-data :: <raw-frame>;
 end;
 
-define protocol lcp-quality-protocol (lcp-option)
+define binary-data lcp-quality-protocol (lcp-option)
   over <lcp-option> 4;
   enum field quality-protocol :: <2byte-big-endian-unsigned-integer>,
     mappings: { #xc025 <=> #"link quality report" };
   field custom-data :: <raw-frame>;
 end;
 
-define protocol lcp-magic-number-option (lcp-option)
+define binary-data lcp-magic-number-option (lcp-option)
   over <lcp-option> 5;
   field lcp-magic-number :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define protocol lcp-protocol-field-compression (lcp-option)
+define binary-data lcp-protocol-field-compression (lcp-option)
   over <lcp-option> 7;
 end;
 
-define protocol lcp-address-and-control-field-compression (lcp-option)
+define binary-data lcp-address-and-control-field-compression (lcp-option)
   over <lcp-option> 8;
 end;
 
-define protocol lcp-fcs-alternatives (lcp-option)
+define binary-data lcp-fcs-alternatives (lcp-option)
   over <lcp-option> 9;
   field null-fcs :: <boolean-bit>;
   field ccitt-16 :: <boolean-bit>;
@@ -165,18 +165,18 @@ define protocol lcp-fcs-alternatives (lcp-option)
   field reserved :: <5bit-unsigned-integer> = 0;
 end;
 
-define protocol lcp-self-describing-padding (lcp-option)
+define binary-data lcp-self-describing-padding (lcp-option)
   over <lcp-option> 10;
   field maximum :: <unsigned-byte>;
 end;
 
-define protocol lcp-numbered-mode (lcp-option)
+define binary-data lcp-numbered-mode (lcp-option)
   over <lcp-option> 11;
   field window :: <unsigned-byte>;
   field hdlc-address :: <raw-frame>;
 end;
 
-define protocol lcp-callback (lcp-option)
+define binary-data lcp-callback (lcp-option)
   over <lcp-option> 13;
   enum field operation :: <unsigned-byte>,
     mappings: { 0 <=> #"location by user authentication",
@@ -187,12 +187,12 @@ define protocol lcp-callback (lcp-option)
   field message :: <raw-frame>;
 end;
 
-define protocol lcp-compound-frames (lcp-option)
+define binary-data lcp-compound-frames (lcp-option)
   over <lcp-option> 15;
 end;
 
 
-define abstract protocol pap (variably-typed-container-frame)
+define abstract binary-data pap (variably-typed-container-frame)
   over <ppp> #xc023;
   length pap-length * 8;
   layering field pap-code :: <unsigned-byte>;
@@ -201,7 +201,7 @@ define abstract protocol pap (variably-typed-container-frame)
     fixup: byte-offset(frame-size(frame));
 end;
 
-define protocol pap-authenticate-request (pap)
+define binary-data pap-authenticate-request (pap)
   over <pap> 1;
   field peer-id-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame.peer-id));
@@ -213,7 +213,7 @@ define protocol pap-authenticate-request (pap)
     length: frame.password-length * 8;
 end;
 
-define protocol pap-authenticate-ack (pap)
+define binary-data pap-authenticate-ack (pap)
   over <pap> 2;
   field message-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame.message));
@@ -221,7 +221,7 @@ define protocol pap-authenticate-ack (pap)
     length: frame.message-length * 8;
 end;
 
-define protocol pap-authenticate-nak (pap)
+define binary-data pap-authenticate-nak (pap)
   over <pap> 3;
   field message-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame.message));
@@ -229,7 +229,7 @@ define protocol pap-authenticate-nak (pap)
     length: frame.message-length * 8;
 end;
 
-define abstract protocol chap (variably-typed-container-frame)
+define abstract binary-data chap (variably-typed-container-frame)
   over <ppp> #xc223;
   length frame.chap-length * 8;
   layering field chap-code :: <unsigned-byte>;
@@ -238,7 +238,7 @@ define abstract protocol chap (variably-typed-container-frame)
     fixup: byte-offset(frame-size(frame));
 end;
 
-define protocol chap-challenge (chap)
+define binary-data chap-challenge (chap)
   over <chap> 1;
   field chap-value-size :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame.chap-value));
@@ -247,7 +247,7 @@ define protocol chap-challenge (chap)
   field chap-name :: <externally-delimited-string>;
 end;
 
-define protocol chap-response (chap)
+define binary-data chap-response (chap)
   over <chap> 2;
   field chap-value-size :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame.chap-value));
@@ -256,25 +256,25 @@ define protocol chap-response (chap)
   field chap-name :: <externally-delimited-string>;
 end;
 
-define protocol chap-success (chap)
+define binary-data chap-success (chap)
   over <chap> 3;
   field chap-message :: <externally-delimited-string>;
 end;
 
-define protocol chap-failure (chap)
+define binary-data chap-failure (chap)
   over <chap> 4;
   field chap-message :: <externally-delimited-string>;
 end;
 
 define lcp-protocol ip-control-protocol (ipcp) end;
 
-define protocol ipcp-ip-addresses (ipcp-option)
+define binary-data ipcp-ip-addresses (ipcp-option)
   over <ipcp-option> 1;
   field source-ip-address :: <ipv4-address>;
   field destination-ip-address :: <ipv4-address>;
 end;
 
-define protocol ipcp-ip-compression-protocol (ipcp-option)
+define binary-data ipcp-ip-compression-protocol (ipcp-option)
   over <ipcp-option> 2;
   enum field compression-protocol :: <2byte-big-endian-unsigned-integer>,
     mappings: { #x002d <=> #"van jacobsen compressed TCP/IP" };
@@ -285,32 +285,32 @@ define protocol ipcp-ip-compression-protocol (ipcp-option)
   field custom-data :: <raw-frame>;
 end;
 
-define protocol ipcp-ip-address (ipcp-option)
+define binary-data ipcp-ip-address (ipcp-option)
   over <ipcp-option> 3;
   field ip-address :: <ipv4-address>;
 end;
 
-define protocol ipcp-mobile-ipv4 (ipcp-option)
+define binary-data ipcp-mobile-ipv4 (ipcp-option)
   over <ipcp-option> 4;
   field mobile-nodes-home-address :: <ipv4-address>;
 end;
 
-define protocol ipcp-primary-dns (ipcp-option)
+define binary-data ipcp-primary-dns (ipcp-option)
   over <ipcp-option> 129;
   field primary-dns :: <ipv4-address>;
 end;
 
-define protocol ipcp-primary-nbns (ipcp-option)
+define binary-data ipcp-primary-nbns (ipcp-option)
   over <ipcp-option> 130;
   field primary-nbnd :: <ipv4-address>;
 end;
 
-define protocol ipcp-secondary-dns (ipcp-option)
+define binary-data ipcp-secondary-dns (ipcp-option)
   over <ipcp-option> 131;
   field secondary-dns :: <ipv4-address>;
 end;
 
-define protocol ipcp-secondary-nbns (ipcp-option)
+define binary-data ipcp-secondary-nbns (ipcp-option)
   over <ipcp-option> 132;
   field secondary-nbns :: <ipv4-address>;
 end;

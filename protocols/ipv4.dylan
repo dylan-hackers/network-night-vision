@@ -3,26 +3,26 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define abstract protocol ip-option-frame (variably-typed-container-frame)
+define abstract binary-data ip-option-frame (variably-typed-container-frame)
   field copy-flag :: <1bit-unsigned-integer>;
   layering field option-type :: <7bit-unsigned-integer>;
 end;
 
-define protocol router-alert-ip-option (ip-option-frame)
+define binary-data router-alert-ip-option (ip-option-frame)
   over <ip-option-frame> 20;
   field router-alert-length :: <unsigned-byte> = 4;
   field router-alert-value :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define protocol end-of-option-ip-option (ip-option-frame)
+define binary-data end-of-option-ip-option (ip-option-frame)
   over <ip-option-frame> 0;
 end;
 
-define protocol no-operation-ip-option (ip-option-frame)
+define binary-data no-operation-ip-option (ip-option-frame)
   over <ip-option-frame> 1;
 end;
 
-define protocol security-ip-option-frame (ip-option-frame)
+define binary-data security-ip-option-frame (ip-option-frame)
   over <ip-option-frame> 2;
   field security-length :: <unsigned-byte>;
   field security :: <2byte-big-endian-unsigned-integer>;
@@ -52,7 +52,7 @@ define method fixup! (frame :: <unparsed-ipv4-frame>,
   next-method();
 end;
 
-define protocol ipv4-frame (header-frame)
+define binary-data ipv4-frame (header-frame)
   summary "IP SRC %= DST %=", source-address, destination-address;
   over <ethernet-frame> #x800;
   over <cisco-hdlc-frame> #x800;
@@ -87,7 +87,7 @@ end;
 
 
 
-define protocol udp-frame (header-frame)
+define binary-data udp-frame (header-frame)
   summary "UDP port %= -> %=", source-port, destination-port;
   over <ipv4-frame> 17;
   field source-port :: <2byte-big-endian-unsigned-integer>;
@@ -109,7 +109,7 @@ define function my-payload-type (frame :: <udp-frame>)
   end;
 end;
               
-define protocol arp-frame (container-frame)
+define binary-data arp-frame (container-frame)
   over <ethernet-frame> #x806;
   over <link-control> #x806;
   field mac-address-type :: <2byte-big-endian-unsigned-integer> = 1;

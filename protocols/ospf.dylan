@@ -3,7 +3,7 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define protocol ospf-v2 (container-frame)
+define binary-data ospf-v2 (container-frame)
   field version :: <unsigned-byte> = 2;
   layering field type :: <unsigned-byte>;
   field packet-length :: <2byte-big-endian-unsigned-integer>;
@@ -14,7 +14,7 @@ define protocol ospf-v2 (container-frame)
   field authentication :: <raw-frame>, static-length: 8 * 8;
 end;
 
-define protocol ospf-v2-hello (ospf-v2)
+define binary-data ospf-v2-hello (ospf-v2)
   over <ospf-v3> 1;
   field network-mask :: <ipv4-address>;
   field hello-interval :: <2byte-big-endian-unsigned-integer>;
@@ -26,7 +26,7 @@ define protocol ospf-v2-hello (ospf-v2)
   repeated field neighbor :: <ipv4-address>, reached-end?: #f;
 end;
 
-define protocol ospf-v2-database-description (ospf-v2)
+define binary-data ospf-v2-database-description (ospf-v2)
   over <ospf-v2> 2;
   field reserved1 :: <2byte-big-endian-unsigned-integer> = 0;
   field options :: <unsigned-byte>;

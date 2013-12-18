@@ -4,26 +4,26 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 
-define protocol multi-precision-integer (container-frame)
+define binary-data multi-precision-integer (container-frame)
   field mpi-length :: <2byte-big-endian-unsigned-integer>;
   field real-mpi :: <raw-frame>, length: byte-offset(frame.mpi-length + 7);
 end;
   
-define protocol string-to-key (variably-typed-container-frame)
+define binary-data string-to-key (variably-typed-container-frame)
   layering field type :: <unsigned-byte>;
   field hash-algorithm :: <hash-algorithm>;
 end;
 
-define protocol simple-string-to-key (string-to-key)
+define binary-data simple-string-to-key (string-to-key)
   over <string-to-key> 0;
 end;
 
-define protocol salted-string-to-key (string-to-key)
+define binary-data salted-string-to-key (string-to-key)
   over <string-to-key> 1;
   field salt-value :: <raw-frame>, static-length: 8 * 8;
 end;
 
-define protocol iterated-and-salted-string-to-key (string-to-key)
+define binary-data iterated-and-salted-string-to-key (string-to-key)
   over <string-to-key> 3;
   field salt-value :: <raw-frame>, static-length: 8 * 8;
   field salt-count :: <unsigned-byte>;
@@ -34,12 +34,12 @@ end;
 // count = ((Int32)16 + (c & 15)) << ((c >> 4) + EXPBIAS);
 //32bit-ints, c = count
 
-define protocol openpgp-packet-header (variably-typed-container-frame)
+define binary-data openpgp-packet-header (variably-typed-container-frame)
   field always-one :: <1bit-unsigned-integer> = 1;
   layering field new-packet-format :: <1bit-unsigned-integer>;
 end;
 
-define protocol old-openpgp-packet (opengpg-packet-header)
+define binary-data old-openpgp-packet (opengpg-packet-header)
   over <openpgp-packet-header> 0;
   field content-tag :: <4bit-unsigned-integer> = 0;
   field length-type :: <2bit-unsigned-integer>;
@@ -52,7 +52,7 @@ define protocol old-openpgp-packet (opengpg-packet-header)
                    end;
 end;
 
-define protocol new-openpgp-packet (openpgp-packet-header)
+define binary-data new-openpgp-packet (openpgp-packet-header)
   over <openpgp-packet-header> 1;
   field content-tag :: <6bit-unsigned-integer>;
   field first-body-length :: <unsigned-byte>;
@@ -84,14 +84,14 @@ end;
 //octet of data; 0xF0, next 65536 octets of data; 0xC5, 0xDD, last 1693
 //octets of data
 
-define protocol reserved-key-packet (container-frame)
+define binary-data reserved-key-packet (container-frame)
   over <openpgp-packet-header> 0;
 end;
 
 define class <public-key-id> (<raw-frame>)
  size: 8 * 8;
 end;
-define protocol public-key-encrypted-session-key-packet (container-frame)
+define binary-data public-key-encrypted-session-key-packet (container-frame)
   over <openpgp-packet-header> 1;
   field version-number :: <unsigned-byte> = 3;
   field public-key-id :: <public-key-id>;
@@ -99,12 +99,12 @@ define protocol public-key-encrypted-session-key-packet (container-frame)
   field encrypted-session-key :: <raw-frame>; // <- mpi?!
 end;
 
-define protocol signature-packet (container-frame)
+define binary-data signature-packet (container-frame)
   over <openpgp-packet-header> 2;
   field version-number :: <unsigned-byte>;
 end;
 
-define protocol version3-signature-packet (signature-packet)
+define binary-data version3-signature-packet (signature-packet)
   over <signature-packet> 3;
   field hash-length :: <unsigned-byte> = 5;
   field signature-type :: <signature-type>;
@@ -122,7 +122,7 @@ end;
 //RIPEMD-160: 0x2B, 0x24, 0x03, 0x02, 0x01
 //SHA-1:      0x2B, 0x0E, 0x03, 0x02, 0x1A
 
-define protocol version4-signature-packet (signature-packet)
+define binary-data version4-signature-packet (signature-packet)
   over <signature-packet> 4;
   field signature-type :: <signature-type>;
   field public-key-algorithm :: <public-key-algorithm>;
@@ -134,7 +134,7 @@ define protocol version4-signature-packet (signature-packet)
   field left-signed-hash-value :: <2byte-big-endian-unsigned-integer>;
   repeated field signature :: <multi-precision-integer>;
 end;
-define protocol signature-subpacket (container-frame)
+define binary-data signature-subpacket (container-frame)
   field first-subpacket-length :: <unsigned-byte>;
   variably-typed-field subpacket-length,
     type-function: select (frame.first-subpacket-length)
@@ -145,11 +145,11 @@ define protocol signature-subpacket (container-frame)
   layering field subpacket-type :: <unsigned-byte>;
 end;
 
-define protocol boolean-signature-subpacket (signature-subpacket)
+define binary-data boolean-signature-subpacket (signature-subpacket)
   field value? :: <unsigned-byte>;
 end;
 
-define protocol time-signature-subpacket (signature-subpacket)
+define binary-data time-signature-subpacket (signature-subpacket)
   field timestamp :: <unix-time>;
 end;
 
@@ -160,59 +160,59 @@ end;
 //   evaluator SHOULD consider the signature to be in error.
 
 
-define protocol signature-creation-time (time-signature-subpacket)
+define binary-data signature-creation-time (time-signature-subpacket)
   over <signature-subpacket> 2;
 end;
 
-define protocol signature-expiration-time (time-signature-subpacket)
+define binary-data signature-expiration-time (time-signature-subpacket)
   over <signature-subpacket> 3;
 end;
 
-define protocol exportable-certification (boolean-signature-subpacket)
+define binary-data exportable-certification (boolean-signature-subpacket)
   over <signature-subpacket> 4;
 end;
 
-define protocol trust-signature (signature-subpacket)
+define binary-data trust-signature (signature-subpacket)
   over <signature-subpacket> 5;
   field level :: <unsigned-byte>;
   field trust-amount :: <unsigned-byte>;
 end;
 
-define protocol regular-expression (signature-subpacket)
+define binary-data regular-expression (signature-subpacket)
   over <signature-subpacket> 6;
   field regular-expression :: <null-terminated-ascii-string>;
 end;
 
-define protocol revocable (boolean-signature-subpacket)
+define binary-data revocable (boolean-signature-subpacket)
   over <signature-subpacket> 7;
 end;
 
-define protocol key-expiration-time (time-signature-subpacket)
+define binary-data key-expiration-time (time-signature-subpacket)
   over <signature-subpacket> 9;
 end;
 
-define protocol backward-compatibility (signature-subpacket)
+define binary-data backward-compatibility (signature-subpacket)
   over <signature-subpacket> 10;
 end;
 
-define protocol preferred-symmetric-algorithms (signature-subpacket)
+define binary-data preferred-symmetric-algorithms (signature-subpacket)
   over <signature-subpacket> 11;
   repeated field algorithms :: <symmetric-cipher>;
 end;
 
-define protocol revocation-key (signature-subpacket)
+define binary-data revocation-key (signature-subpacket)
   over <signature-subpacket> 12;
   field class :: <unsigned-byte>;
   field algorithm-id :: <unsigned-byte>;
   field fingerprint :: <raw-frame>, length: 20 * 8;
 end;
 
-define protocol issuer-key-id (signature-subpacket)
+define binary-data issuer-key-id (signature-subpacket)
   over <signature-subpacket> 16;
   field issuer :: <public-key-id>;
 end;
 
-define protocol notation-data (signature-subpacket)
+define binary-data notation-data (signature-subpacket)
   over <signature-subpacket> 20;
   count repeated field flags :: <unsigned-byte> = 0, count: 4;
   field name-length :: <2byte-big-endian-unsigned-integer>;
@@ -221,36 +221,36 @@ define protocol notation-data (signature-subpacket)
   field value-length :: <ascii-string>, length: frame.value-length * 8;
 end;
 
-define protocol preferred-hash-algorithms (signature-subpacket)
+define binary-data preferred-hash-algorithms (signature-subpacket)
   over <signature-subpacket> 21;
   repeated field algorithms :: <hash-algorithm>;
 end;
 
-define protocol preferred-compression-algorithms (signature-subpacket)
+define binary-data preferred-compression-algorithms (signature-subpacket)
   over <signature-subpacket> 22;
   repeated field algorithms :: <compression-algorithm>;
 end;
 
-define protocol key-server-preferences (signature-subpacket)
+define binary-data key-server-preferences (signature-subpacket)
   over <signature-subpacket> 23;
   repeated field flags :: <unsigned-byte>;
 end;
 
-define protocol preferred-key-server (signature-subpacket)
+define binary-data preferred-key-server (signature-subpacket)
   over <signature-subpacket> 24;
   field url :: <ascii-string>;
 end;
 
-define protocol primary-user-id (boolean-signature-subpacket)
+define binary-data primary-user-id (boolean-signature-subpacket)
   over <signature-subpacket> 25;
 end;
 
-define protocol policy-url (signature-subpacket)
+define binary-data policy-url (signature-subpacket)
   over <signature-subpacket> 26;
   field url :: <ascii-string>;
 end;
 
-define protocol key-flags (signature-subpacket)
+define binary-data key-flags (signature-subpacket)
   over <signature-subpacket> 27;
   repeated field flags :: <key-usage>;
 end;
@@ -264,12 +264,12 @@ define enum-field key-usage (enum-frame)
   #x80 => #"possession of more than one person";
 end;
 
-define protocol signers-user-id (signature-subpacket)
+define binary-data signers-user-id (signature-subpacket)
   over <signature-subpacket> 28;
   field user-id :: <public-key-id>;
 end;
 
-define protocol reason-for-revocation (signature-subpacket)
+define binary-data reason-for-revocation (signature-subpacket)
   over <signature-subpacket> 29;
   field revocation-code :: <revocation-code>;
   field reason-string :: <ascii-string>;
@@ -283,7 +283,7 @@ define enum-field revocation-code (enum-frame)
   #x20 => #"user id no longer valid"
 end;
 
-define protocol symmetric-key-encrypted-session-key-packet (container-frame)
+define binary-data symmetric-key-encrypted-session-key-packet (container-frame)
   over <openpgp-packet-header> 3;
   field version-number :: <unsigned-byte> = 4;
   field symmetric-algorithm :: <symmetric-cipher>;
@@ -291,7 +291,7 @@ define protocol symmetric-key-encrypted-session-key-packet (container-frame)
   optional field encrypted-session-key :: <string-to-key>;
 end;
 
-define protocol one-pass-signature-packet (container-frame)
+define binary-data one-pass-signature-packet (container-frame)
   over <openpgp-packet-header> 4;
   field version-number :: <unsigned-byte> = 3;
   field signature-type :: <signature-type>;
@@ -301,38 +301,38 @@ define protocol one-pass-signature-packet (container-frame)
   field nested? :: <unsigned-byte>;
 end;
 
-define protocol secret-key-packet (container-frame)
+define binary-data secret-key-packet (container-frame)
   over <openpgp-packet-header> 5;
   repeated field data :: <secret-key-packet>;
 end;
 
-define protocol public-key (container-frame)
+define binary-data public-key (container-frame)
   over <openpgp-packet-header> 6;
   repeated field data :: <public-key-packet>;
 end;
 
-define protocol secret-subkey (container-frame)
+define binary-data secret-subkey (container-frame)
   over <openpgp-packet-header> 7;
   repeated field data :: <secret-key-packet>;
 end;
 
-define protocol compressed-data-packet (container-frame)
+define binary-data compressed-data-packet (container-frame)
   over <openpgp-packet-header> 8;
   field compression-algorithm :: <compression-algorithm>;
   field data :: <raw-frame>;
 end;
 
-define protocol symmetrically-encrypted-data-packet (container-frame)
+define binary-data symmetrically-encrypted-data-packet (container-frame)
   over <openpgp-packet-header> 9;
   field encrypted-data :: <raw-frame>;
 end;
 
-define protocol marker-packet (container-frame)
+define binary-data marker-packet (container-frame)
   over <openpgp-packet-header> 10;
   field marker :: <ascii-string> = "PGP";
 end;
 
-define protocol literal-data-packet (container-frame)
+define binary-data literal-data-packet (container-frame)
   over <openpgp-packet-header> 11;
   field data-format :: <unsigned-byte>;
   field file-name-length :: <unsigned-byte>;
@@ -341,38 +341,38 @@ define protocol literal-data-packet (container-frame)
   field data :: <raw-frame>;
 end;
 
-define protocol trust-packet (container-frame)
+define binary-data trust-packet (container-frame)
   over <openpgp-packet-header> 12;
 end;
 
-define protocol user-id-packet (container-frame)
+define binary-data user-id-packet (container-frame)
   over <openpgp-packet-header> 13;
 end;
 
-define protocol public-subkey (container-frame)
+define binary-data public-subkey (container-frame)
   over <openpgp-packet-header> 14;
   repeated field data :: <public-key-packet>;
 end;
 
-define protocol public-key-packet (container-frame)
+define binary-data public-key-packet (container-frame)
   layering field version-number :: <unsigned-byte>;
   field creation-time :: <unix-time>;
 end;
 
-define protocol v3-public-key-packet (public-key-packet)
+define binary-data v3-public-key-packet (public-key-packet)
   over <public-key-packet-format> 3;
   field days-valid :: <2byte-big-endian-unsigned-integer>;
   field public-key-algorithm :: <public-key-algorithm>;
   repeated field multi-precision-integers :: <multi-precision-integer>;
 end;
 
-define protocol v4-public-key-packet (public-key-packet)
+define binary-data v4-public-key-packet (public-key-packet)
   over <public-key-packet-format> 4;
   field public-key-algorithm :: <public-key-algorithm>;
   repeated field multi-precision-integers :: <multi-precision-integer>;
 end;
 
-define protocol secret-key-packet (container-frame)
+define binary-data secret-key-packet (container-frame)
   field public-key :: <public-key-packet>;
   field string-to-key-usage :: <unsigned-byte>;
   field symmetric-algorithm :: <symmetric-algorithm>;

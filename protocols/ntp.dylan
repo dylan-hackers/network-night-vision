@@ -4,7 +4,7 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 // Simple Network Time Protocol (SNTP) RFC 1769
-define protocol ntp (container-frame)
+define binary-data ntp (container-frame)
   summary "NTP v%= mode: %=", version, mode;
   over <udp-frame> 123;
   enum field leap-indicator :: <2bit-unsigned-integer> = 0,

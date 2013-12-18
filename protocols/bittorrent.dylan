@@ -4,7 +4,7 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 //incomplete from http://xbtt.sourceforge.net/udp_tracker_protocol.html
-define protocol bittorrent-announce (container-frame)
+define binary-data bittorrent-announce (container-frame)
   field connection-id :: <raw-frame> =
     as(<raw-frame>,
        #(#x0, #x0, #x04, #x17, #x27, #x10, #x19, #x80)),
@@ -31,7 +31,7 @@ define protocol bittorrent-announce (container-frame)
   field port :: <2byte-big-endian-unsigned-integer> = 6887;
 end;
 
-define protocol bittorrent-announce-output (container-frame)
+define binary-data bittorrent-announce-output (container-frame)
   over <udp-frame> 6969;
   field action :: <big-endian-unsigned-integer-4byte>;
   field transaction-id :: <big-endian-unsigned-integer-4byte>;
@@ -42,7 +42,7 @@ define protocol bittorrent-announce-output (container-frame)
     reached-end?: #f;
 end;
 
-define protocol ip-and-port (container-frame)
+define binary-data ip-and-port (container-frame)
   field ip :: <ipv4-address>;
   field port :: <2byte-big-endian-unsigned-integer>;
 end;
