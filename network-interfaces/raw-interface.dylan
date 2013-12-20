@@ -98,7 +98,7 @@ define method receive (interface :: <interface>)
               let fd = interface.unix-file-descriptor;
               let read-bytes =
                 interruptible-system-call(unix-recv-buffer-from(fd,
-                                                                buffer-offset(buffer, 0),
+                                                                byte-storage-address(buffer),
                                                                 $ethernet-buffer-size,
                                                                 0,
                                                                 sockaddr,
@@ -118,20 +118,10 @@ end method receive;
 
 define method send (interface :: <interface>, buffer :: <buffer>)
   unix-send-buffer(interface.unix-file-descriptor,
-                   buffer-offset(buffer, 0),
+                   byte-storage-address(buffer),
                    buffer.size,
                    0);
 end method send;
-
-define function buffer-offset
-    (the-buffer :: <buffer>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
-
 
 define class <ethernet-interface> (<filter>)
   slot unix-interface :: <interface>;

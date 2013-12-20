@@ -37,7 +37,7 @@ define method flow-socket-receive (flow-socket :: <flow-socket>)
               let fd = flow-socket.unix-file-descriptor;
               let read-bytes =
                 interruptible-system-call(unix-recv-buffer-from(fd,
-                                                                buffer-offset(buffer, 0),
+                                                                byte-storage-address(buffer),
                                                                 512,
                                                                 0,
                                                                 sockaddr,

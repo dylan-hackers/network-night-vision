@@ -25,22 +25,13 @@ define method push-data-aux
     sockaddr.sin-addr-value   := node.reply-addr;
     let data = as(<byte-vector>, assemble-frame(payload).packet);
     msendto(node.unix-file-descriptor,
-            buffer-offset(data, 0),
+            byte-storage-address(data),
             data.size,
             0,
             sockaddr,
             size-of(<sockaddr-in>));
   end;
 end;
-
-define function buffer-offset
-    (the-buffer :: <buffer>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
 
 define method toplevel (s :: <flow-socket>)
   while (s.running?)

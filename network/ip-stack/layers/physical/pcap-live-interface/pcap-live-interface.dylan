@@ -78,7 +78,7 @@ define method push-data-aux (input :: <push-input>,
                              node :: <pcap-flow-node>,
                              frame :: <frame>)
   let buffer = as(<byte-vector>, assemble-frame!(frame).packet);
-  pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
+  pcap-inject(node.pcap-t, byte-storage-address(buffer), buffer.size);
 end;
 
 define function run-interface (layer :: <pcap-layer>)
@@ -169,15 +169,6 @@ define C-function pcap-free-all-devices
   parameter pcap-if-list :: <pcap-if*>;
   c-name: "pcap_freealldevs";
 end;
-
-define function buffer-offset
-    (the-buffer :: <byte-vector>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
 
 define C-function pcap-inject
   parameter pcap-t :: <C-void*>;

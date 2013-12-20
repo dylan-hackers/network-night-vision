@@ -4,11 +4,6 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 
-/*
-define simple-C-mapped-subtype <C-buffer-offset> (<C-char*>)
-  export-map <machine-word>, export-function: identity;
-end;
-*/
 define method pcap-receive-callback
     (interface, packet :: <pcap-packet-header*>, bytes)
   let real-interface = import-c-dylan-object(interface);
@@ -120,15 +115,6 @@ define C-function pcap-find-all-devices
   c-name: "pcap_findalldevs";
 end;
 
-define function buffer-offset
-    (the-buffer :: <byte-vector>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
-
 define C-function pcap-inject
   parameter pcap-t :: <C-void*>;
   parameter buffer :: <C-buffer-offset>;
@@ -147,7 +133,7 @@ define method push-data-aux (input :: <push-input>,
                              node :: <ethernet-interface>,
                              frame :: <frame>)
   let buffer = as(<byte-vector>, assemble-frame(frame).packet);
-  pcap-inject(node.pcap-t, buffer-offset(buffer, 0), buffer.size);
+  pcap-inject(node.pcap-t, byte-storage-address(buffer), buffer.size);
 end;
 
 define method toplevel (interface :: <ethernet-interface>)

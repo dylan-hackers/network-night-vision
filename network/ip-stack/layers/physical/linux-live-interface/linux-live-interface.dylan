@@ -71,7 +71,7 @@ define method push-data-aux (input :: <push-input>,
                              frame :: <ethernet-frame>)
   let buffer = as(<byte-vector>, assemble-frame(frame).packet);
   unix-send-buffer(node.unix-file-descriptor,
-                   buffer-offset(buffer, 0),
+                   byte-storage-address(buffer),
                    buffer.size,
                    0);
 end;
@@ -172,7 +172,7 @@ define method receive (interface :: <packet-flow-node>)
               let fd = interface.unix-file-descriptor;
               let read-bytes =
                 interruptible-system-call(unix-recv-buffer-from(fd,
-                                                                buffer-offset(buffer, 0),
+                                                                byte-storage-address(buffer),
                                                                 $ethernet-buffer-size,
                                                                 0,
                                                                 sockaddr,
@@ -189,16 +189,6 @@ define method receive (interface :: <packet-flow-node>)
         end method;
   unix-receive();
 end method receive;
-
-define function buffer-offset
-    (the-buffer :: <buffer>, data-offset :: <integer>)
- => (result-offset :: <machine-word>)
-  u%+(data-offset,
-      primitive-wrap-machine-word
-        (primitive-repeated-slot-as-raw
-           (the-buffer, primitive-repeated-slot-offset(the-buffer))))
-end function;
-
 
 begin
   register-startup-function(start-packet);

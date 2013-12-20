@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 define method find-all-devices () => (res :: <collection>)
   let res = make(<stretchy-vector>);
   let errbuf = make(<byte-vector>);
-  let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
+  let (errorcode, devices) = pcap-find-all-devices(byte-storage-address(errbuf));
   for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
     let cidrs = make(<stretchy-vector>);
     for (ele = device.addresses then ele.next, while: ele ~= null-pointer(<pcap-addr*>))
@@ -65,7 +65,7 @@ define method initialize
                                      $ethernet-buffer-size,
                                      if (interface.promiscuous?) 1 else 0 end,
                                      $timeout,
-                                     buffer-offset(errbuf, 0));
+                                     byte-storage-address(errbuf));
             if (res ~= null-pointer(<C-void*>))
               interface.pcap-t := res;
 //              format-out("Opened Interface %s\n", name);
@@ -75,7 +75,7 @@ define method initialize
     //open-interface(interface.interface-name);
 
 //    format-out("trying pcap-find-alldevices\n");
-    let (errorcode, devices) = pcap-find-all-devices(buffer-offset(errbuf, 0));
+    let (errorcode, devices) = pcap-find-all-devices(byte-storage-address(errbuf));
 //    format-out("errcode %=\n", errorcode);
     for (device = devices then device.next, while: device ~= null-pointer(<pcap-if*>))
 //      format-out("device %s %s\n", device.name, device.description);

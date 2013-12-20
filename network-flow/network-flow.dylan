@@ -278,7 +278,7 @@ define method push-data-aux (input :: <push-input>,
                              frame :: <frame>)
   block()
     push-data(node.the-output, frame);
-  exception (e :: <malformed-packet-error>)
+  exception (e :: <malformed-data-error>)
     unless (node.pcap-writer)
       node.pcap-writer := make(<pcap-file-writer>, stream: node.file-stream);
     end;
