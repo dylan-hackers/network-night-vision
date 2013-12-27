@@ -47,7 +47,7 @@ define binary-data old-openpgp-packet (opengpg-packet-header)
     type-function: select (frame.length-type)
                      0 => <unsigned-byte>;
                      1 => <2byte-big-endian-unsigned-integer>;
-                     2 => <4byte-big-endian-unsigned-integer>;
+                     2 => <big-endian-unsigned-integer-4byte>;
                      3 => <null-frame>;
                    end;
 end;
