@@ -57,7 +57,7 @@ define binary-data ethernet-frame (header-frame)
   field destination-address :: <mac-address>;
   field source-address :: <mac-address>;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: if (frame.type-code > 1500)
                      payload-type(frame)
                    else
@@ -71,7 +71,7 @@ define binary-data llc-frame (header-frame)
   field ssap :: <7bit-unsigned-integer>;
   field command-response-identifer :: <1bit-unsigned-integer>;
   field control :: <unsigned-byte>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: case
                      frame.dsap = 85 & frame.ssap = 85 => <snap-frame>;
                      frame.dsap = 33 & frame.ssap = 33 => <stp-frame>;
@@ -82,7 +82,7 @@ end;
 define binary-data snap-frame (header-frame)
   field organization-code :: <3byte-big-endian-unsigned-integer> = 0;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
 end;
 
@@ -94,7 +94,7 @@ define binary-data vlan-tag (header-frame)
   field vlan-id :: <12bit-unsigned-integer>;
   field type-code :: <2byte-big-endian-unsigned-integer>,
     fixup: reverse-lookup-layer(<ethernet-frame>, frame.payload);
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
 end;
 

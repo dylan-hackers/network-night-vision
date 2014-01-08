@@ -38,7 +38,7 @@ define binary-data socks5-request (container-frame)
     mappings: { 1 <=> #"ipv4 address",
                 3 <=> #"domainname",
                 4 <=> #"ipv6 address" };
-  variably-typed-field bind-address, type-function:
+  variably-typed field bind-address, type-function:
     if (frame.address-type == #"ipv4 address")
       <ipv4-address>
     elseif (frame.address-type == #"domainname")
@@ -67,7 +67,7 @@ define binary-data socks5-reply (container-frame)
     mappings: { 1 <=> #"ipv4 address",
                 3 <=> #"domainname",
                 4 <=> #"ipv6 address" };
-  variably-typed-field bind-address, type-function:
+  variably-typed field bind-address, type-function:
     if (frame.address-type == #"ipv4 address")
       <ipv4-address>
     elseif (frame.address-type == #"domainname")
@@ -85,7 +85,7 @@ define binary-data socks5-udp-associate (container-frame)
     mappings: { 1 <=> #"ipv4 address",
                 3 <=> #"domainname",
                 4 <=> #"ipv6 address" };
-  variably-typed-field destination-address, type-function:
+  variably-typed field destination-address, type-function:
     if (frame.address-type == #"ipv4 address")
       <ipv4-address>
     elseif (frame.address-type == #"domainname")

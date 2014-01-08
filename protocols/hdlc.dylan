@@ -12,7 +12,7 @@ define binary-data cisco-hdlc-frame (header-frame)
                 #x8f <=> #"multicast" };
   field control :: <unsigned-byte> = 0;
   layering field protocol :: <2byte-big-endian-unsigned-integer> = #x800;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: payload-type(frame);
 end;
 

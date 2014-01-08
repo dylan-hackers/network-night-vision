@@ -9,7 +9,7 @@ define binary-data link-control (header-frame)
   field control :: <unsigned-byte>;
   field organisation-code :: <3byte-big-endian-unsigned-integer>;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: payload-type(frame);
 end;
 

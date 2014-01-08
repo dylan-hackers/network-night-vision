@@ -26,7 +26,7 @@ define binary-data prism2-frame (header-frame)
   field rate ::  <prism2-header-item>;
   field istx ::  <prism2-header-item>;
   field frame-length ::  <prism2-header-item>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: <ieee80211-frame>;
 end;
 
@@ -36,7 +36,7 @@ define binary-data bsd-80211-radio-frame (header-frame)
   field frame-length :: <2byte-little-endian-unsigned-integer>;
   field it-present :: <little-endian-unsigned-integer-4byte>;
   field options :: <raw-frame>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: <ieee80211-frame>,
     start: frame.frame-length * 8;
 end;

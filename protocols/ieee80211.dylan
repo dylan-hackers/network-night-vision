@@ -231,7 +231,7 @@ define binary-data ieee80211-management-frame (ieee80211-frame)
   field source-address :: <mac-address>;
   field bssid :: <mac-address>;
   field sequence-control  :: <ieee80211-sequence-control>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function:
       select (frame.frame-control.subtype)
         $atim => <ieee80211-atim>;
@@ -336,7 +336,7 @@ define binary-data ieee80211-data-frame (ieee80211-frame)
   field mac-address-two :: <mac-address>;
   field mac-address-three :: <mac-address>;
   field sequence-control ::  <ieee80211-sequence-control>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function:
       select (frame.frame-control.subtype)
         // XXX: split up (inheritance)
@@ -363,7 +363,7 @@ define binary-data ieee80211-qos-control (header-frame)
   field ack-policy :: <2bit-unsigned-integer>;
   field reserved :: <1bit-unsigned-integer>;
   field transmit-opportunity :: <unsigned-byte>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function:
       select (frame.parent.frame-control.subtype)
         $qos-null-function, $qos-cf-poll-no-data, $qos-cf-ack-cf-poll-no-data
@@ -383,7 +383,7 @@ end;
 
 // ieee80211 control frames
 define binary-data ieee80211-control-frame (ieee80211-frame)
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function:
       select (frame.frame-control.subtype)
         $power-save-poll => <ieee80211-ps-poll>;

@@ -43,7 +43,7 @@ define binary-data old-openpgp-packet (opengpg-packet-header)
   over <openpgp-packet-header> 0;
   field content-tag :: <4bit-unsigned-integer> = 0;
   field length-type :: <2bit-unsigned-integer>;
-  variably-typed-field body-length,
+  variably-typed field body-length,
     type-function: select (frame.length-type)
                      0 => <unsigned-byte>;
                      1 => <2byte-big-endian-unsigned-integer>;
@@ -56,7 +56,7 @@ define binary-data new-openpgp-packet (openpgp-packet-header)
   over <openpgp-packet-header> 1;
   field content-tag :: <6bit-unsigned-integer>;
   field first-body-length :: <unsigned-byte>;
-  variably-typed-field body-length,
+  variably-typed field body-length,
     type-function: select (frame.first-body-length)
                      < 192 => <null-frame>;
                      < 224 => <unsigned-byte>;
@@ -136,7 +136,7 @@ define binary-data version4-signature-packet (signature-packet)
 end;
 define binary-data signature-subpacket (container-frame)
   field first-subpacket-length :: <unsigned-byte>;
-  variably-typed-field subpacket-length,
+  variably-typed field subpacket-length,
     type-function: select (frame.first-subpacket-length)
                      < 192 => <null-frame>;
                      < 255 => <unsigned-byte>;

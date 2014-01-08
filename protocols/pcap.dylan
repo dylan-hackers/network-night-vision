@@ -60,7 +60,7 @@ define binary-data pcap-packet (header-frame)
   field packet-length :: <3byte-little-endian-unsigned-integer>,
    fixup: size(frame.payload.packet);
   field last-packet-length :: <unsigned-byte> = 0;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: select (frame.parent.header.linktype)
                      $DLT-EN10MB => <ethernet-frame>;
                      $DLT-C-HDLC => <cisco-hdlc-frame>;

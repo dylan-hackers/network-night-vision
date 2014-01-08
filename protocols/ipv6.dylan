@@ -61,7 +61,7 @@ define binary-data ipv6-frame (header-frame)
   field hop-limit :: <unsigned-byte>;
   field source-address :: <ipv6-address>;
   field destination-address :: <ipv6-address>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: payload-type(frame),
     length: frame.payload-length * 8;
 end; 

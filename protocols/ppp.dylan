@@ -5,7 +5,7 @@ license: see license.txt in this distribution
 
 define binary-data ppp (header-frame)
   layering field protocol :: <2byte-big-endian-unsigned-integer>;
-  variably-typed-field payload,
+  variably-typed field payload,
     type-function: payload-type(frame);
 end;
 
