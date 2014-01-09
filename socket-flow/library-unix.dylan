@@ -24,5 +24,5 @@ define module socket-flow
   use sockets, import: { interruptible-system-call };
   use dylan-direct-c-ffi;
 
-  export <flow-socket>;
+  export <flow-socket>, reply-addr, reply-port;
 end module;

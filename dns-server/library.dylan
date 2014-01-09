@@ -10,6 +10,7 @@ define library dns-server
   use socket-flow;
   use system;
   use command-line-parser;
+  use network;
 end library;
 
 define module dns-server
@@ -29,4 +30,5 @@ define module dns-server
   use standard-io, import: { *standard-output* };
   use command-line-parser;
   use simple-random;
+  use sockets, import: { <ipv4-network-order-address> };
 end module;

@@ -34,9 +34,9 @@ end;
 define function domain-name-matches? (domain-name :: <string>, question :: <string>) => (res :: <boolean>)
   //dbg("comparing %s with %s\n", domain-name, question);
   if (domain-name[0] == '*')
-    copy-sequence(domain-name, start: 2) = join(copy-sequence(split(question, "."), start: 1), ".");
+    as-lowercase(copy-sequence(domain-name, start: 2)) = as-lowercase(join(copy-sequence(split(question, "."), start: 1), "."));
   else
-    domain-name = question
+    as-lowercase(domain-name) = as-lowercase(question)
   end
 end;
 

@@ -5,8 +5,11 @@ define class <dns-server> (<filter>)
 end;
 
 define method push-data-aux
-    (input :: <push-input>, node :: <dns-server>, data :: <dns-frame>) => ()
+    (input :: <push-input>, dns :: <dns-server>, data :: <dns-frame>) => ()
   //dbg("received %=\n", data);
+  let remote-ip-c = dns.the-output.connected-input.node.reply-addr;
+  let remote-ip = make(<ipv4-network-order-address>,
+                       address: remote-ip-c);
   if (data.query-or-response == #"query" &
         data.question-count == 1)
     let question = data.questions.first;
@@ -16,13 +19,13 @@ define method push-data-aux
 
     //TODO: check authority!
 
-    dbg("question: ?%s%s\n", dns-query-entry(question.question-type), que);
-    let answers = choose(rcurry(entry-matches?, type, que), node.zone.entries);
+    dbg("%s ?%s%s\n", as(<string>, remote-ip), dns-query-entry(question.question-type), que);
+    let answers = choose(rcurry(entry-matches?, type, que), dns.zone.entries);
 
     dbg("answers: %d\n", answers.size);
-    for (x in answers, i from 0)
-      dbg("answer %d: %=\n", i, x);
-    end;
+    //for (x in answers, i from 0)
+    //  dbg("answer %d: %=\n", i, x);
+    //end;
 
     let d1 = as(<domain-name>, que);
     let quest = dns-question(domainname: d1,
@@ -40,7 +43,7 @@ define method push-data-aux
                         answers: frs);
     quest.parent := res;
     do(method(x) x.parent := res end, frs);
-    push-data(node.the-output, res);
+    push-data(dns.the-output, res);
   else
     format-out("not a question or multiple.\n")
   end;
