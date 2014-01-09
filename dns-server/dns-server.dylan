@@ -19,10 +19,10 @@ define method push-data-aux
 
     //TODO: check authority!
 
-    dbg("%s ?%s%s\n", as(<string>, remote-ip), dns-query-entry(question.question-type), que);
     let answers = choose(rcurry(entry-matches?, type, que), dns.zone.entries);
 
-    dbg("answers: %d\n", answers.size);
+    dbg("%s ?%s%s [%d answers]\n", as(<string>, remote-ip), type.dns-query-entry, que, answers.size);
+    //dbg("answers: %d\n", answers.size);
     //for (x in answers, i from 0)
     //  dbg("answer %d: %=\n", i, x);
     //end;

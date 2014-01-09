@@ -24,7 +24,11 @@ define abstract class <entry> (<object>)
   constant slot dns-time-to-live :: <integer> = 86400, init-keyword: ttl:;
 end;
 
-define generic entry-matches? (entry :: <entry>, type :: <symbol>, question :: <string>) => (matches? :: <boolean>);
+define generic entry-matches? (entry :: <entry>, type, question :: <string>) => (matches? :: <boolean>);
+
+define method entry-matches? (entry :: <entry>, type, question :: <string>) => (matches? :: <boolean>)
+  #f
+end;
 
 define method entry-matches? (entry :: <entry>, type :: <symbol>, question :: <string>) => (matches? :: <boolean>)
   (entry.entry-type == #"CNAME" | entry.entry-type = type) &
