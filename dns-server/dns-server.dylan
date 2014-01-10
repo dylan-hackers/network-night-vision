@@ -14,7 +14,12 @@ define method push-data-aux
         data.question-count == 1)
     let question = data.questions.first;
     let q = as(<string>, question.domainname);
-    let que = copy-sequence(q, end: q.size - 1); //cut off '.'
+    let que =
+      if (q.size > 0)
+        copy-sequence(q, end: q.size - 1); //cut off last '.'
+      else
+        q
+      end;
     let type = question.question-type;
 
     //TODO: check authority!

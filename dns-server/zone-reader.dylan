@@ -1,16 +1,20 @@
 module: dns-server
 
 
-define function dns-query-entry (x :: <symbol>) => (res :: <character>)
-  select (x)
-    #"A" => '+';
-    #"NS" => '&';
-    #"CNAME" => 'C';
-    #"SOA" => 'Z';
-    #"PTR" => '^';
-    #"MX" => '@';
-    #"TXT" => '\'';
-    #"ANY" => '*';
+define function dns-query-entry (x :: type-union(<symbol>, <integer>)) => (res :: <string>)
+  select (x.object-class)
+    <symbol> => select (x)
+                  #"A" => "+";
+                  #"NS" => "&";
+                  #"CNAME" => "C";
+                  #"SOA" => "Z";
+                  #"PTR" => "^";
+                  #"MX" => "@";
+                  #"TXT" => "'";
+                  #"ANY" => "*";
+                  otherwise => as(<string>, x);
+                end;
+    <integer> => x.integer-to-string;
   end;
 end;
 
@@ -38,14 +42,14 @@ end;
 define function domain-name-matches? (domain-name :: <string>, question :: <string>) => (res :: <boolean>)
   //dbg("comparing %s with %s\n", domain-name, question);
   if (domain-name[0] == '*')
-    as-lowercase(copy-sequence(domain-name, start: 2)) = as-lowercase(join(copy-sequence(split(question, "."), start: 1), "."));
+    as-lowercase(copy-sequence(domain-name, start: 2)) = as-lowercase(join(copy-sequence(split(question, "."), start: 1), "."))
   else
     as-lowercase(domain-name) = as-lowercase(question)
   end
 end;
 
 define method entry-matches? (entry :: <entry>, type == #"ANY", question :: <string>) => (matches? :: <boolean>)
-  #t
+  domain-name-matches?(entry.fully-qualified-domain-name, question);
 end;
 
 define constant $tbv = compose(big-endian-unsigned-integer-4byte, float-to-byte-vector-be, curry(as, <float>));
