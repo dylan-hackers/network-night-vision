@@ -1,23 +1,6 @@
 module: dns-server
 
 
-define function dns-query-entry (x :: type-union(<symbol>, <integer>)) => (res :: <string>)
-  select (x.object-class)
-    <symbol> => select (x)
-                  #"A" => "+";
-                  #"NS" => "&";
-                  #"CNAME" => "C";
-                  #"SOA" => "Z";
-                  #"PTR" => "^";
-                  #"MX" => "@";
-                  #"TXT" => "'";
-                  #"ANY" => "*";
-                  otherwise => as(<string>, x);
-                end;
-    <integer> => x.integer-to-string;
-  end;
-end;
-
 define class <zone> (<object>)
   constant slot entries = make(<stretchy-vector>)
 end;

@@ -19,6 +19,7 @@ define module dns-server
   use print;
   use streams;
   use format;
+  use date;
   use file-system;
   use binary-data;
   use dns;
