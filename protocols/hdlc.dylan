@@ -5,7 +5,7 @@ license: see license.txt in this distribution
 
 // Cisco High-Level Data Link Control
 // http://www.nethelp.no/net/cisco-hdlc.txt
-define binary-data cisco-hdlc-frame (header-frame)
+define binary-data <cisco-hdlc-frame> (<header-frame>)
   summary "Cisco HDLC";
   enum field address :: <unsigned-byte> = #x8f,
     mappings: { #x0f <=> #"unicast",
@@ -17,7 +17,7 @@ define binary-data cisco-hdlc-frame (header-frame)
 end;
 
 // Serial Line Address Resolution Protocol
-define abstract binary-data slarp (variably-typed-container-frame)
+define abstract binary-data <slarp> (<variably-typed-container-frame>)
   over <cisco-hdlc-frame> #x8035;
   // layering field packet-type :: <big-endian-unsigned-integer-4byte> = 2;
   field packet-type-first :: <unsigned-byte> = 0;
@@ -36,7 +36,7 @@ define method summary (frame :: <slarp>) => (res :: <string>)
   end;
 end;
 
-define binary-data slarp-address-resolution (slarp)
+define binary-data <slarp-address-resolution> (<slarp>)
   over <slarp> 0;
   over <slarp> 1;
 //  field address :: <ipv4-address>;
@@ -44,7 +44,7 @@ define binary-data slarp-address-resolution (slarp)
 //  field unused :: <2byte-big-endian-unsigned-integer> = 0;
 end;
 
-define binary-data slarp-line-keepalive (slarp)
+define binary-data <slarp-line-keepalive> (<slarp>)
   over <slarp> 2;
   field mysequence :: <big-endian-unsigned-integer-4byte>;
   field yoursequence :: <big-endian-unsigned-integer-4byte>;

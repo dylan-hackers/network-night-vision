@@ -3,7 +3,7 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define n-byte-vector(ipv6-address, 16) end;
+define n-byte-vector(<ipv6-address>, 16) end;
 
 define method read-frame (class == <ipv6-address>, data :: <string>) => (res :: <ipv6-address>)
   //XXXX:XXXX::XXXX
@@ -49,7 +49,7 @@ define method as (class == <string>, ip :: <ipv6-address>) => (res :: <string>)
   reduce1(method(x, y) concatenate(x, ":", y) end, reverse(strings));
 end;
 
-define binary-data ipv6-frame (header-frame)
+define binary-data <ipv6-frame> (<header-frame>)
   summary "IPv6 %= -> %=", source-address, destination-address; 
   over <ethernet-frame> #x86dd;
   over <link-control> #x86dd;
@@ -66,7 +66,7 @@ define binary-data ipv6-frame (header-frame)
     length: frame.payload-length * 8;
 end; 
 
-define binary-data ipv6-extension-header (container-frame)
+define binary-data <ipv6-extension-header> (<container-frame>)
   field option-type :: <unsigned-byte>;
   field option-data-length :: <unsigned-byte>;
   field option-data :: <raw-frame>, length: frame.option-data-length * 8;

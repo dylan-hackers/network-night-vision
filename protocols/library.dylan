@@ -79,7 +79,7 @@ define module ppp
 
   export ppp, lcp-configure-request, configuration-options,
     lcp-configure-ack, lcp-configure-nak, lcp-configure-reject,
-    lcp-terminate-request, lcp-terminate-ack, lcp-terminate-nak,
+    lcp-terminate-request, lcp-terminate-ack,
     lcp-code-reject, lcp-protocol-reject,
     lcp-echo-request, lcp-echo-reply, lcp-discard-request,
     lcp-identification, lcp-time-remaining;
@@ -93,8 +93,7 @@ define module ppp
 
   export <pap>, pap-authenticate-request,
     peer-id, password,
-    pap-autenticate-ack, pap-authenticate-nak;
-    
+    pap-authenticate-ack, pap-authenticate-nak;
 end;
 
 define module pppoe
@@ -460,8 +459,7 @@ define module dns
     rr-type, rr-type-setter,
     rr-class, rr-class-setter,
     ttl, ttl-setter,
-    rdlength, rdlength-setter,
-    rdata, rdata-setter;
+    rdlength, rdlength-setter;
 
   export <a-host-address>,
     a-host-address,

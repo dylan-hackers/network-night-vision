@@ -3,14 +3,14 @@ author: mb, Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 mb, Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define binary-data prism2-header-item (container-frame)
+define binary-data <prism2-header-item> (<container-frame>)
   field item-did :: <little-endian-unsigned-integer-4byte>;
   field item-status :: <2byte-little-endian-unsigned-integer>;
   field item-length :: <2byte-little-endian-unsigned-integer>;
   field item-data :: <little-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data prism2-frame (header-frame)
+define binary-data <prism2-frame> (<header-frame>)
   field message-code :: <little-endian-unsigned-integer-4byte>;
   field message-len :: <little-endian-unsigned-integer-4byte>;
   field device-name :: <externally-delimited-string>
@@ -30,7 +30,7 @@ define binary-data prism2-frame (header-frame)
     type-function: <ieee80211-frame>;
 end;
 
-define binary-data bsd-80211-radio-frame (header-frame)
+define binary-data <bsd-80211-radio-frame> (<header-frame>)
   field version :: <unsigned-byte>;
   field pad :: <unsigned-byte>;
   field frame-length :: <2byte-little-endian-unsigned-integer>;

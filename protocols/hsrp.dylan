@@ -4,13 +4,13 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 //Cisco Hot Standby Router Protocol (HSRP) RFC 2281 
-define abstract binary-data hsrp (variably-typed-container-frame)
+define abstract binary-data <hsrp> (<variably-typed-container-frame>)
   over <udp-frame> 1985;
   field version :: <unsigned-byte> = 0;
   layering field opcode :: <unsigned-byte> = 0;
 end;
 
-define abstract binary-data hsrp-rfc2881 (hsrp)
+define abstract binary-data <hsrp-rfc2881> (<hsrp>)
   summary "HSRP v%= (%=)", version, state;
   enum field state :: <unsigned-byte> = 16,
     mappings: { 0 <=> #"Initial",
@@ -30,19 +30,19 @@ define abstract binary-data hsrp-rfc2881 (hsrp)
   field virtual-ip :: <ipv4-address>;
 end;
 
-define binary-data hsrp-hello (hsrp-rfc2881)
+define binary-data <hsrp-hello> (<hsrp-rfc2881>)
   over <hsrp> 0;
 end;
 
-define binary-data hsrp-coup (hsrp-rfc2881)
+define binary-data <hsrp-coup> (<hsrp-rfc2881>)
   over <hsrp> 1;
 end;
 
-define binary-data hsrp-resign (hsrp-rfc2881)
+define binary-data <hsrp-resign> (<hsrp-rfc2881>)
   over <hsrp> 2;
 end;
 
-define binary-data hsrp-advertisement (hsrp)
+define binary-data <hsrp-advertisement> (<hsrp>)
   summary "HSRP v%= (%=)", version, state;
   length frame.advertisement-length * 8;
   over <hsrp> 3;

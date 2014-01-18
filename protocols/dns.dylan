@@ -15,7 +15,7 @@ define abstract class <unparsed-container-frame-with-metadata>
  (<container-frame-with-metadata>, <unparsed-container-frame>)
 end;
 
-define binary-data dns-frame (container-frame-with-metadata)
+define binary-data <dns-frame> (<container-frame-with-metadata>)
   over <udp-frame> 53;
   summary "DNS ID=%=, %= questions, %= answers",
     identifier, question-count, answer-count;
@@ -52,7 +52,9 @@ define binary-data dns-frame (container-frame-with-metadata)
 end;
 
 
-define method find-offset (search :: <frame>, current :: <container-frame>) => (offset :: <integer>)
+define method find-offset
+    (search :: <frame>, current :: <container-frame>)
+ => (offset :: <integer>)
   let ff = find-frame-field(current, search);
   let off1 =
     if (instance?(current, <dns-frame>))
@@ -70,7 +72,7 @@ define method find-offset (search :: <frame>, current :: <container-frame>) => (
 end;
 
 define method assemble-frame-into
- (frame :: <domain-name>, packet :: <stretchy-byte-vector-subsequence>)
+    (frame :: <domain-name>, packet :: <stretchy-byte-vector-subsequence>)
  => (res :: <integer>)
   //assumption: frame.parent.parent is the <dns-frame>!
   let name-table = frame.parent.parent.fragment-table;
@@ -122,7 +124,7 @@ define method fixup! (f :: <unparsed-dns-frame>, #next next-method)
   do(h, f.additional-records);
 end;
 
-define binary-data domain-name (container-frame)
+define binary-data <domain-name> (<container-frame>)
   summary "%=", curry(as, <string>);
   repeated field fragment :: <domain-name-fragment>,
     reached-end?: frame.type-code = 3 | frame.data-length = 0;
@@ -145,11 +147,11 @@ define method \= (a :: <domain-name>, b :: <domain-name>) => (res :: <boolean>)
   as(<string>, a) = as(<string>, b)
 end;
 
-define abstract binary-data domain-name-fragment (variably-typed-container-frame)
+define abstract binary-data <domain-name-fragment> (<variably-typed-container-frame>)
   layering field type-code :: <2bit-unsigned-integer>;
 end;
 
-define binary-data label-offset (domain-name-fragment)
+define binary-data <label-offset> (<domain-name-fragment>)
   over <domain-name-fragment> 3;
   field offset :: <14bit-unsigned-integer>;
 end;
@@ -186,7 +188,7 @@ define method as (class == <string>, label-offset :: <label-offset>)
   end;
 end;
 
-define binary-data label (domain-name-fragment)
+define binary-data <label> (<domain-name-fragment>)
   over <domain-name-fragment> 0;
   field data-length :: <6bit-unsigned-integer>,
     fixup: frame.raw-data.frame-size.byte-offset;
@@ -204,7 +206,7 @@ define method as (class == <label>, string :: <string>)
   make(<label>, raw-data: as(<externally-delimited-string>, string))
 end;
 
-define binary-data dns-question (container-frame)
+define binary-data <dns-question> (<container-frame>)
   summary "%= %s", domainname, question-type;
   field domainname :: <domain-name>;
   enum field question-type :: <2byte-big-endian-unsigned-integer> = #"A",
@@ -220,7 +222,7 @@ define binary-data dns-question (container-frame)
   field question-class :: <2byte-big-endian-unsigned-integer> = 1;
 end;
 
-define abstract binary-data dns-resource-record (variably-typed-container-frame)
+define abstract binary-data <dns-resource-record> (<variably-typed-container-frame>)
   length frame.rdlength * 8 + 80 + frame.domainname.frame-size;
   field domainname :: <domain-name>;
   layering field rr-type :: <2byte-big-endian-unsigned-integer>;
@@ -233,8 +235,8 @@ end;
 define function fixup-dnsrr
     (dnsrr :: <dns-resource-record>,
      packet :: <stretchy-byte-vector-subsequence>,
-     offset :: <integer>) =>
-    (len :: <integer>)
+     offset :: <integer>)
+  => (len :: <integer>)
   let ff = dnsrr.concrete-frame-fields;
   let off = byte-offset(ff[ff.size - 1].end-offset);
   let length = off - 10 - byte-offset(dnsrr.domainname.frame-size);
@@ -249,25 +251,25 @@ define function fixup-dnsrr
   length + 10 + byte-offset(dnsrr.domainname.frame-size);
 end;
 
-define binary-data a-host-address (dns-resource-record)
+define binary-data <a-host-address> (<dns-resource-record>)
   summary "%= A %=", domainname, ipv4-address;
   over <dns-resource-record> 1;
   field ipv4-address :: <ipv4-address>;
 end;
 
-define binary-data name-server (dns-resource-record)
+define binary-data <name-server> (<dns-resource-record>)
   summary "%= NS %=", domainname, ns-name;
   over <dns-resource-record> 2;
   field ns-name :: <domain-name>;
 end;
 
-define binary-data canonical-name (dns-resource-record)
+define binary-data <canonical-name> (<dns-resource-record>)
   summary "%= CNAME %=", domainname, cname;
   over <dns-resource-record> 5;
   field cname :: <domain-name>;
 end;
 
-define binary-data start-of-authority (dns-resource-record)
+define binary-data <start-of-authority> (<dns-resource-record>)
   summary "%= SOA", domainname;
   over <dns-resource-record> 6;
   field nameserver :: <domain-name>;
@@ -279,13 +281,13 @@ define binary-data start-of-authority (dns-resource-record)
   field minimum :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data domain-name-pointer (dns-resource-record)
+define binary-data <domain-name-pointer> (<dns-resource-record>)
   summary "%= PTR %=", domainname, ptr-name;
   over <dns-resource-record> 12;
   field ptr-name :: <domain-name>;
 end;
 
-define binary-data character-string (container-frame)
+define binary-data <character-string> (<container-frame>)
   field data-length :: <unsigned-byte>;
   field string-data :: <externally-delimited-string>,
     length: frame.data-length * 8;
@@ -302,21 +304,21 @@ define method as (class == <character-string>, data :: <string>)
   character-string(data-length: data.size, string-data: str)
 end;
 
-define binary-data host-information (dns-resource-record)
+define binary-data <host-information> (<dns-resource-record>)
   summary "%= HINFO %=, %=", domainname, cpu, operating-system;
   over <dns-resource-record> 13;
   field cpu :: <character-string>;
-  field operating-system :: <character-string>; 
+  field operating-system :: <character-string>;
 end;
 
-define binary-data mail-exchange (dns-resource-record)
-  summary "%= MX %= %=", domainname, preference, exchange; 
+define binary-data <mail-exchange> (<dns-resource-record>)
+  summary "%= MX %= %=", domainname, preference, exchange;
   over <dns-resource-record> 15;
   field preference :: <2byte-big-endian-unsigned-integer>;
   field exchange :: <domain-name>;
 end;
 
-define binary-data text-strings (dns-resource-record)
+define binary-data <text-strings> (<dns-resource-record>)
   summary "%= TXT %=", domainname, text-data;
   over <dns-resource-record> 16;
   field text-data :: <character-string>;

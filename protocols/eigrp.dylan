@@ -6,7 +6,7 @@ license: see license.txt in this distribution
 //Enhanced Interior Gateway Routing Protocol (EIGRP)
 //http://www.rhyshaden.com/eigrp.htm
 //http://www.oreilly.com/catalog/iprouting/chapter/ch04.html
-define binary-data eigrp (container-frame)
+define binary-data <eigrp> (<container-frame>)
   summary "EIGRP Opcode: %= AS Number: %=", opcode, autonomoussystem;
   over <ipv4-frame> 88;
   field version :: <unsigned-byte> = 2;
@@ -25,12 +25,12 @@ define binary-data eigrp (container-frame)
   repeated field tlv-payload :: <eigrp-tlv>, reached-end?: #f;
 end;
 
-define abstract binary-data eigrp-tlv (variably-typed-container-frame)
+define abstract binary-data <eigrp-tlv> (<variably-typed-container-frame>)
   layering field tlv-type :: <2byte-big-endian-unsigned-integer>;
   field tlv-length :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define abstract binary-data eigrp-parameters (eigrp-tlv)
+define abstract binary-data <eigrp-parameters> (<eigrp-tlv>)
   over <eigrp-tlv> 1;
   field k1 :: <unsigned-byte> = 1;
   field k2 :: <unsigned-byte> = 0;
@@ -41,29 +41,29 @@ define abstract binary-data eigrp-parameters (eigrp-tlv)
   field hold-time :: <2byte-big-endian-unsigned-integer> = 15;
 end;
 
-define abstract binary-data eigrp-authentication-data (eigrp-tlv)
+define abstract binary-data <eigrp-authentication-data> (<eigrp-tlv>)
   over <eigrp-tlv> 2;
   field authentication-data :: <raw-frame>, length: frame.tlv-length * 8 - 32;
 end;
 
-define abstract binary-data eigrp-sequence (eigrp-tlv)
+define abstract binary-data <eigrp-sequence> (<eigrp-tlv>)
   over <eigrp-tlv> 3;
   field address-length :: <unsigned-byte> = 4;
   field ip-address :: <ipv4-address>;
 end;
 
-define abstract binary-data eigrp-software-version (eigrp-tlv)
+define abstract binary-data <eigrp-software-version> (<eigrp-tlv>)
   over <eigrp-tlv> 4;
   field ios-version :: <2byte-big-endian-unsigned-integer>;
   field eigrp-version :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define abstract binary-data eigrp-next-multicast-sequence (eigrp-tlv)
+define abstract binary-data <eigrp-next-multicast-sequence> (<eigrp-tlv>)
   over <eigrp-tlv> 5;
   field next-multicast-sequence :: <big-endian-unsigned-integer-4byte> = 144;
 end;
 
-define abstract binary-data eigrp-internal-route (eigrp-tlv)
+define abstract binary-data <eigrp-internal-route> (<eigrp-tlv>)
   over <eigrp-tlv> 258;
   field next-hop :: <ipv4-address>;
   field delay :: <big-endian-unsigned-integer-4byte> = 0;

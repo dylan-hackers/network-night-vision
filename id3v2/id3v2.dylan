@@ -28,18 +28,18 @@ define method parse-frame
   values(result, 8 * 4);
 end;
 
-define binary-data id3v2-string (container-frame)
+define binary-data <id3v2-string> (<container-frame>)
 end;
 
-define binary-data id3v2-string-with-type (id3v2-string)
+define binary-data <id3v2-string-with-type> (<id3v2-string>)
   field string-type :: <unsigned-byte>;
 end;
 
-define binary-data ascii-string-with-type (id3v2-string-with-type)
+define binary-data <ascii-string-with-type> (<id3v2-string-with-type>)
   field string-data :: <externally-delimited-string>;
 end;
 
-define binary-data ascii-string (id3v2-string)
+define binary-data <ascii-string> (<id3v2-string>)
   field string-data :: <externally-delimited-string>;
 end;
 
@@ -51,10 +51,10 @@ define method parse-frame
                       #x00 => <ascii-string-with-type>;
                         otherwise <ascii-string>;
                     end select;
-  parse-frame(string-type, packet);
+  parse-frame(string-type, packet)
 end;
 
-define binary-data id3v2-flags (container-frame)
+define binary-data <id3v2-flags> (<container-frame>)
   field unsynchronisation :: <1bit-unsigned-integer>;
   field extended-header :: <1bit-unsigned-integer>;
   field experimental-indicator :: <1bit-unsigned-integer>;
@@ -62,7 +62,7 @@ define binary-data id3v2-flags (container-frame)
   field dummy :: <4bit-unsigned-integer>;	// must be zero
 end;
 
-define binary-data id3v2-frame (container-frame)
+define binary-data <id3v2-frame> (<container-frame>)
   field frame-id :: <externally-delimited-string>, static-length: 8 * 4;
   field id3v2-frame-size :: <4byte-7bit-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame.id3v2-data));
@@ -77,7 +77,7 @@ define binary-data id3v2-frame (container-frame)
             end if; */
 end;
 
-define binary-data id3v2-header (container-frame)
+define binary-data <id3v2-header> (<container-frame>)
   field identifier :: <externally-delimited-string>,
     static-length: 8 * 3;
   field major-version :: <unsigned-byte>;
@@ -86,7 +86,7 @@ define binary-data id3v2-header (container-frame)
   field tag-size :: <4byte-7bit-big-endian-unsigned-integer>;
 end;
 
-define binary-data id3v2-tag (header-frame)
+define binary-data <id3v2-tag> (<header-frame>)
   field id3v2-header :: <id3v2-header>;
   repeated field id3v2-frame :: <id3v2-frame>,
     reached-end?: frame.frame-id.data[0] == #x00;

@@ -3,7 +3,7 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define abstract binary-data rip (variably-typed-container-frame)
+define abstract binary-data <rip> (<variably-typed-container-frame>)
   over <udp-frame> 520;
   field command :: <unsigned-byte>;
   layering field version :: <unsigned-byte>;
@@ -15,16 +15,16 @@ end;
 //4 - traceoff
 //5 - reserved
 
-define binary-data rip-v1 (rip)
+define binary-data <rip-v1> (<rip>)
   over <rip> 1;
   repeated field routes :: <rip-v1-route>, reached-end?: #f;
 end;
-define binary-data rip-v2 (rip)
+define binary-data <rip-v2> (<rip>)
   over <rip> 2;
   repeated field routes :: <rip-v2-route>, reached-end?: #f;
 end;
 
-define binary-data rip-v1-route (container-frame)
+define binary-data <rip-v1-route> (<container-frame>)
   field address-family-identifier :: <2byte-big-endian-unsigned-integer>;
   field reserved2 :: <2byte-big-endian-unsigned-integer> = 0;
   field route-ip-address :: <ipv4-address>;
@@ -32,7 +32,7 @@ define binary-data rip-v1-route (container-frame)
   field metric :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data rip-v2-route (container-frame)
+define binary-data <rip-v2-route> (<container-frame>)
   field address-family-identifier :: <2byte-big-endian-unsigned-integer>;
   field route-tag :: <2byte-big-endian-unsigned-integer> = 0;
   field route-ip-address :: <ipv4-address>;
@@ -41,18 +41,18 @@ define binary-data rip-v2-route (container-frame)
   field metric :: <big-endian-unsigned-integer-4byte>
 end;
 
-define binary-data rip-v2-authentication (container-frame)
+define binary-data <rip-v2-authentication> (<container-frame>)
   field authentication-id :: <2byte-big-endian-unsigned-integer> = #xffff;
   field authentication-type :: <2byte-big-endian-unsigned-integer>;
   field authentication-value :: <raw-frame>, static-length: 16 * 8;
 end;
 
-define binary-data rip-ng (rip)
+define binary-data <rip-ng> (<rip>)
   over <udp-frame> 521;
   repeated field routes :: <rip-ng-route>, reached-end?: #f;
 end;
 
-define binary-data rip-ng-route (container-frame)
+define binary-data <rip-ng-route> (<container-frame>)
   field ipv6-prefix :: <raw-frame>, static-length: 128; //<ipv6-address>;
   field route-tag :: <2byte-big-endian-unsigned-integer>;
   field prefix-length :: <unsigned-byte>;

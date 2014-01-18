@@ -9,7 +9,7 @@ define constant $DLT-C-HDLC = 104;
 define constant $DLT-PRISM-HEADER = 119;
 define constant $DLT-80211-BSD-RADIO = 127;
 
-define binary-data pcap-file-header (container-frame)
+define binary-data <pcap-file-header> (<container-frame>)
   field magic :: <little-endian-unsigned-integer-4byte>
    = little-endian-unsigned-integer-4byte(#(#xd4, #xc3, #xb2, #xa1));
   field major-version :: <2byte-little-endian-unsigned-integer> = 2;
@@ -25,7 +25,7 @@ define binary-data pcap-file-header (container-frame)
 end;
 
 
-define binary-data unix-time-value (container-frame)
+define binary-data <unix-time-value> (<container-frame>)
   field seconds :: <little-endian-unsigned-integer-4byte>;
   field microseconds :: <little-endian-unsigned-integer-4byte>;
 end;
@@ -51,7 +51,8 @@ define method make-unix-time (dur :: <day/time-duration>)
        microseconds: little-endian-unsigned-integer-4byte(float-to-byte-vector-le(as(<double-float>, microseconds))));
 end;
 
-define binary-data pcap-packet (header-frame)
+//XXX: this is so wrong! only taking 3 of the 4 bytes into account for length.
+define binary-data <pcap-packet> (<header-frame>)
   field timestamp :: <unix-time-value>
     = make-unix-time(current-date() - make(<date>, year: 1970, month: 1, day: 1));
   field capture-length :: <3byte-little-endian-unsigned-integer>,
@@ -71,7 +72,7 @@ define binary-data pcap-packet (header-frame)
     length: frame.capture-length * 8;
 end;
 
-define binary-data pcap-file (container-frame)
+define binary-data <pcap-file> (<container-frame>)
   field header :: <pcap-file-header>;
   repeated field packets :: <pcap-packet>,
     reached-end?: #f;

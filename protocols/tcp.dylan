@@ -3,7 +3,7 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define binary-data tcp-frame (header-frame)
+define binary-data <tcp-frame> (<header-frame>)
   summary "TCP %s port %= -> %=", flags-summary, source-port, destination-port;
   over <ipv4-frame> 6;
   over <ipv6-frame> 6;
@@ -31,7 +31,7 @@ define binary-data tcp-frame (header-frame)
     start: frame.data-offset * 4 * 8;
 end;
 
-define binary-data pseudo-header (container-frame)
+define binary-data <pseudo-header> (<container-frame>)
   field source-address :: <ipv4-address>;
   field destination-address :: <ipv4-address>;
   field reserved :: <unsigned-byte> = 0;
@@ -60,101 +60,101 @@ define method flags-summary (frame :: <tcp-frame>) => (result :: <string>)
             list("U", "A", "P", "R", "S", "F")))
 end;
 
-define abstract binary-data tcp-option (variably-typed-container-frame)
+define abstract binary-data <tcp-option> (<variably-typed-container-frame>)
   layering field tcp-option-type :: <unsigned-byte>;
 end;
 
-define binary-data end-of-option (tcp-option)
+define binary-data <end-of-option> (<tcp-option>)
   over <tcp-option> 0;
 end;
 
-define binary-data no-operation-option (tcp-option)
+define binary-data <no-operation-option> (<tcp-option>)
   over <tcp-option> 1
 end;
 
-define abstract binary-data tcp-option-with-data (tcp-option)
+define abstract binary-data <tcp-option-with-data> (<tcp-option>)
   length frame.tcp-option-length * 8;
   field tcp-option-length :: <unsigned-byte>,
     fixup: byte-offset(frame-size(frame));
 end;
 
-define binary-data maximum-segment-size-option (tcp-option-with-data)
+define binary-data <maximum-segment-size-option> (<tcp-option-with-data>)
   over <tcp-option> 2;
   field maximum-segment-size :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define binary-data window-scale-option (tcp-option-with-data)
+define binary-data <window-scale-option> (<tcp-option-with-data>)
   over <tcp-option> 3;
   field shift-count :: <unsigned-byte>;
 end;
 
-define binary-data tcp-sack-permitted (tcp-option-with-data)
+define binary-data <tcp-sack-permitted> (<tcp-option-with-data>)
   over <tcp-option> 4;
 end;
 
-define binary-data tcp-sack-option (tcp-option-with-data)
+define binary-data <tcp-sack-option> (<tcp-option-with-data>)
   over <tcp-option> 5;
   repeated field blocks :: <received-blocks>, reached-end?: #f;
 end;
 
-define binary-data received-blocks (container-frame)
+define binary-data <received-blocks> (<container-frame>)
   field left-edge :: <big-endian-unsigned-integer-4byte>;
   field right-edge :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data tcp-echo-option (tcp-option-with-data)
+define binary-data <tcp-echo-option> (<tcp-option-with-data>)
   over <tcp-option> 6;
   field data-to-echo :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data tcp-echo-reply-option (tcp-option-with-data)
+define binary-data <tcp-echo-reply-option> (<tcp-option-with-data>)
   over <tcp-option> 7;
   field echoed-data :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data tcp-timestamp-option (tcp-option-with-data)
+define binary-data <tcp-timestamp-option> (<tcp-option-with-data>)
   over <tcp-option> 8;
   field timestamp-value :: <big-endian-unsigned-integer-4byte>;
   field timestamp-echo-reply :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data tcp-partial-order-permitted (tcp-option-with-data)
+define binary-data <tcp-partial-order-permitted> (<tcp-option-with-data>)
   over <tcp-option> 9;
 end;
 
-define binary-data tcp-partial-order-service-profile (tcp-option-with-data)
+define binary-data <tcp-partial-order-service-profile> (<tcp-option-with-data>)
   over <tcp-option> 10;
   field start-flag :: <1bit-unsigned-integer>;
   field end-flag :: <1bit-unsigned-integer>;
   field filler :: <6bit-unsigned-integer> = 0;
 end;
 
-define binary-data ttcp-connection-count (tcp-option-with-data)
+define binary-data <ttcp-connection-count> (<tcp-option-with-data>)
   over <tcp-option> 11;
   field connection-count :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data ttcp-connection-count-new (tcp-option-with-data)
+define binary-data <ttcp-connection-count-new> (<tcp-option-with-data>)
   over <tcp-option> 12;
   field connection-count :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data ttcp-connection-count-echo (tcp-option-with-data)
+define binary-data <ttcp-connection-count-echo> (<tcp-option-with-data>)
   over <tcp-option> 13;
   field connection-count :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data tcp-alternate-checksum-request (tcp-option-with-data)
+define binary-data <tcp-alternate-checksum-request> (<tcp-option-with-data>)
   over <tcp-option> 14;
   field checksum-type :: <unsigned-byte>;
 end;
 
-define binary-data tcp-alternate-checksum-data (tcp-option-with-data)
+define binary-data <tcp-alternate-checksum-data> (<tcp-option-with-data>)
   over <tcp-option> 15;
   field checksum-data :: <raw-frame>;
 end;
 
-define binary-data md5-digest-tcp-option (tcp-option-with-data)
+define binary-data <md5-digest-tcp-option> (<tcp-option-with-data>)
   over <tcp-option> 19;
   field md5-digest :: <raw-frame>, length: 16 * 8;
 end;

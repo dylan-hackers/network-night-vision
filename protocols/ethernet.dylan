@@ -3,7 +3,7 @@ author: Andreas Bogk and Hannes Mehnert
 copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
-define n-byte-vector(ipv4-address, 4) end;
+define n-byte-vector(<ipv4-address>, 4) end;
 
 define method read-frame (frame-type == <ipv4-address>, string :: <string>)
  => (res)
@@ -18,7 +18,7 @@ define method as (class == <string>, frame :: <ipv4-address>) => (string :: <str
                  frame.data))
 end;
 
-define n-byte-vector(mac-address, 6) end;
+define n-byte-vector(<mac-address>, 6) end;
 
 define method read-frame(type == <mac-address>,
                          string :: <string>)
@@ -52,7 +52,7 @@ define method as (class == <string>, frame :: <mac-address>) => (string :: <stri
                  frame.data))
 end;
 
-define binary-data ethernet-frame (header-frame)
+define binary-data <ethernet-frame> (<header-frame>)
   summary "ETH %= -> %=", source-address, destination-address;
   field destination-address :: <mac-address>;
   field source-address :: <mac-address>;
@@ -65,7 +65,7 @@ define binary-data ethernet-frame (header-frame)
                    end;
 end;
 
-define binary-data llc-frame (header-frame)
+define binary-data <llc-frame> (<header-frame>)
   field dsap :: <7bit-unsigned-integer>;
   field address-type-designation :: <1bit-unsigned-integer>;
   field ssap :: <7bit-unsigned-integer>;
@@ -79,42 +79,40 @@ define binary-data llc-frame (header-frame)
                    end;
 end;
 
-define binary-data snap-frame (header-frame)
+define binary-data <snap-frame> (<header-frame>)
   field organization-code :: <3byte-big-endian-unsigned-integer> = 0;
   layering field type-code :: <2byte-big-endian-unsigned-integer>;
   variably-typed field payload,
     type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
 end;
 
-define binary-data vlan-tag (header-frame)
+define binary-data <vlan-tag> (<header-frame>)
   over <ethernet-frame> #x8100;
   summary "VLAN: %=", vlan-id;
   field priority :: <3bit-unsigned-integer> = 0;
   field canonical-format-indicator :: <1bit-unsigned-integer> = 0;
   field vlan-id :: <12bit-unsigned-integer>;
-  field type-code :: <2byte-big-endian-unsigned-integer>,
-    fixup: reverse-lookup-layer(<ethernet-frame>, frame.payload);
-  variably-typed field payload,
-    type-function: lookup-layer(<ethernet-frame>, frame.type-code) | <raw-frame>;
+  layering field type-code :: <2byte-big-endian-unsigned-integer>;
+  variably-typed field payload, type-function: frame.payload-type;
 end;
 
 define method source-address (frame :: <vlan-tag>) => (res :: <mac-address>)
   frame.parent.source-address;
 end;
 
-define binary-data stp-identifier (container-frame)
+define binary-data <stp-identifier> (<container-frame>)
   summary "%=/%=", bridge-priority, bridge-address;
   field bridge-priority :: <2byte-big-endian-unsigned-integer>;
   field bridge-address :: <mac-address>;
 end;
 
-define abstract binary-data stp-frame (variably-typed-container-frame)
+define abstract binary-data <stp-frame> (<variably-typed-container-frame>)
   field protocol-identifier :: <2byte-big-endian-unsigned-integer>;
   field protocol-version :: <unsigned-byte>;
   layering field bpdu-type :: <unsigned-byte>;
 end;
 
-define binary-data stp-configuration-frame (stp-frame)
+define binary-data <stp-configuration-frame> (<stp-frame>)
   summary "STP configuration";
   over <stp-frame> 0;
   field flags :: <unsigned-byte>;
@@ -128,32 +126,32 @@ define binary-data stp-configuration-frame (stp-frame)
   field forward-delay :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define binary-data stp-topology-change-frame (stp-frame)
+define binary-data <stp-topology-change-frame> (<stp-frame>)
   over <stp-frame> #x80;
   summary "STP topology change notification";
 end;
 
-define abstract binary-data cdp-record (variably-typed-container-frame)
+define abstract binary-data <cdp-record> (<variably-typed-container-frame>)
   length frame.cdp-length * 8;
   layering field cdp-type :: <2byte-big-endian-unsigned-integer>;
   field cdp-length :: <2byte-big-endian-unsigned-integer>,
     fixup: byte-offset(frame-size(frame));
 end;
 
-define abstract binary-data cdp-unknown-record (cdp-record)
+define abstract binary-data <cdp-unknown-record> (<cdp-record>)
   field cdp-value :: <raw-frame>;
 end;
 
-define abstract binary-data cdp-string-record (cdp-record)
+define abstract binary-data <cdp-string-record> (<cdp-record>)
   field cdp-value :: <externally-delimited-string>;
 end;
 
-define binary-data cdp-device-id (cdp-string-record)
+define binary-data <cdp-device-id> (<cdp-string-record>)
   over <cdp-record> #x1;
   summary "ID: %=", cdp-value;
 end;
 
-define binary-data cdp-address-frame (container-frame)
+define binary-data <cdp-address-frame> (<container-frame>)
   field cdp-protocol-type :: <unsigned-byte>;
   field cdp-protocol-length :: <unsigned-byte>;
   field cdp-protocol :: <raw-frame>, length: frame.cdp-protocol-length * 8;
@@ -161,7 +159,7 @@ define binary-data cdp-address-frame (container-frame)
   field cdp-address :: <raw-frame>, length: frame.cdp-address-length * 8;
 end; 
 
-define binary-data cdp-addresses-frame (cdp-record)
+define binary-data <cdp-addresses-frame> (<cdp-record>)
   over <cdp-record> #x2;
   // FIXME: field address-count :: <big-endian-unsigned-integer-4byte>;
   field address-count-first :: <unsigned-byte>;
@@ -170,12 +168,12 @@ define binary-data cdp-addresses-frame (cdp-record)
     count: frame.address-count;
 end;
 
-define binary-data cdp-port-id (cdp-string-record)
+define binary-data <cdp-port-id> (<cdp-string-record>)
   over <cdp-record> #x3;
   summary "Port: %=", cdp-value;
 end;
 
-define binary-data cdp-capabilities (cdp-record)
+define binary-data <cdp-capabilities> (<cdp-record>)
   over <cdp-record> #x4;
   field padding1 :: <3byte-big-endian-unsigned-integer>;
   field padding2 :: <1bit-unsigned-integer>;
@@ -188,97 +186,97 @@ define binary-data cdp-capabilities (cdp-record)
   field cdp-layer3 :: <1bit-unsigned-integer>;
 end;
 
-define binary-data cdp-version (cdp-string-record)
+define binary-data <cdp-version> (<cdp-string-record>)
   over <cdp-record> #x5;
   summary "Version: %=", cdp-value;
 end;
 
-define binary-data cdp-platform (cdp-string-record)
+define binary-data <cdp-platform> (<cdp-string-record>)
   over <cdp-record> #x6;
   summary "Platform: %=", cdp-value;
 end;
 
-define binary-data cdp-ip-prefix (container-frame)
+define binary-data <cdp-ip-prefix> (<container-frame>)
   field ip-address :: <raw-frame>, length: 32;
   field netmask :: <unsigned-byte>;
 end;
 
-define binary-data cdp-ip-prefixes (cdp-record)
+define binary-data <cdp-ip-prefixes> (<cdp-record>)
   over <cdp-record> #x7;
   field ip-prefix-count :: <unsigned-byte>;
   repeated field ip-prefixes :: <cdp-ip-prefix>,
     count: frame.ip-prefix-count;
 end;
 
-define binary-data cdp-vtp-management-domain (cdp-string-record)
+define binary-data <cdp-vtp-management-domain> (<cdp-string-record>)
   over <cdp-record> #x9;
   summary "VTP Management domain: %=", cdp-value;
 end;
 
-define binary-data cdp-vtp-native-vlan-id (cdp-record)
+define binary-data <cdp-vtp-native-vlan-id> (<cdp-record>)
   over <cdp-record> #xa;
   summary "VTP native VLAN: %=", cdp-native-vlan-id;
   field cdp-native-vlan-id :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define binary-data cdp-duplex-frame (cdp-record)
+define binary-data <cdp-duplex-frame> (<cdp-record>)
   over <cdp-record> #xb;
   summary "Duplex: %s", method(x) if (x.cdp-duplex = 0) "half" else "full" end end;
   field cdp-duplex :: <unsigned-byte>;
 end;
 
-define binary-data cdp-hello (cdp-unknown-record)
+define binary-data <cdp-hello> (<cdp-unknown-record>)
   over <cdp-record> #x8;
   summary "Hello (undocumented)";
 end;
 
-define binary-data cdp-ata-186-voip-vlan-request (cdp-unknown-record)
+define binary-data <cdp-ata-186-voip-vlan-request> (<cdp-unknown-record>)
   over <cdp-record> #xe;
   summary "ATA 186 VoIP VLAN Request";
 end;
 
-define binary-data cdp-ata-186-voip-vlan-assignment (cdp-unknown-record)
+define binary-data <cdp-ata-186-voip-vlan-assignment> (<cdp-unknown-record>)
   over <cdp-record> #xf;
   summary "ATA 186 VoIP VLAN Assignment";
 end;
 
-define binary-data cdp-power (cdp-unknown-record)
+define binary-data <cdp-power> (<cdp-unknown-record>)
   over <cdp-record> #x10;
   summary "Power: %=", cdp-value;
 end;
 
-define binary-data cdp-mtu-frame (cdp-record)
+define binary-data <cdp-mtu-frame> (<cdp-record>)
   over <cdp-record> #x11;
   summary "MTU: %=", cdp-mtu;
   field cdp-mtu :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data cdp-avvid-trust-bitmap (cdp-unknown-record)
+define binary-data <cdp-avvid-trust-bitmap> (<cdp-unknown-record>)
   over <cdp-record> #x12;
   summary "AVVID Trust Bitmap";
 end;
 
-define binary-data cdp-avvid-untrusted-port-CoS (cdp-unknown-record)
+define binary-data <cdp-avvid-untrusted-port-CoS> (<cdp-unknown-record>)
   over <cdp-record> #x13;
   summary "AVVID Untrusted Port CoS";
 end;
 
-define binary-data cdp-system-name (cdp-string-record)
+define binary-data <cdp-system-name> (<cdp-string-record>)
   over <cdp-record> #x14;
   summary "System name: %=", cdp-value;
 end;
 
-define binary-data cdp-system-object-id (cdp-unknown-record)
+define binary-data <cdp-system-object-id> (<cdp-unknown-record>)
   over <cdp-record> #x16;
   summary "System OID: %=", cdp-value;
 end;
 
-define binary-data cdp-physical-location (cdp-string-record)
+define binary-data <cdp-physical-location> (<cdp-string-record>)
   over <cdp-record> #x17;
   summary "Physical location: %=", cdp-value;
 end;
 
-define binary-data cdp-frame (container-frame)
+define binary-data <cdp-frame> (<container-frame>)
   over <ethernet-frame> #x2000;
   over <cisco-hdlc-frame> #x2000;
   summary "Cisco Discovery Protocol";

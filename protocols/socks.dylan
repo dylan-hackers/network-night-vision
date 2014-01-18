@@ -4,7 +4,7 @@ copyright: 2005-2011 Andreas Bogk and Hannes Mehnert. All rights reserved.
 license: see license.txt in this distribution
 
 //rfc1928
-define binary-data socks5-version/method-selection (container-frame)
+define binary-data <socks5-version/method-selection> (<container-frame>)
   field version-number :: <unsigned-byte> = 5;
   field number-methods :: <unsigned-byte>,
     fixup: frame.methods.size;
@@ -12,7 +12,7 @@ define binary-data socks5-version/method-selection (container-frame)
     count: frame.number-methods;
 end;
 
-define binary-data socks5-version-selection (container-frame)
+define binary-data <socks5-version-selection> (<container-frame>)
   field version-number :: <unsigned-byte> = 5;
   field method-to-use :: <unsigned-byte>;
 end;
@@ -27,7 +27,7 @@ o  X'80' to X'FE' RESERVED FOR PRIVATE METHODS
 o  X'FF' NO ACCEPTABLE METHODS
 */
 
-define binary-data socks5-request (container-frame)
+define binary-data <socks5-request> (<container-frame>)
   field version-number :: <unsigned-byte> = 5;
   enum field command :: <unsigned-byte> = 0,
     mappings: { 1 <=> #"connect",
@@ -50,7 +50,7 @@ define binary-data socks5-request (container-frame)
 end;
 
 
-define binary-data socks5-reply (container-frame)
+define binary-data <socks5-reply> (<container-frame>)
   field version-number :: <unsigned-byte> = 5;
   enum field reply-field :: <unsigned-byte> = 0,
     mappings: { 0 <=> #"succeeded",
@@ -78,7 +78,7 @@ define binary-data socks5-reply (container-frame)
   field bind-port :: <2byte-big-endian-unsigned-integer>;
 end;
 
-define binary-data socks5-udp-associate (container-frame)
+define binary-data <socks5-udp-associate> (<container-frame>)
   field reserved :: <2byte-big-endian-unsigned-integer> = 0;
   field fragment-number :: <unsigned-byte> = 0;
   enum field address-type :: <unsigned-byte>,
@@ -97,12 +97,12 @@ define binary-data socks5-udp-associate (container-frame)
   field user-data :: <raw-frame>;
 end;
 
-define binary-data null-terminated-string (container-frame)
+define binary-data <null-terminated-string> (<container-frame>)
   repeated field characters :: <unsigned-byte>,
     reached-end?: frame == 0;
 end;
 
-define binary-data socks4-connection-request (container-frame)
+define binary-data <socks4-connection-request> (<container-frame>)
   field version-number :: <unsigned-byte> = 4;
   enum field command-code :: <unsigned-byte> = 1,
     mappings: { 1 <=> #"TCP/IP stream connection",
@@ -112,7 +112,7 @@ define binary-data socks4-connection-request (container-frame)
   field user-id :: <null-terminated-string>;
 end;
 
-define binary-data socks4-response (container-frame)
+define binary-data <socks4-response> (<container-frame>)
   field null-byte :: <unsigned-byte> = 0;
   enum field status :: <unsigned-byte>,
     mappings: { #x5a <=> #"request granted",
@@ -123,11 +123,11 @@ define binary-data socks4-response (container-frame)
   field arbitrary-bytes-2 :: <big-endian-unsigned-integer-4byte>;
 end;
 
-define binary-data socks4a-connection-request (socks4-connection-request)
+define binary-data <socks4a-connection-request> (<socks4-connection-request>)
   field domain-name :: <null-terminated-string>;
 end;
 
-define binary-data socks4a-response (container-frame)
+define binary-data <socks4a-response> (<container-frame>)
   field null-byte :: <unsigned-byte> = 0;
   enum field status :: <unsigned-byte>,
     mappings: { #x5a <=> #"request granted",
