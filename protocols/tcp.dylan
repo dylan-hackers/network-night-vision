@@ -41,8 +41,8 @@ define binary-data <pseudo-header> (<container-frame>)
     length: frame.segment-length;
 end;
 
-define method fixup!(tcp-frame :: <unparsed-tcp-frame>,
-                     #next next-method)
+define method fixup! (tcp-frame :: <unparsed-tcp-frame>,
+                      #next next-method)
   let pseudo-header = make(<pseudo-header>,
                            source-address: tcp-frame.parent.source-address,
                            destination-address: tcp-frame.parent.destination-address,
