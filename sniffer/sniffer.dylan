@@ -39,11 +39,13 @@ define function main()
   exception (ex :: <usage-error>)
     exit-application(2);
   end;
+
   let input-stream = if (parser.read-pcap)
                        make(<file-stream>,
                             locator: parser.read-pcap,
                             direction: #"input")
                      end;
+
   let source = if (input-stream)
                  make(<pcap-file-reader>,
                       stream: input-stream);
@@ -51,6 +53,7 @@ define function main()
                  make(<ethernet-interface>,
                       name: parser.interface);
                end if;
+
   let output-stream = if (parser.write-pcap)
                         make(<file-stream>,
                              locator: parser.write-pcap,
@@ -71,13 +74,14 @@ define function main()
     connect(fan-out, make(<pcap-file-writer>,
                           stream: output-stream));
   end;
-  
+
   let output = make(if (parser.verbose?)
                       <verbose-printer>
                     else
                       <summary-printer>
                     end,
                     stream: *standard-output*);
+
   if (parser.show-ethernet)
     connect(fan-out, output)
   else
@@ -85,9 +89,9 @@ define function main()
     connect(fan-out, decapsulator);
     connect(decapsulator, output)
   end;
-  
+
   toplevel(source);
-  
+
   if (input-stream)
     close(input-stream);
   end;
