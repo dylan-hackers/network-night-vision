@@ -8,7 +8,7 @@ define binary-data <multi-precision-integer> (<container-frame>)
   field mpi-length :: <2byte-big-endian-unsigned-integer>;
   field real-mpi :: <raw-frame>, length: byte-offset(frame.mpi-length + 7);
 end;
-  
+
 define binary-data <string-to-key> (<variably-typed-container-frame>)
   layering field type :: <unsigned-byte>;
   field hash-algorithm :: <hash-algorithm>;

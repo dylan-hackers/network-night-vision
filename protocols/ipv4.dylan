@@ -81,8 +81,7 @@ define binary-data <ipv4-frame> (<header-frame>)
     reached-end?: instance?(frame, <end-of-option-ip-option>);
   variably-typed field payload,
     start: frame.header-length * 4 * 8,
-    end: frame.total-length * 8,
-    type-function: payload-type(frame);
+    end: frame.total-length * 8;
 end;
 
 
@@ -97,25 +96,19 @@ define binary-data <udp-frame> (<header-frame>)
   field checksum :: <2byte-big-endian-unsigned-integer> = 0;
   variably-typed field payload,
     end: frame.payload-size * 8,
-    type-function: my-payload-type(frame);
+    type-function:
+      lookup-layer(frame.object-class, frame.layer-magic) |
+        lookup-layer(frame.object-class, frame.source-port) |
+          <raw-frame>
 end;
 
-define function my-payload-type (frame :: <udp-frame>)
-  let res = payload-type(frame);
-  if (res == <raw-frame>)
-    lookup-layer(frame.object-class, frame.source-port) | <raw-frame>;
-  else
-    res;
-  end;
-end;
-              
 define binary-data <arp-frame> (<container-frame>)
   over <ethernet-frame> #x806;
   over <link-control> #x806;
   field mac-address-type :: <2byte-big-endian-unsigned-integer> = 1;
   field protocol-address-type :: <2byte-big-endian-unsigned-integer> = #x800;
   field mac-address-size :: <unsigned-byte> = byte-offset(field-size(<mac-address>));
-  field protocol-address-size :: <unsigned-byte> 
+  field protocol-address-size :: <unsigned-byte>
     = byte-offset(field-size(<ipv4-address>));
   enum field operation :: <2byte-big-endian-unsigned-integer>,
     mappings: { #x1 <=> #"arp-request",

@@ -66,7 +66,7 @@ define binary-data <pcap-packet> (<header-frame>)
                      $DLT-EN10MB => <ethernet-frame>;
                      $DLT-C-HDLC => <cisco-hdlc-frame>;
                      $DLT-PRISM-HEADER => <prism2-frame>;
-                     $DLT-80211-BSD-RADIO => <bsd-80211-radio-frame>; 
+                     $DLT-80211-BSD-RADIO => <bsd-80211-radio-frame>;
                      otherwise => <raw-frame>;
                    end,
     length: frame.capture-length * 8;

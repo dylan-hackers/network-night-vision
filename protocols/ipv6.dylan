@@ -62,9 +62,8 @@ define binary-data <ipv6-frame> (<header-frame>)
   field source-address :: <ipv6-address>;
   field destination-address :: <ipv6-address>;
   variably-typed field payload,
-    type-function: payload-type(frame),
     length: frame.payload-length * 8;
-end; 
+end;
 
 define binary-data <ipv6-extension-header> (<container-frame>)
   field option-type :: <unsigned-byte>;
