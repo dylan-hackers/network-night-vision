@@ -28,10 +28,34 @@ function initialize () {
             var out = document.getElementById("details")
             executeCommand("details" , ("details/" + res.packetid), null, out)
         }
-        var newElement = document.createElement("li")
-        newElement.innerHTML = res.summary
-        newElement.onclick = cb
-        document.getElementById("list").appendChild(newElement)
+        var newElement = document.createElement("tr")
+
+        var td1 = document.createElement("td")
+        td1.innerHTML = res.packetid
+        td1.onclick = cb
+        newElement.appendChild(td1)
+
+        var td2 = document.createElement("td")
+        td2.innerHTML = res.source
+        td2.onclick = cb
+        newElement.appendChild(td2)
+
+        var td3 = document.createElement("td")
+        td3.innerHTML = res.destination
+        td3.onclick = cb
+        newElement.appendChild(td3)
+
+        var td4 = document.createElement("td")
+        td4.innerHTML = res.protocol
+        td4.onclick = cb
+        newElement.appendChild(td4)
+
+        var td5 = document.createElement("td")
+        td5.innerHTML = res.content
+        td5.onclick = cb
+        newElement.appendChild(td5)
+
+        document.getElementById("packets").appendChild(newElement)
     }
 
     var shell = document.getElementById("shell")
@@ -48,6 +72,7 @@ function handle_filterkey (debug, output, filter, event) {
     switch (keyCode) {
     case 13: //return
         debug.innerHTML = "executing filter with :" + val + ":"
+        executeCommand("clear")
         if (val == "")
             executeCommand("filter", "filter/delete", null, output)
         else
@@ -81,10 +106,11 @@ function handle_keypress (debug, output, inputfield, event) {
 
 function executeCommand (command, req, inputfield, output) {
     if (command == "clear") {
-        var lst = document.getElementById("list")
+        var lst = document.getElementById("packets")
         while (lst.hasChildNodes())
             lst.removeChild(lst.childNodes[0])
-        inputfield.value = ""
+        if (inputfield)
+            inputfield.value = ""
     } else {
         function reqListener () {
             var value = this.responseText
@@ -123,12 +149,12 @@ function handle_command (command, list, json) {
             list.appendChild(ele)
             break
         case 'details':
-            var ele = document.createElement("li")
-            ele.innerHTML = json
-            list.appendChild(ele)
-            break
-        case 'filter':
-            executeCommand("clear")
+            var hexdump = json.hex
+            for (var i = 0; i < hexdump.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = hexdump[i]
+                list.appendChild(ele)
+            }
             break
         default:
             var ele = document.createElement("li")

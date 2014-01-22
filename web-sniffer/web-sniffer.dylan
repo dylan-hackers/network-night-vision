@@ -111,18 +111,64 @@ define function recv-frame (frame :: <object>)
   maybe-get-summary(id, frame);
 end;
 
+define function latest-payload (frame :: <container-frame>) => (res :: <container-frame>)
+  maybe-last(frame, frame)
+end;
+
+
+define method maybe-last (frame :: <header-frame>, outer :: <container-frame>)
+  => (res :: <container-frame>)
+  maybe-last(frame.payload, frame)
+end;
+
+define method maybe-last (frame :: <container-frame>, outer :: <container-frame>)
+  => (res :: <container-frame>)
+  frame
+end;
+
+define method maybe-last (frame :: <raw-frame>, outer :: <container-frame>)
+  => (res :: <container-frame>)
+  outer
+end;
+
+define method find-addresses (frame :: <header-frame>) => (source, destination)
+  let (child-a, child-b) = find-addresses(frame.payload);
+  if (child-a & child-b)
+    values(child-a, child-b)
+  else
+    next-method()
+  end
+end;
+
+define method find-addresses (frame) => (source, destination)
+  values(source-address(frame), destination-address(frame))
+end;
+
+define method source-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
+  #f;
+end;
+
+define method destination-address (frame :: type-union(<raw-frame>, <container-frame>)) => (res)
+  #f;
+end;
+
+
 define function maybe-get-summary (id :: <integer>, frame :: <object>)
   let queue = stream-resource.sse-queue;
   let lock = stream-resource.sse-queue-lock;
   let notification = stream-resource.sse-queue-notification;
   if (~ *filter-expression* | matches?(frame, *filter-expression*))
-    let summ = recursive-summary(frame);
     with-lock (lock)
       if (queue.empty?)
         release-all(notification)
       end;
+      let last-data = frame.latest-payload;
+      let (source, target) = find-addresses(frame);
       let data = struct(packetid:, id,
-                        summary:, summ.quote-html);
+                        source: as(<string>, source),
+                        destination: as(<string>, target),
+                        protocol: last-data.frame-name,
+                        content: last-data.summary.quote-html);
       let str = make(<string-stream>, direction: #"output");
       encode-json(str, list(data));
       let json = str.stream-contents;
@@ -180,7 +226,9 @@ define method execute (c :: <details-command>, #rest args, #key)
     let stream = make(<string-stream>, direction: #"output");
     let hex = hexdump(stream, frame.packet);
     let data = stream.stream-contents;
-    split(data, '\n', remove-if-empty?: #t)
+    let hexd = split(data, '\n', remove-if-empty?: #t);
+    //.. tree ..
+    list(struct(hex:, hexd)) //, tree:, tree)
   exception (c :: <condition>)
     list(struct(error: quote-html(format-to-string("Failed to get details: %=\n", c))))
   end
