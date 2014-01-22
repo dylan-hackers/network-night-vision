@@ -47,7 +47,12 @@ function handle_filterkey (debug, output, filter, event) {
     var val = filter.value
     switch (keyCode) {
     case 13: //return
-        executeCommand("filter", "filter/" + val, null, output)
+        debug.innerHTML = "executing filter with :" + val + ":"
+        if (val == "")
+            executeCommand("filter", "filter/delete", null, output)
+        else
+            executeCommand("filter", "filter/" + val, null, output)
+        debug.innerHTML = "executing filter with :" + val + ":, done"
         break
     default:
         debug.innerHTML = "unknown filterkey " + keyCode
@@ -90,11 +95,13 @@ function executeCommand (command, req, inputfield, output) {
                 handle_command(command, list, x)
             }
             output.appendChild(list)
-            inputfield.value = ""
+            if (inputfield)
+                inputfield.value = ""
         }
 
-        while (output.hasChildNodes())
-            output.removeChild(output.childNodes[0])
+        if (output)
+            while (output.hasChildNodes())
+                output.removeChild(output.childNodes[0])
         var oReq = new XMLHttpRequest()
         oReq.onload = reqListener
         oReq.open("get", ("/execute/" + req), true)
@@ -119,6 +126,9 @@ function handle_command (command, list, json) {
             var ele = document.createElement("li")
             ele.innerHTML = json
             list.appendChild(ele)
+            break
+        case 'filter':
+            executeCommand("clear")
             break
         default:
             var ele = document.createElement("li")

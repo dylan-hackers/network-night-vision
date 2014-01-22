@@ -105,9 +105,13 @@ define method recursive-summary (frame :: <frame>) => (res :: <string>)
   summary(frame);
 end;
 
-define function print-summary (frame :: <object>)
+define function recv-frame (frame :: <object>)
   let id = $packet-table.size;
   add!($packet-table, pair(frame, id));
+  maybe-get-summary(id, frame);
+end;
+
+define function maybe-get-summary (id :: <integer>, frame :: <object>)
   let queue = stream-resource.sse-queue;
   let lock = stream-resource.sse-queue-lock;
   let notification = stream-resource.sse-queue-notification;
@@ -140,7 +144,7 @@ define method execute (c :: <open-command>, #rest args, #key)
                               default-mac-address: mac);
     make(<thread>, function: curry(toplevel, int));
     let ethernet-socket = create-raw-socket(ethernet-layer);
-    let sum = make(<closure-node>, closure: print-summary);
+    let sum = make(<closure-node>, closure: recv-frame);
     connect(ethernet-socket, sum);
     #("connected!")
   exception (c :: <condition>)
@@ -191,8 +195,15 @@ make(<filter-command>, name: #"filter", description: "Filters the packet capture
 define method execute (c :: <filter-command>, #rest args, #key)
   let expression = args[0];
   block ()
-    let filter = parse-filter(expression);
-    *filter-expression* := filter;
+    if (expression = "delete")
+      *filter-expression* := #f;
+    else
+      let filter = parse-filter(expression);
+      *filter-expression* := filter;
+    end;
+    for (frame in $packet-table)
+      maybe-get-summary(frame.tail, frame.head)
+    end;
     #("successfully installed filter")
   exception (c :: <condition>)
     *filter-expression* := #f;
