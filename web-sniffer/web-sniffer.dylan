@@ -62,6 +62,9 @@ define method make (class :: subclass(<command>), #rest rest, #key, #all-keys) =
   $command-table[res.command-name] := res
 end;
 
+define abstract class <text-command> (<command>)
+end;
+
 define class <help-command> (<command>)
 end;
 make(<help-command>, name: #"help", description: "You just found out what this did");
@@ -69,14 +72,16 @@ make(<help-command>, name: #"help", description: "You just found out what this d
 define method execute (help :: <help-command>, #key)
   let res = make(<stretchy-vector>);
   for (x in $command-table)
-    add!(res, struct(#"name", x.command-name,
-                     #"description", x.command-description.quote-html,
-                     #"signature", x.command-signature.quote-html));
+    if (instance?(x, <text-command>))
+      add!(res, struct(#"name", x.command-name,
+                       #"description", x.command-description.quote-html,
+                       #"signature", x.command-signature.quote-html));
+    end;
   end;
-  res;
+  res
 end;
 
-define class <list-command> (<command>)
+define class <list-command> (<text-command>)
 end;
 make(<list-command>, name: #"list", description: "Lists all available interfaces");
 make(<list-command>, name: #"clear", description: "Clears the packet output");
@@ -88,7 +93,7 @@ define method execute (c :: <list-command>, #key)
   ((open-devices.size > 0) & open-devices) | devices
 end;
 
-define class <open-command> (<command>)
+define class <open-command> (<text-command>)
 end;
 make(<open-command>, name: #"open", description: "Opens a network interface", signature: "<interface>");
 
@@ -184,7 +189,7 @@ define method execute (c :: <open-command>, #rest args, #key)
 end;
 
 
-define class <close-command> (<command>)
+define class <close-command> (<text-command>)
 end;
 make(<close-command>, name: #"close", description: "Closes a network interface", signature: "<interface>");
 

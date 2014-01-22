@@ -179,7 +179,6 @@ function handle_keypress (debug, output, inputfield, event) {
             inputfield.value = ""
         }
         executeCommand("help", "help", cont)
-        inputfield.value = ""
         break
     default:
         debug.innerHTML = "unknown key " + keyCode
