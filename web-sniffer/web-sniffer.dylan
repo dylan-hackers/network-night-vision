@@ -133,34 +133,29 @@ define method recursive-summary (frame :: <frame>) => (res :: <string>)
 end;
 
 define function print-summary (stream :: <stream>, frame :: <object>)
-  write(stream, "data: ");
-  quote-html(recursive-summary(frame), stream: stream);
-  write(stream, "\r\n\r\n");
-  force-output(stream);
+  if (~ *filter-expression* | matches?(frame, *filter-expression*))
+    write(stream, "data: ");
+    quote-html(recursive-summary(frame), stream: stream);
+    write(stream, "\r\n\r\n");
+    force-output(stream);
+  end;
 end;
 
 define method execute (c :: <open-command>, #rest args, #key)
   let interface = args[0];
   block ()
     let mac = mac-address("00:de:ad:be:ef:00");
-    dbg("mac %=\n", mac);
     let int = make(<ethernet-interface>, name: interface, promiscuous?: #t);
-    dbg("int %=\n", int);
     assert(int.pcap-t);
     $interface-table[as(<symbol>, interface)] := int;
-    dbg("interface-table.size %=\n", $interface-table.size);
     let ethernet-layer = make(<ethernet-layer>,
                               ethernet-interface: int,
                               default-mac-address: mac);
-    dbg("eth %=\n", ethernet-layer);
     make(<thread>, function: curry(toplevel, int));
     let ethernet-socket = create-raw-socket(ethernet-layer);
-    dbg("eth-socket %=\n", ethernet-socket);
     let sum = make(<closure-node>,
                    closure: curry(print-summary, *events-socket*));
-    dbg("sum %=\n", sum);
     connect(ethernet-socket, sum);
-    dbg("connected!\n");
     #("connected!")
   exception (c :: <condition>)
     list(struct(error: quote-html(format-to-string("Cannot open interface %=: %=", interface, c))))
@@ -181,6 +176,24 @@ define method execute (c :: <close-command>, #rest args, #key)
     #("shutdown!")
   exception (c :: <condition>)
     list(struct(error: quote-html(format-to-string("Cannot close interface %=: %=", interface, c))))
+  end
+end;
+
+define variable *filter-expression* :: false-or(<filter-expression>) = #f;
+
+define class <filter-command> (<command>)
+end;
+make(<filter-command>, name: #"filter", description: "Filters the packet capture", signature: "<filter-expression>");
+
+define method execute (c :: <filter-command>, #rest args, #key)
+  let expression = args[0];
+  block ()
+    let filter = parse-filter(expression);
+    *filter-expression* := filter;
+    #("successfully installed filter")
+  exception (c :: <condition>)
+    *filter-expression* := #f;
+    list(struct(error: quote-html(format-to-string("Cannot set filter %=: %=", expression, c))))
   end
 end;
 

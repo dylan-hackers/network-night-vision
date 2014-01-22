@@ -17,6 +17,8 @@ define library web-sniffer
   use layer;
   use flow;
   use network-flow;
+
+  use packet-filter;
 end;
 
 define module web-sniffer
@@ -42,5 +44,7 @@ define module web-sniffer
   use layer;
   use flow;
   use network-flow;
+
+  use packet-filter;
 end module;
 

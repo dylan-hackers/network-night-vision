@@ -3,17 +3,22 @@
 <script src="gui.js"></script>
 <script>window.onload = initialize</script>
 <body>
-  <div>
+  <div class="input">
     input&gt; <input type="text" id="shell" autofocus="true"></input><br/>
-
+  </div>
+  <div class="filter">
+    filter: <input type="text" id="filter"></input><br/>
+  </div>
+  <div class="output">
     output: <div id="output"></div></br>
-
+  </div>
+  <div class="debug">
     debug: <div id="debug"></div>
-
   </div>
 
-
-  <ul id="list"></ul>
+  <div class="packets">
+    <ul id="list"></ul>
+  </div>
 
   <ul class="hide" id="contextmenu">
     <li>a</li>

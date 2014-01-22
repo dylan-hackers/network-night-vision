@@ -27,27 +27,23 @@ function initialize () {
     var shell = document.getElementById("shell")
     var output = document.getElementById("output")
     var debug = document.getElementById("debug")
+    var filter = document.getElementById("filter")
+    filter.onkeyup = handle_filterkey.curry(debug, output, filter)
     shell.onkeyup = handle_keypress.curry(debug, output, shell)
 }
 
-
-function mouseX (evt) {
-    if (evt.pageX) return evt.pageX;
-    else if (evt.clientX)
-        return evt.clientX + (document.documentElement.scrollLeft ?
-                              document.documentElement.scrollLeft :
-                              document.body.scrollLeft);
-    else return null;
+function handle_filterkey (debug, output, filter, event) {
+    var keyCode = ('which' in event) ? event.which : event.keyCode
+    var val = filter.value
+    switch (keyCode) {
+    case 13: //return
+        executeCommand("filter", "filter/" + val, null, output)
+        break
+    default:
+        debug.innerHTML = "unknown filterkey " + keyCode
+    }
 }
 
-function mouseY (evt) {
-    if (evt.pageY) return evt.pageY;
-    else if (evt.clientY)
-        return evt.clientY + (document.documentElement.scrollTop ?
-                              document.documentElement.scrollTop :
-                              document.body.scrollTop);
-    else return null;
-}
 
 function handle_keypress (debug, output, inputfield, event) {
     var keyCode = ('which' in event) ? event.which : event.keyCode
@@ -56,7 +52,8 @@ function handle_keypress (debug, output, inputfield, event) {
     case 32: //space
         debug.innerHTML = "space: " + val; break
     case 13: //return
-        executeCommand(val, inputfield, output)
+        var cmd = val.split(" ")
+        executeCommand(cmd[0], cmd.join("/"), inputfield, output)
         break
     case 191: //?
         getHelp(val, output)
@@ -67,17 +64,14 @@ function handle_keypress (debug, output, inputfield, event) {
     }
 }
 
-function executeCommand (command, inputfield, output) {
-    var eles = command.split(" ")
-
-    if (eles[0] == "clear") {
+function executeCommand (command, req, inputfield, output) {
+    if (command == "clear") {
         var lst = document.getElementById("list")
         while (lst.hasChildNodes())
             lst.removeChild(lst.childNodes[0])
         inputfield.value = ""
     } else {
         function reqListener () {
-            var command = eles[0]
             var value = this.responseText
             var res = eval(value)
             var list = document.createElement("ul")
@@ -91,7 +85,6 @@ function executeCommand (command, inputfield, output) {
 
         while (output.hasChildNodes())
             output.removeChild(output.childNodes[0])
-        var req = eles.join("/")
         var oReq = new XMLHttpRequest();
         oReq.onload = reqListener;
         oReq.open("get", ("/execute/" + req), true);
@@ -105,7 +98,7 @@ function handle_command (command, list, json) {
         ele.className = "error"
         ele.innerHTML = json.error
         list.appendChild(ele)
-    } else
+    } else {
         switch (command) {
         case 'list':
             var ele = document.createElement("li")
@@ -117,6 +110,7 @@ function handle_command (command, list, json) {
             ele.innerHTML = json
             list.appendChild(ele)
         }
+    }
 }
 
 function getHelp (partialinput, output) {
@@ -154,4 +148,21 @@ function create_context_menu (ele) {
     ele.onmouseout = function (event) {
         document.getElementById("contextmenu").className = "hide"
     }
+}
+function mouseX (evt) {
+    if (evt.pageX) return evt.pageX;
+    else if (evt.clientX)
+        return evt.clientX + (document.documentElement.scrollLeft ?
+                              document.documentElement.scrollLeft :
+                              document.body.scrollLeft);
+    else return null;
+}
+
+function mouseY (evt) {
+    if (evt.pageY) return evt.pageY;
+    else if (evt.clientY)
+        return evt.clientY + (document.documentElement.scrollTop ?
+                              document.documentElement.scrollTop :
+                              document.body.scrollTop);
+    else return null;
 }
