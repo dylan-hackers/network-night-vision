@@ -196,15 +196,18 @@ function executeCommand (command, req, cont) {
             var value = this.responseText
             var res = eval(value)
             var output = document.getElementById("output")
-            if (res.error) {
+            var json = res
+            if (res.length == 1)
+                json = res[0]
+            if (json.error) {
                 output.className = "error"
-                output.innerHTML = res.error
+                output.innerHTML = json.error
             } else {
                 output.className = "success"
-                output.innerHTML = "Success!: " + res
+                output.innerHTML = "Success!: " + json
+                if (cont)
+                    cont(res)
             }
-            if (cont)
-                cont(res)
         }
         var oReq = new XMLHttpRequest()
         oReq.onload = reqListener

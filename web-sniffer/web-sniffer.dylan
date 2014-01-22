@@ -51,7 +51,7 @@ define constant $interface-table = make(<table>);
 define abstract class <command> (<object>)
   constant slot command-name :: <symbol>, required-init-keyword: name:;
   constant slot command-description :: <string>, required-init-keyword: description:;
-  constant slot command-signature :: <string> = "", init-keyword: signature:;
+  constant slot command-signature :: <string> = " ", init-keyword: signature:;
 end;
 
 define generic execute (c :: <command>, #rest args, #key, #all-keys);
@@ -70,8 +70,8 @@ define method execute (help :: <help-command>, #key)
   let res = make(<stretchy-vector>);
   for (x in $command-table)
     add!(res, struct(#"name", x.command-name,
-                     #"description", x.command-description,
-                     #"signature", x.command-signature));
+                     #"description", x.command-description.quote-html,
+                     #"signature", x.command-signature.quote-html));
   end;
   res;
 end;
@@ -79,7 +79,7 @@ end;
 define class <list-command> (<command>)
 end;
 make(<list-command>, name: #"list", description: "Lists all available interfaces");
-make(<list-command>, name: #"clear", description: "Clears the event output");
+make(<list-command>, name: #"clear", description: "Clears the packet output");
 
 define method execute (c :: <list-command>, #key)
   let devices = map(device-name,
@@ -169,22 +169,18 @@ end;
 
 define method execute (c :: <open-command>, #rest args, #key)
   let interface = args[0];
-  block ()
-    let mac = mac-address("00:de:ad:be:ef:00");
-    let int = make(<ethernet-interface>, name: interface, promiscuous?: #t);
-    assert(int.pcap-t);
-    $interface-table[as(<symbol>, interface)] := int;
-    let ethernet-layer = make(<ethernet-layer>,
-                              ethernet-interface: int,
-                              default-mac-address: mac);
-    make(<thread>, function: curry(toplevel, int));
-    let ethernet-socket = create-raw-socket(ethernet-layer);
-    let sum = make(<closure-node>, closure: recv-frame);
-    connect(ethernet-socket, sum);
-    #("connected!")
-  exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Cannot open interface %=: %=", interface, c))))
-  end
+  let mac = mac-address("00:de:ad:be:ef:00");
+  let int = make(<ethernet-interface>, name: interface, promiscuous?: #t);
+  assert(int.pcap-t);
+  $interface-table[as(<symbol>, interface)] := int;
+  let ethernet-layer = make(<ethernet-layer>,
+                            ethernet-interface: int,
+                            default-mac-address: mac);
+  make(<thread>, function: curry(toplevel, int));
+  let ethernet-socket = create-raw-socket(ethernet-layer);
+  let sum = make(<closure-node>, closure: recv-frame);
+  connect(ethernet-socket, sum);
+  #("connected!")
 end;
 
 
@@ -193,15 +189,11 @@ end;
 make(<close-command>, name: #"close", description: "Closes a network interface", signature: "<interface>");
 
 define method execute (c :: <close-command>, #rest args, #key)
-  block ()
-    let interface = as(<symbol>, args[0]);
-    let int = $interface-table[interface];
-    remove-key!($interface-table, interface);
-    int.running? := #f;
-    #("shutdown!")
-  exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Cannot close interface: %=", c))))
-  end
+  let interface = as(<symbol>, args[0]);
+  let int = $interface-table[interface];
+  remove-key!($interface-table, interface);
+  int.running? := #f;
+  #("shutdown!")
 end;
 
 define class <details-command> (<command>)
@@ -217,18 +209,14 @@ define method summarize-layers (frame :: type-union(<raw-frame>, <container-fram
 end;
 
 define method execute (c :: <details-command>, #rest args, #key)
-  block ()
-    let pint = string-to-integer(args[0]);
-    let frame = $packet-table[pint].head;
-    let stream = make(<string-stream>, direction: #"output");
-    let hex = hexdump(stream, frame.packet);
-    let data = stream.stream-contents;
-    let hexd = split(data, '\n', remove-if-empty?: #t);
-    let layers = frame.summarize-layers;
-    list(struct(hex:, hexd, tree: map(quote-html, layers), packetid:, pint))
-  exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Failed to get details: %=", c))))
-  end
+  let pint = string-to-integer(args[0]);
+  let frame = $packet-table[pint].head;
+  let stream = make(<string-stream>, direction: #"output");
+  let hex = hexdump(stream, frame.packet);
+  let data = stream.stream-contents;
+  let hexd = split(data, '\n', remove-if-empty?: #t);
+  let layers = frame.summarize-layers;
+  list(struct(hex:, hexd, tree: map(quote-html, layers), packetid:, pint))
 end;
 
 define class <treedetails-command> (<command>)
@@ -309,16 +297,12 @@ end;
 
 
 define method execute (c :: <treedetails-command>, #rest args, #key)
-  block ()
-    let pid = string-to-integer(args[0]);
-    let lid = string-to-integer(args[1]);
-    let frame = $packet-table[pid].head;
-    let lay = find-layer(frame, lid);
-    let strings = map(frame-print-label, lay.frame-children-generator);
-    list(struct(fields:, strings))
-  exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Failed treedetails: %=", c))))
-  end;
+  let pid = string-to-integer(args[0]);
+  let lid = string-to-integer(args[1]);
+  let frame = $packet-table[pid].head;
+  let lay = find-layer(frame, lid);
+  let strings = map(frame-print-label, lay.frame-children-generator);
+  list(struct(fields:, strings))
 end;
 
 define variable *filter-expression* :: false-or(<filter-expression>) = #f;
@@ -328,22 +312,16 @@ end;
 make(<filter-command>, name: #"filter", description: "Filters the packet capture", signature: "<filter-expression>");
 
 define method execute (c :: <filter-command>, #rest args, #key)
+  *filter-expression* := #f;
   let expression = args[0];
-  block ()
-    if (expression = "delete")
-      *filter-expression* := #f;
-    else
-      let filter = parse-filter(expression);
-      *filter-expression* := filter;
-    end;
-    for (frame in $packet-table)
-      maybe-get-summary(frame.tail, frame.head)
-    end;
-    #("successfully installed filter")
-  exception (c :: <condition>)
-    *filter-expression* := #f;
-    list(struct(error: quote-html(format-to-string("Cannot set filter %=: %=", expression, c))))
-  end
+  unless (expression = "delete")
+    let filter = parse-filter(expression);
+    *filter-expression* := filter;
+  end;
+  for (frame in $packet-table)
+    maybe-get-summary(frame.tail, frame.head)
+  end;
+  #("successfully installed filter")
 end;
 
 define function execute-handler (#key command, arguments)
@@ -354,6 +332,7 @@ define function execute-handler (#key command, arguments)
     dbg("sending back %=\n", result);
     encode-json(response, result)
   exception (c :: <condition>)
+    dbg("condition occured %=\n", c);
     encode-json(response, list(struct(error:, quote-html(format-to-string("error while executing handler %=", c)))))
   end;
 end;
