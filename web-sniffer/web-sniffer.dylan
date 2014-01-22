@@ -107,10 +107,14 @@ end;
 define function print-summary (frame :: <object>)
   let queue = stream-resource.sse-queue;
   let lock = stream-resource.sse-queue-lock;
+  let notification = stream-resource.sse-queue-notification;
   if (~ *filter-expression* | matches?(frame, *filter-expression*))
     let summ = recursive-summary(frame);
     dbg("inserting summary %s\n", summ);
     with-lock (lock)
+      if (queue.empty?)
+        release-all(notification)
+      end;
       push-last(queue, format-to-string("data: %s", quote-html(summ)));
     end;
   end;
