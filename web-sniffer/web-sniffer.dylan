@@ -50,6 +50,10 @@ define class <struct> (<object>)
   constant slot value :: <collection>, required-init-keyword: value:;
 end;
 
+define method print-object (s :: <struct>, stream :: <stream>) => ()
+  encode-json(stream, s);
+end;
+
 define function struct (#rest args) => (struct :: <struct>)
   make(<struct>, value: args)
 end;
@@ -86,7 +90,7 @@ add-resource(server, "/help/{partial}", help-resource);
 
 define constant $command-table = make(<table>);
 
-define constant $object-table = make(<table>);
+define constant $interface-table = make(<table>);
 
 define abstract class <command> (<object>)
   constant slot command-name :: <symbol>, required-init-keyword: name:;
@@ -105,13 +109,14 @@ end;
 define class <list-command> (<command>)
 end;
 make(<list-command>, name: #"list", description: "Lists all available interfaces");
+make(<list-command>, name: #"clear", description: "Clears the event output");
 
 define method execute (c :: <list-command>, #key)
-  let devices = find-all-devices();
-  do(method (x)
-       $object-table[as(<symbol>, x.device-name)] := x
-     end, devices);
-  map(device-name, devices)
+  let devices = map(compose(curry(struct, open:, #f, name:), device-name),
+                    find-all-devices());
+  let open-devices = map(curry(struct, open:, #t, name:),
+                         key-sequence($interface-table));
+  ((open-devices.size > 0) & open-devices) | devices
 end;
 
 define class <open-command> (<command>)
@@ -138,21 +143,57 @@ define method execute (c :: <open-command>, #rest args, #key)
   let interface = args[0];
   block ()
     let mac = mac-address("00:de:ad:be:ef:00");
-    let ethernet-layer = build-ethernet-layer(interface, default-mac-address: mac);
+    dbg("mac %=\n", mac);
+    let int = make(<ethernet-interface>, name: interface, promiscuous?: #t);
+    dbg("int %=\n", int);
+    assert(int.pcap-t);
+    $interface-table[as(<symbol>, interface)] := int;
+    dbg("interface-table.size %=\n", $interface-table.size);
+    let ethernet-layer = make(<ethernet-layer>,
+                              ethernet-interface: int,
+                              default-mac-address: mac);
+    dbg("eth %=\n", ethernet-layer);
+    make(<thread>, function: curry(toplevel, int));
     let ethernet-socket = create-raw-socket(ethernet-layer);
-    let sum = make(<closure-node>, closure: curry(print-summary, *events-socket*));
+    dbg("eth-socket %=\n", ethernet-socket);
+    let sum = make(<closure-node>,
+                   closure: curry(print-summary, *events-socket*));
+    dbg("sum %=\n", sum);
     connect(ethernet-socket, sum);
+    dbg("connected!\n");
     #("connected!")
   exception (c :: <condition>)
-    struct(error: format-to-string("Cannot open interface %=: %=", interface, c));
+    list(struct(error: quote-html(format-to-string("Cannot open interface %=: %=", interface, c))))
+  end
+end;
+
+
+define class <close-command> (<command>)
+end;
+make(<close-command>, name: #"close", description: "Closes a network interface", signature: "<interface>");
+
+define method execute (c :: <close-command>, #rest args, #key)
+  let interface = as(<symbol>, args[0]);
+  block ()
+    let int = $interface-table[interface];
+    remove-key!($interface-table, interface);
+    int.running? := #f;
+    #("shutdown!")
+  exception (c :: <condition>)
+    list(struct(error: quote-html(format-to-string("Cannot close interface %=: %=", interface, c))))
   end
 end;
 
 define function execute-handler (#key command, arguments)
   let response = current-response();
   set-header(response, "Content-type", "application/json");
-  let result = apply(execute, $command-table[as(<symbol>, command)], arguments);
-  encode-json(response, result)
+  block ()
+    let result = apply(execute, $command-table[as(<symbol>, command)], arguments);
+    dbg("sending back %=\n", result);
+    encode-json(response, result)
+  exception (c :: <condition>)
+    encode-json(response, list(struct(error:, quote-html(format-to-string("error while executing handler %=", c)))))
+  end;
 end;
 
 let execute-resource = make(<function-resource>, function: execute-handler);

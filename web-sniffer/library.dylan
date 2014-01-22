@@ -27,6 +27,8 @@ define module web-sniffer
   use standard-io;
   use streams;
   use threads;
+  use print;
+
 
   //web stuff
   use http-common;

@@ -56,41 +56,67 @@ function handle_keypress (debug, output, inputfield, event) {
     case 32: //space
         debug.innerHTML = "space: " + val; break
     case 13: //return
-        executeCommand(val, output); break
+        executeCommand(val, inputfield, output)
+        break
     case 191: //?
-        getHelp(val, output); break
+        getHelp(val, output)
+        inputfield.value = ""
+        break
     default:
         debug.innerHTML = "unknown key " + keyCode
     }
 }
 
-function executeCommand (command, output) {
-    function reqListener () {
-        var value = this.responseText
-        if (! value)
-            output.innerHTML = "RECEIVED error"
-        var res = eval(value)
-        var list = document.createElement("ul")
-        for (var i = 0; i < res.length; i++) {
-            var x = res[i]
+function executeCommand (command, inputfield, output) {
+    var eles = command.split(" ")
+
+    if (eles[0] == "clear") {
+        var lst = document.getElementById("list")
+        while (lst.hasChildNodes())
+            lst.removeChild(lst.childNodes[0])
+        inputfield.value = ""
+    } else {
+        function reqListener () {
+            var command = eles[0]
+            var value = this.responseText
+            var res = eval(value)
+            var list = document.createElement("ul")
+            for (var i = 0; i < res.length; i++) {
+                var x = res[i]
+                handle_command(command, list, x)
+            }
+            output.appendChild(list)
+            inputfield.value = ""
+        }
+
+        while (output.hasChildNodes())
+            output.removeChild(output.childNodes[0])
+        var req = eles.join("/")
+        var oReq = new XMLHttpRequest();
+        oReq.onload = reqListener;
+        oReq.open("get", ("/execute/" + req), true);
+        oReq.send();
+    }
+}
+
+function handle_command (command, list, json) {
+    if (json.error) {
+        var ele = document.createElement("div")
+        ele.className = "error"
+        ele.innerHTML = json.error
+        list.appendChild(ele)
+    } else
+        switch (command) {
+        case 'list':
             var ele = document.createElement("li")
-            ele.innerHTML = x
+            ele.innerHTML = json.name + " running? " + json.open
+            list.appendChild(ele)
+            break
+        default:
+            var ele = document.createElement("li")
+            ele.innerHTML = json
             list.appendChild(ele)
         }
-        var old = output.firstChild
-        if (old)
-            output.replaceChild(list, old)
-        else
-            output.appendChild(list)
-    }
-
-    var eles = command.split(" ")
-    var req = eles.join("/")
-
-    var oReq = new XMLHttpRequest();
-    oReq.onload = reqListener;
-    oReq.open("get", ("/execute/" + req), true);
-    oReq.send();
 }
 
 function getHelp (partialinput, output) {
