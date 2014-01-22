@@ -1,3 +1,4 @@
+
 Function.prototype.curry = function () {
   // wir merken uns f
   var f = this
@@ -18,9 +19,18 @@ function toArray (xs) {
 function initialize () {
     var evtSource = new EventSource("events")
 
-    evtSource.onmessage = function (e) {
+    evtSource.onmessage = handle_event
+
+    function handle_event (event) {
+        var val = event.data
+        var res = eval(val)[0]
+        function cb () {
+            var out = document.getElementById("details")
+            executeCommand("details" , ("details/" + res.packetid), null, out)
+        }
         var newElement = document.createElement("li")
-        newElement.innerHTML = "message: " + e.data
+        newElement.innerHTML = res.summary
+        newElement.onclick = cb
         document.getElementById("list").appendChild(newElement)
     }
 
@@ -85,10 +95,10 @@ function executeCommand (command, req, inputfield, output) {
 
         while (output.hasChildNodes())
             output.removeChild(output.childNodes[0])
-        var oReq = new XMLHttpRequest();
-        oReq.onload = reqListener;
-        oReq.open("get", ("/execute/" + req), true);
-        oReq.send();
+        var oReq = new XMLHttpRequest()
+        oReq.onload = reqListener
+        oReq.open("get", ("/execute/" + req), true)
+        oReq.send()
     }
 }
 
@@ -103,6 +113,11 @@ function handle_command (command, list, json) {
         case 'list':
             var ele = document.createElement("li")
             ele.innerHTML = json.name + " running? " + json.open
+            list.appendChild(ele)
+            break
+        case 'details':
+            var ele = document.createElement("li")
+            ele.innerHTML = json
             list.appendChild(ele)
             break
         default:

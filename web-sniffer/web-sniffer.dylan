@@ -53,7 +53,7 @@ define function help (#key partial)
                      #"description", x.command-description,
                      #"signature", x.command-signature));
   end;
-  encode-json(response,res);
+  encode-json(response, res);
 end;
 
 let help-resource = make(<function-resource>, function: help);
@@ -95,6 +95,7 @@ define class <open-command> (<command>)
 end;
 make(<open-command>, name: #"open", description: "Opens a network interface", signature: "<interface>");
 
+define constant $packet-table = make(<stretchy-vector>);
 
 define method recursive-summary (frame :: <header-frame>) => (res :: <string>)
   concatenate(summary(frame), "/", recursive-summary(frame.payload));
@@ -105,17 +106,24 @@ define method recursive-summary (frame :: <frame>) => (res :: <string>)
 end;
 
 define function print-summary (frame :: <object>)
+  let id = $packet-table.size;
+  add!($packet-table, pair(frame, id));
   let queue = stream-resource.sse-queue;
   let lock = stream-resource.sse-queue-lock;
   let notification = stream-resource.sse-queue-notification;
   if (~ *filter-expression* | matches?(frame, *filter-expression*))
     let summ = recursive-summary(frame);
-    dbg("inserting summary %s\n", summ);
     with-lock (lock)
       if (queue.empty?)
         release-all(notification)
       end;
-      push-last(queue, format-to-string("data: %s", quote-html(summ)));
+      let data = struct(packetid:, id,
+                        summary:, summ.quote-html);
+      let str = make(<string-stream>, direction: #"output");
+      encode-json(str, list(data));
+      let json = str.stream-contents;
+      dbg("inserting data: %s\n", json);
+      push-last(queue, concatenate("data: ", json));
     end;
   end;
 end;
@@ -153,7 +161,24 @@ define method execute (c :: <close-command>, #rest args, #key)
     int.running? := #f;
     #("shutdown!")
   exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Cannot close interface %=: %=", interface, c))))
+    list(struct(error: quote-html(format-to-string("Cannot close interface: %=", c))))
+  end
+end;
+
+define class <details-command> (<command>)
+end;
+make(<details-command>, name: #"details", description: "Shows details of a given packet", signature: "<packet-identifier>");
+
+define method execute (c :: <details-command>, #rest args, #key)
+  let pint = string-to-integer(args[0]);
+  block ()
+    let frame = $packet-table[pint].head;
+    let stream = make(<string-stream>, direction: #"output");
+    let hex = hexdump(stream, frame.packet);
+    let data = stream.stream-contents;
+    split(data, '\n', remove-if-empty?: #t)
+  exception (c :: <condition>)
+    list(struct(error: quote-html(format-to-string("Failed to get details: %=\n", c))))
   end
 end;
 
