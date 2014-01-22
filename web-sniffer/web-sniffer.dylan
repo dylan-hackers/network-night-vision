@@ -204,8 +204,8 @@ end;
 make(<close-command>, name: #"close", description: "Closes a network interface", signature: "<interface>");
 
 define method execute (c :: <close-command>, #rest args, #key)
-  let interface = as(<symbol>, args[0]);
   block ()
+    let interface = as(<symbol>, args[0]);
     let int = $interface-table[interface];
     remove-key!($interface-table, interface);
     int.running? := #f;
@@ -219,19 +219,119 @@ define class <details-command> (<command>)
 end;
 make(<details-command>, name: #"details", description: "Shows details of a given packet", signature: "<packet-identifier>");
 
+define method summarize-layers (frame :: <header-frame>) => (res :: <collection>)
+  pair(frame.summary, frame.payload.summarize-layers)
+end;
+
+define method summarize-layers (frame :: type-union(<raw-frame>, <container-frame>)) => (res :: <collection>)
+  list(frame.summary)
+end;
+
 define method execute (c :: <details-command>, #rest args, #key)
-  let pint = string-to-integer(args[0]);
   block ()
+    let pint = string-to-integer(args[0]);
     let frame = $packet-table[pint].head;
     let stream = make(<string-stream>, direction: #"output");
     let hex = hexdump(stream, frame.packet);
     let data = stream.stream-contents;
     let hexd = split(data, '\n', remove-if-empty?: #t);
-    //.. tree ..
-    list(struct(hex:, hexd)) //, tree:, tree)
+    let layers = frame.summarize-layers;
+    list(struct(hex:, hexd, tree: map(quote-html, layers), packetid:, pint))
   exception (c :: <condition>)
-    list(struct(error: quote-html(format-to-string("Failed to get details: %=\n", c))))
+    list(struct(error: quote-html(format-to-string("Failed to get details: %=", c))))
   end
+end;
+
+define class <treedetails-command> (<command>)
+end;
+make(<treedetails-command>, name: #"treedetails", description: "Shows container frame of given layer", signature: "<packet-identifier> <layer-identifier>");
+
+define method find-layer (frame :: <frame>, count == 0) => (frame :: <frame>)
+  dbg("finding layer1 %d %=\n", count, frame);
+  frame
+end;
+
+define method find-layer (frame :: <header-frame>, count == 0) => (frame :: <frame>)
+  frame
+end;
+
+define method find-layer (frame :: <frame>, count :: <integer>) => (frame :: <frame>)
+  error("no such layer in frame")
+end;
+
+define method find-layer (frame :: <header-frame>, count :: <integer>) => (frame :: <frame>)
+  dbg("finding layer2 %d %=\n", count, frame);
+  find-layer(frame.payload, count - 1)
+end;
+
+define method frame-children-generator (a-frame :: <header-frame>)
+  let ffs = sorted-frame-fields(a-frame);
+  copy-sequence(ffs, end: ffs.size - 1);
+end;
+
+define method frame-children-generator (frame-field :: <frame-field>)
+  frame-children-generator(frame-field.value);
+end;
+
+define method frame-children-generator (frame-field :: <repeated-frame-field>)
+  frame-field.frame-field-list
+end;
+
+define method frame-children-generator (ff :: <rep-frame-field>)
+  frame-children-generator(ff.frame)
+end;
+
+define method frame-children-generator (collection :: <collection>)
+  collection
+end;
+
+define method frame-children-generator (a-frame :: <container-frame>)
+  sorted-frame-fields(a-frame)
+end;
+
+define method frame-print-label (frame-field :: <frame-field>)
+  if (frame-field.field.field-name = #"payload")
+    format-to-string("%s", frame-print-label(frame-field.value))
+  else
+    format-to-string("%s: %s", frame-field.field.field-name, frame-print-label(frame-field.value))
+  end;
+end;
+
+define method frame-print-label (mframe :: <rep-frame-field>)
+  frame-print-label(mframe.frame);
+end;
+define method frame-print-label (frame :: <collection>)
+  format-to-string("(%d elements)", frame.size)
+end;
+
+define method frame-print-label (frame :: <container-frame>)
+  format-to-string("%s %s", frame.frame-name, frame.summary);
+end;
+
+define method frame-print-label (frame :: <leaf-frame>)
+  format-to-string("%=", frame);
+end;
+
+define method frame-print-label (frame :: <object>)
+  as(<string>, frame);
+end;
+
+define method frame-print-label (frame :: <raw-frame>)
+  format-to-string("Additional data: %d bytes", frame.data.size)
+end;
+
+
+define method execute (c :: <treedetails-command>, #rest args, #key)
+  block ()
+    let pid = string-to-integer(args[0]);
+    let lid = string-to-integer(args[1]);
+    let frame = $packet-table[pid].head;
+    let lay = find-layer(frame, lid);
+    let strings = map(frame-print-label, lay.frame-children-generator);
+    list(struct(fields:, strings))
+  exception (c :: <condition>)
+    list(struct(error: quote-html(format-to-string("Failed treedetails: %=", c))))
+  end;
 end;
 
 define variable *filter-expression* :: false-or(<filter-expression>) = #f;

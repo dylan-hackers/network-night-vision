@@ -71,13 +71,11 @@ function handle_filterkey (debug, output, filter, event) {
     var val = filter.value
     switch (keyCode) {
     case 13: //return
-        debug.innerHTML = "executing filter with :" + val + ":"
         executeCommand("clear")
         if (val == "")
             executeCommand("filter", "filter/delete", null, output)
         else
             executeCommand("filter", "filter/" + val, null, output)
-        debug.innerHTML = "executing filter with :" + val + ":, done"
         break
     default:
         debug.innerHTML = "unknown filterkey " + keyCode
@@ -155,6 +153,30 @@ function handle_command (command, list, json) {
                 ele.innerHTML = hexdump[i]
                 list.appendChild(ele)
             }
+            var layers = json.tree
+            var tree = document.getElementById("tree")
+            while (tree.hasChildNodes())
+                tree.removeChild(tree.firstChild)
+            var ul = document.createElement("ul")
+            for (var i = 0; i < layers.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = layers[i]
+                function cb (id, packet, ele) {
+                    executeCommand("treedetails", ("treedetails/" + packet + "/" + id), null, ele)
+                }
+                ele.onclick = cb.curry(i, json.packetid, ele)
+                ul.appendChild(ele)
+            }
+            tree.appendChild(ul)
+            break
+        case 'treedetails':
+            var ul = document.createElement("ul")
+            for (var i = 0; i < json.fields.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = json.fields[i]
+                ul.appendChild(ele)
+            }
+            list.appendChild(ul)
             break
         default:
             var ele = document.createElement("li")
