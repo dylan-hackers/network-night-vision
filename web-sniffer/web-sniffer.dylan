@@ -14,35 +14,7 @@ let static-resource = make(<directory-resource>,
                            allow-directory-listing?: #t);
 add-resource(server, "/", static-resource);
 
-
-define variable *events-socket* :: false-or(<stream>) = #f;
-
-define function stream-function (#rest args)
-  let req = current-request();
-  let stream :: <stream> = req.request-socket;
-  let response-line = format-to-string("%s %d %s",
-                                       "HTTP/1.1",
-                                       200,
-                                       "OK");
-  format(stream, "%s\r\n", response-line);
-  format(stream, "Content-Type: text/event-stream\r\n\r\n");
-  format(stream, "Cache-Control: no-cache\r\n\r\n");
-  format(stream, "\r\n\r\n");
-
-  dbg("events socket set to %=\n", stream);
-  *events-socket* := stream;
-  while (#t)
-//different event types in JS!
-//source.addEventListener('add', addHandler, false);
-//source.addEventListener('remove', removeHandler, false);
-//    format(stream, "data: %s\r\n\r\n", as-iso8601-string(current-date()));
-//    force-output(stream);
-    sleep(50);
-  end;
-end;
-
-let stream-resource = make(<function-resource>,
-                           function: stream-function);
+let stream-resource = make(<sse-resource>);
 add-resource(server, "/events", stream-resource);
 
 
@@ -132,12 +104,15 @@ define method recursive-summary (frame :: <frame>) => (res :: <string>)
   summary(frame);
 end;
 
-define function print-summary (stream :: <stream>, frame :: <object>)
+define function print-summary (frame :: <object>)
+  let queue = stream-resource.sse-queue;
+  let lock = stream-resource.sse-queue-lock;
   if (~ *filter-expression* | matches?(frame, *filter-expression*))
-    write(stream, "data: ");
-    quote-html(recursive-summary(frame), stream: stream);
-    write(stream, "\r\n\r\n");
-    force-output(stream);
+    let summ = recursive-summary(frame);
+    dbg("inserting summary %s\n", summ);
+    with-lock (lock)
+      push-last(queue, format-to-string("data: %s", quote-html(summ)));
+    end;
   end;
 end;
 
@@ -153,8 +128,7 @@ define method execute (c :: <open-command>, #rest args, #key)
                               default-mac-address: mac);
     make(<thread>, function: curry(toplevel, int));
     let ethernet-socket = create-raw-socket(ethernet-layer);
-    let sum = make(<closure-node>,
-                   closure: curry(print-summary, *events-socket*));
+    let sum = make(<closure-node>, closure: print-summary);
     connect(ethernet-socket, sum);
     #("connected!")
   exception (c :: <condition>)
