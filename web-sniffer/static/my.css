@@ -11,10 +11,18 @@
 }
 
 .error {
-    z-index:1000;
-    position: absolute;
     background-color:#DDAAAA;
-    border: 1px solid blue;
+    border: 1px;
+    padding: 2px;
+    display: block;
+    margin: 0;
+    list-style-type: none;
+    list-style: none;
+}
+
+.success {
+    background-color:#AADDAA;
+    border: 1px;
     padding: 2px;
     display: block;
     margin: 0;

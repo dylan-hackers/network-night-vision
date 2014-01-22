@@ -24,9 +24,57 @@ function initialize () {
     function handle_event (event) {
         var val = event.data
         var res = eval(val)[0]
+
+        var handle_details = function (val) {
+            var json = val[0]
+            var hexdiv = document.getElementById("hexoutput")
+            clear_element(hexdiv)
+            var list = document.createElement("ul")
+            var hexdump = json.hex
+            for (var i = 0; i < hexdump.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = hexdump[i]
+                list.appendChild(ele)
+            }
+            hexdiv.appendChild(list)
+
+            var layers = json.tree
+            var tree = document.getElementById("tree")
+            clear_element(tree)
+            var ul = document.createElement("ul")
+
+            var handle_treedetails = function (parent, val) {
+                var chi = parent.childNodes
+                if (chi.length > 1)
+                    for (var i = 1; i < chi.length; i++)
+                        parent.removeChild(chi[i])
+                else {
+                    var json = val[0]
+                    var ul = document.createElement("ul")
+                    for (var i = 0; i < json.fields.length; i++) {
+                        var ele = document.createElement("li")
+                        ele.innerHTML = json.fields[i]
+                        ul.appendChild(ele)
+                    }
+                    parent.appendChild(ul)
+                }
+            }
+
+            for (var i = 0; i < layers.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = layers[i]
+                function cb (id, packet, cont) {
+                    executeCommand("treedetails", ("treedetails/" + packet + "/" + id), cont)
+                }
+                ele.onclick = cb.curry(i, json.packetid, handle_treedetails.curry(ele))
+                ul.appendChild(ele)
+            }
+            tree.appendChild(ul)
+        }
+
         function cb () {
             var out = document.getElementById("details")
-            executeCommand("details" , ("details/" + res.packetid), null, out)
+            executeCommand("details" , ("details/" + res.packetid), handle_details)
         }
         var newElement = document.createElement("tr")
 
@@ -86,15 +134,51 @@ function handle_filterkey (debug, output, filter, event) {
 function handle_keypress (debug, output, inputfield, event) {
     var keyCode = ('which' in event) ? event.which : event.keyCode
     var val = inputfield.value
+
     switch (keyCode) {
     case 32: //space
         debug.innerHTML = "space: " + val; break
     case 13: //return
+        var cont = function (res) {
+            clear_element(output)
+            var list = document.createElement("ul")
+            for (var i = 0; i < res.length; i++) {
+                var ele = document.createElement("li")
+                ele.innerHTML = res[i]
+                list.appendChild(ele)
+            }
+            output.appendChild(list)
+            inputfield.value = ""
+        }
         var cmd = val.split(" ")
-        executeCommand(cmd[0], cmd.join("/"), inputfield, output)
+        executeCommand(cmd[0], cmd.join("/"), cont)
         break
     case 191: //?
-        getHelp(val, output)
+        var cont = function (res) {
+            clear_element(output)
+            var table = document.createElement("table")
+            for (var i = 0; i < res.length; i++) {
+                var tr = document.createElement("tr")
+                var json = res[i]
+
+                var nametd = document.createElement("td")
+                nametd.innerHTML = json.name
+                tr.appendChild(nametd)
+
+                var descriptiontd = document.createElement("td")
+                descriptiontd.innerHTML = json.description
+                tr.appendChild(descriptiontd)
+
+                var signaturetd = document.createElement("td")
+                signaturetd.innerHTML = json.signature
+                tr.appendChild(signaturetd)
+
+                table.appendChild(tr)
+            }
+            output.appendChild(table)
+            inputfield.value = ""
+        }
+        executeCommand("help", "help", cont)
         inputfield.value = ""
         break
     default:
@@ -102,30 +186,26 @@ function handle_keypress (debug, output, inputfield, event) {
     }
 }
 
-function executeCommand (command, req, inputfield, output) {
+function executeCommand (command, req, cont) {
     if (command == "clear") {
-        var lst = document.getElementById("packets")
-        while (lst.hasChildNodes())
-            lst.removeChild(lst.childNodes[0])
-        if (inputfield)
-            inputfield.value = ""
+        clear_element(document.getElementById("packets"))
+        if (cont)
+            cont()
     } else {
         function reqListener () {
             var value = this.responseText
             var res = eval(value)
-            var list = document.createElement("ul")
-            for (var i = 0; i < res.length; i++) {
-                var x = res[i]
-                handle_command(command, list, x)
+            var output = document.getElementById("output")
+            if (res.error) {
+                output.className = "error"
+                output.innerHTML = res.error
+            } else {
+                output.className = "success"
+                output.innerHTML = "Success!: " + res
             }
-            output.appendChild(list)
-            if (inputfield)
-                inputfield.value = ""
+            if (cont)
+                cont(res)
         }
-
-        if (output)
-            while (output.hasChildNodes())
-                output.removeChild(output.childNodes[0])
         var oReq = new XMLHttpRequest()
         oReq.onload = reqListener
         oReq.open("get", ("/execute/" + req), true)
@@ -133,84 +213,14 @@ function executeCommand (command, req, inputfield, output) {
     }
 }
 
-function handle_command (command, list, json) {
-    if (json.error) {
-        var ele = document.createElement("div")
-        ele.className = "error"
-        ele.innerHTML = json.error
-        list.appendChild(ele)
-    } else {
-        switch (command) {
-        case 'list':
-            var ele = document.createElement("li")
-            ele.innerHTML = json.name + " running? " + json.open
-            list.appendChild(ele)
-            break
-        case 'details':
-            var hexdump = json.hex
-            for (var i = 0; i < hexdump.length; i++) {
-                var ele = document.createElement("li")
-                ele.innerHTML = hexdump[i]
-                list.appendChild(ele)
-            }
-            var layers = json.tree
-            var tree = document.getElementById("tree")
-            while (tree.hasChildNodes())
-                tree.removeChild(tree.firstChild)
-            var ul = document.createElement("ul")
-            for (var i = 0; i < layers.length; i++) {
-                var ele = document.createElement("li")
-                ele.innerHTML = layers[i]
-                function cb (id, packet, ele) {
-                    executeCommand("treedetails", ("treedetails/" + packet + "/" + id), null, ele)
-                }
-                ele.onclick = cb.curry(i, json.packetid, ele)
-                ul.appendChild(ele)
-            }
-            tree.appendChild(ul)
-            break
-        case 'treedetails':
-            var ul = document.createElement("ul")
-            for (var i = 0; i < json.fields.length; i++) {
-                var ele = document.createElement("li")
-                ele.innerHTML = json.fields[i]
-                ul.appendChild(ele)
-            }
-            list.appendChild(ul)
-            break
-        default:
-            var ele = document.createElement("li")
-            ele.innerHTML = json
-            list.appendChild(ele)
-        }
-    }
+function clear_element (element) {
+    while (element.hasChildNodes())
+        element.removeChild(element.firstChild)
 }
 
-function getHelp (partialinput, output) {
-    function reqListener () {
-        var value = this.responseText
-        if (! value)
-            output.innerHTML = "RECEIVED error"
-        var res = eval(value)
-        var list = document.createElement("ul")
-        for (var i = 0; i < res.length; i++) {
-            var x = res[i]
-            var ele = document.createElement("li")
-            ele.innerHTML = x["name"] + ": " + x["description"]
-            list.appendChild(ele)
-        }
-        var old = output.firstChild
-        if (old)
-            output.replaceChild(list, old)
-        else
-            output.appendChild(list)
-    }
 
-    var oReq = new XMLHttpRequest()
-    oReq.onload = reqListener
-    oReq.open("get", ("/help/" + partialinput), true)
-    oReq.send()
-}
+
+
 
 function create_context_menu (ele) {
     ele.onmouseover = function (event) {

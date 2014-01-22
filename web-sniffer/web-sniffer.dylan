@@ -44,22 +44,6 @@ define method encode-json (stream :: <stream>, object :: <struct>)
   write(stream, "}");
 end;
 
-define function help (#key partial)
-  let response = current-response();
-  set-header(response, "Content-type", "application/json");
-  let res = make(<stretchy-vector>);
-  for (x in $command-table)
-    add!(res, struct(#"name", x.command-name,
-                     #"description", x.command-description,
-                     #"signature", x.command-signature));
-  end;
-  encode-json(response, res);
-end;
-
-let help-resource = make(<function-resource>, function: help);
-add-resource(server, "/help/{partial}", help-resource);
-
-
 define constant $command-table = make(<table>);
 
 define constant $interface-table = make(<table>);
@@ -78,16 +62,29 @@ define method make (class :: subclass(<command>), #rest rest, #key, #all-keys) =
   $command-table[res.command-name] := res
 end;
 
+define class <help-command> (<command>)
+end;
+make(<help-command>, name: #"help", description: "You just found out what this did");
+
+define method execute (help :: <help-command>, #key)
+  let res = make(<stretchy-vector>);
+  for (x in $command-table)
+    add!(res, struct(#"name", x.command-name,
+                     #"description", x.command-description,
+                     #"signature", x.command-signature));
+  end;
+  res;
+end;
+
 define class <list-command> (<command>)
 end;
 make(<list-command>, name: #"list", description: "Lists all available interfaces");
 make(<list-command>, name: #"clear", description: "Clears the event output");
 
 define method execute (c :: <list-command>, #key)
-  let devices = map(compose(curry(struct, open:, #f, name:), device-name),
+  let devices = map(device-name,
                     find-all-devices());
-  let open-devices = map(curry(struct, open:, #t, name:),
-                         key-sequence($interface-table));
+  let open-devices = key-sequence($interface-table);
   ((open-devices.size > 0) & open-devices) | devices
 end;
 
@@ -96,20 +93,6 @@ end;
 make(<open-command>, name: #"open", description: "Opens a network interface", signature: "<interface>");
 
 define constant $packet-table = make(<stretchy-vector>);
-
-define method recursive-summary (frame :: <header-frame>) => (res :: <string>)
-  concatenate(summary(frame), "/", recursive-summary(frame.payload));
-end;
-
-define method recursive-summary (frame :: <frame>) => (res :: <string>)
-  summary(frame);
-end;
-
-define function recv-frame (frame :: <object>)
-  let id = $packet-table.size;
-  add!($packet-table, pair(frame, id));
-  maybe-get-summary(id, frame);
-end;
 
 define function latest-payload (frame :: <container-frame>) => (res :: <container-frame>)
   maybe-last(frame, frame)
@@ -176,6 +159,12 @@ define function maybe-get-summary (id :: <integer>, frame :: <object>)
       push-last(queue, concatenate("data: ", json));
     end;
   end;
+end;
+
+define function recv-frame (frame :: <object>)
+  let id = $packet-table.size;
+  add!($packet-table, pair(frame, id));
+  maybe-get-summary(id, frame);
 end;
 
 define method execute (c :: <open-command>, #rest args, #key)
@@ -247,7 +236,6 @@ end;
 make(<treedetails-command>, name: #"treedetails", description: "Shows container frame of given layer", signature: "<packet-identifier> <layer-identifier>");
 
 define method find-layer (frame :: <frame>, count == 0) => (frame :: <frame>)
-  dbg("finding layer1 %d %=\n", count, frame);
   frame
 end;
 
@@ -260,7 +248,6 @@ define method find-layer (frame :: <frame>, count :: <integer>) => (frame :: <fr
 end;
 
 define method find-layer (frame :: <header-frame>, count :: <integer>) => (frame :: <frame>)
-  dbg("finding layer2 %d %=\n", count, frame);
   find-layer(frame.payload, count - 1)
 end;
 
