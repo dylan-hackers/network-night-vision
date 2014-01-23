@@ -39,3 +39,4 @@
 .show a {border: 0 !important; text-decoration: none;}
 .show a:hover {text-decoration: underline !important;}
 
+.canvas { border: 1px solid black; }

@@ -1,7 +1,8 @@
 <html>
 <link rel="stylesheet" href="my.css" />
 <script src="gui.js"></script>
-<script>window.onload = initialize</script>
+<script src="graph.js"></script>
+<script>window.onload = function () { initialize(); canvas_init(); }</script>
 <body>
   <div class="input">
     ? for help:<input type="text" id="shell" autofocus="true"></input><br/>
@@ -15,6 +16,8 @@
   <div class="debug">
     debug: <div id="debug"></div>
   </div>
+
+  <canvas id="canvas" class="canvas" width="800" height="800"></canvas>
 
   <div class="packets">
     <table id="packets"></table>
