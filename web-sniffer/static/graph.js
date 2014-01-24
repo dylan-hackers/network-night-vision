@@ -110,6 +110,7 @@ function Edge (source, destination, properties) {
     this.source = source
     this.destination = destination
     this.strokeStyle = "blue"
+    this.directed = true
     if (properties)
         for (var i = 0; i < properties.length; i = i + 2)
             this.properties[i] = properties[i + 1]
@@ -117,13 +118,43 @@ function Edge (source, destination, properties) {
 
 Edge.prototype.draw = function (ctx, graph) {
     ctx.beginPath()
-    var spos = this.source.position.toComplex()
-    var dpos = this.destination.position.toComplex()
+    var sour = this.source.position
+    var dest = this.destination.position
+
+    var spos = sour.toComplex()
+    var dpos = dest.toComplex()
+    var theta  = toPolar(dpos[0] - spos[0], dpos[1] - spos[1]).theta
+
+    var start = sour.follow(new PolarPoint(theta, this.source.radius)).toComplex()
+    if (Math.abs(dpos[0] - spos[0]) < 0.1) {
+        theta = Math.PI / 2
+        if (spos[1] < dpos[1])
+            theta = - theta
+    }
+
+    var invvec = Math.PI - theta
+    var endp = dest.follow(new PolarPoint(invvec, this.destination.radius))
+    var end = endp.toComplex()
+
     ctx.strokeStyle = this.strokeStyle
-    ctx.moveTo(spos[0], spos[1])
-    ctx.lineTo(dpos[0], dpos[1])
+    ctx.moveTo(start[0], start[1])
+    ctx.lineTo(end[0], end[1])
     ctx.closePath()
     ctx.stroke()
+
+    if (this.directed) {
+        var arrowsize = 5
+        var oneend = endp.follow(new PolarPoint(invvec + Math.PI / 8, arrowsize)).toComplex()
+        var otherend = endp.follow(new PolarPoint(invvec - Math.PI / 8, arrowsize)).toComplex()
+
+        ctx.beginPath()
+        ctx.moveTo(end[0], end[1])
+        ctx.lineTo(oneend[0], oneend[1])
+        ctx.moveTo(end[0], end[1])
+        ctx.lineTo(otherend[0], otherend[1])
+        ctx.closePath()
+        ctx.stroke()
+    }
 }
 
 function Node (value, properties) {
@@ -174,11 +205,7 @@ Node.prototype = {
     draw: function (ctx, graph) {
         //we better have a position
         this.redraw(ctx, graph)
-
-        var old = ctx.globalCompositeOperation
-        ctx.globalCompositeOperation = 'destination-over'
         graph.outEdges(this).forEach(function (x) { x.draw(ctx, graph) })
-        ctx.globalCompositeOperation = old
     },
 }
 
