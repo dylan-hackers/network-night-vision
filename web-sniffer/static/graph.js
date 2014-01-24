@@ -22,11 +22,13 @@ function canvas_init () {
     graph.insert(n7)
     graph.insert(n8)
     graph.insert(n9)
+    graph.connect(n5, n4)
+    graph.connect(n2, n3)
     graph.connect(n1, n5)
     graph.connect(n1, n6)
     graph.connect(n7, n8)
     //graph.connect(n1, n9)
-    graph.connect(n7, n9)
+    graph.connect(n9, n8)
     //graph.connect(n1, n7)
     //graph.visit(function (x) { console.log("[neighbours] callback of " + x.value) })
     //graph.visit(function (x) { console.log("[up] callback of " + x.value) }, 'up')
@@ -194,8 +196,6 @@ Node.prototype = {
         var childs = graph.children(this)
         for (var i = 0; i < childs.length; i++) {
             if (childs[i].position == null) {
-                //that is not entirely true:
-                //we need to move a bit if child already has a position
                 var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
                 childs[i].position = this.position.follow(vec)
             }
@@ -222,7 +222,12 @@ Graph.prototype = {
         var subgraphs = this.subgraphs
         for (var i = 0; i < subgraphs.length; i++) {
             var roots = this.getRoots(subgraphs[i])
-            roots[0].position = toPolar(canvas.width / (2 * subgraphs.length) + (canvas.width * i / subgraphs.length), canvas.height / 2)
+            for (var r = 0; r < roots.length; r++) {
+                var root = roots[r]
+                var x = canvas.width / (2 * subgraphs.length) + (canvas.width * i / subgraphs.length)
+                var y = canvas.height / (2 * roots.length) + (canvas.height * r / roots.length)
+                root.position = toPolar(x, y)
+            }
         }
         var cb = function (graph, x) { x.place(graph) }
         this.visit(cb.curry(this), 'down')
@@ -336,7 +341,13 @@ Graph.prototype = {
     },
 
     getRoots: function (nodelist) {
-        return [nodelist[0]]
+        var roots = []
+        var cb = function (graph, x) {
+            if (graph.inEdges(x).length == 0)
+                roots.push(x)
+        }
+        nodelist.filter(cb.curry(this))
+        return roots
     },
 
     visit: function (callback, direction) {
