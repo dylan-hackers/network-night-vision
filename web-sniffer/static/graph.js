@@ -17,12 +17,17 @@ function canvas_init () {
     var n7 = new Node(7)
     var n8 = new Node(8)
     var n9 = new Node(9)
+    graph.insert(n5)
+    graph.insert(n6)
+    graph.insert(n7)
+    graph.insert(n8)
+    graph.insert(n9)
     graph.connect(n1, n5)
     graph.connect(n1, n6)
     graph.connect(n7, n8)
-    graph.connect(n1, n9)
-    graph.connect(n9, n7)
-    graph.connect(n1, n7)
+    //graph.connect(n1, n9)
+    graph.connect(n7, n9)
+    //graph.connect(n1, n7)
     //graph.visit(function (x) { console.log("[neighbours] callback of " + x.value) })
     //graph.visit(function (x) { console.log("[up] callback of " + x.value) }, 'up')
     //graph.visit(function (x) { console.log("[down] callback of " + x.value) }, 'down')
@@ -158,6 +163,8 @@ Node.prototype = {
         var childs = graph.children(this)
         for (var i = 0; i < childs.length; i++) {
             if (childs[i].position == null) {
+                //that is not entirely true:
+                //we need to move a bit if child already has a position
                 var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
                 childs[i].position = this.position.follow(vec)
             }
@@ -179,18 +186,24 @@ function Graph () {
     this.nodes = []
     this.edges = []
     this.selectedNode = null
+    this.subgraphs = []
 }
 
 Graph.prototype = {
     layout: function (canvas) {
-        this.nodes[0].position = toPolar(canvas.width / 2, canvas.height / 2)
+        this.findsubgraphs()
+        var subgraphs = this.subgraphs
+        for (var i = 0; i < subgraphs.length; i++) {
+            var roots = this.getRoots(subgraphs[i])
+            roots[0].position = toPolar(canvas.width / (2 * subgraphs.length) + (canvas.width * i / subgraphs.length), canvas.height / 2)
+        }
         var cb = function (graph, x) { x.place(graph) }
         this.visit(cb.curry(this), 'down')
     },
 
     draw: function (ctx) {
         var cb = function (ctx, graph, x) { x.draw(ctx, graph) }
-        this.visit(cb.curry(ctx, this), 'down')
+        this.visit(cb.curry(ctx, this))
     },
 
     find: function (x, y) {
@@ -265,9 +278,47 @@ Graph.prototype = {
         }
     },
 
-    visit: function (callback, direction) {
+    findsubgraphs: function () {
         //implements a breadth-first search
         var todo = [this.nodes[0]]
+        var visited = []
+        var subgraph = []
+        function doVisit (graph) {
+            while (todo.length > 0) {
+                var node = todo.shift()
+                if (visited.filter(eq.curry(node)).length == 0) {
+                    subgraph.push(node)
+                    visited.push(node)
+                    graph.neighbours(node).forEach(function (x) { todo.push(x) })
+                }
+            }
+        }
+
+        doVisit(this)
+        this.subgraphs.push(subgraph)
+
+        //find remaining, disconnected nodes
+        for (var i = 0; i < this.nodes.length; i++)
+            if (visited.filter(eq.curry(this.nodes[i])).length == 0) {
+                console.log("disconnected graph!")
+                subgraph = []
+                todo.push(this.nodes[i])
+                doVisit(this)
+                this.subgraphs.push(subgraph)
+            }
+    },
+
+    getRoots: function (nodelist) {
+        return [nodelist[0]]
+    },
+
+    visit: function (callback, direction) {
+        //implements a breadth-first search
+        var todo = []
+        var cb = function (graph, subgraph) {
+            graph.getRoots(subgraph).forEach(function (r) { todo.push(r)})
+        }
+        this.subgraphs.forEach(cb.curry(this))
         var visited = []
         function doVisit (graph) {
             while (todo.length > 0) {
@@ -286,14 +337,6 @@ Graph.prototype = {
         }
 
         doVisit(this)
-
-        //find remaining, disconnected nodes
-        for (var i = 0; i < this.nodes.length; i++)
-            if (visited.filter(eq.curry(this.nodes[i])).length == 0) {
-                console.log("disconnected graph!")
-                todo.push(this.nodes[i])
-                doVisit(this)
-            }
     },
 
 }
