@@ -239,7 +239,7 @@ Node.prototype = {
                     stat = this.edge.theta - (Math.PI / 2)
                 }
 
-                var vec = new PolarPoint(stat + i * (variance / fact), 50)
+                var vec = new PolarPoint(stat + (i + 1) * (variance / fact), 50)
                 childs[i].position = this.position.follow(vec)
             }
         }
