@@ -17,19 +17,37 @@ function canvas_init () {
     var n7 = new Node(7)
     var n8 = new Node(8)
     var n9 = new Node(9)
+    var n10 = new Node(10)
+    var n11 = new Node(11)
+    var n12 = new Node(12)
     graph.insert(n5)
     graph.insert(n6)
     graph.insert(n7)
     graph.insert(n8)
     graph.insert(n9)
+    graph.insert(n10)
+    graph.insert(n11)
+    graph.insert(n12)
     graph.connect(n5, n4)
     graph.connect(n2, n3)
     graph.connect(n1, n5)
     graph.connect(n1, n6)
+    graph.connect(n1, n10)
+    graph.connect(n1, n11)
+//    graph.connect(n1, n12)
     graph.connect(n7, n8)
-    //graph.connect(n1, n9)
+    graph.connect(n1, n9)
     graph.connect(n9, n8)
     graph.connect(n9, n7)
+    var n13 = new Node(13)
+    var n14 = new Node(14)
+    var n15 = new Node(15)
+    graph.insert(n13)
+    graph.insert(n14)
+    graph.insert(n15)
+    graph.connect(n9, n13)
+    graph.connect(n9, n14)
+    graph.connect(n9, n15)
     //graph.connect(n1, n7)
     //graph.visit(function (x) { console.log("[neighbours] callback of " + x.value) })
     //graph.visit(function (x) { console.log("[up] callback of " + x.value) }, 'up')
@@ -108,71 +126,80 @@ PolarPoint.prototype = {
 }
 
 
-function Edge (source, destination, properties) {
+function Edge (source, destination) {
     this.source = source
     this.destination = destination
     this.strokeStyle = "blue"
     this.directed = true
-    if (properties)
-        for (var i = 0; i < properties.length; i = i + 2)
-            this.properties[i] = properties[i + 1]
+    this.theta = null
+    this.invvec = null
+    this.startpos = null
+    this.endpos = null
 }
 
-Edge.prototype.draw = function (ctx, graph) {
-    ctx.beginPath()
-    var sour = this.source.position
-    var dest = this.destination.position
+Edge.prototype = {
+    place: function (graph) {
+        var sour = this.source.position
+        var dest = this.destination.position
 
-    var spos = sour.toComplex()
-    var dpos = dest.toComplex()
-    var dx = dpos[0] - spos[0]
-    var dy = dpos[1] - spos[1]
-    var theta  = toPolar(dx, dy).theta
+        var spos = sour.toComplex()
+        var dpos = dest.toComplex()
+        var dx = dpos[0] - spos[0]
+        var dy = dpos[1] - spos[1]
+        this.theta = toPolar(dx, dy).theta
 
-    var start = sour.follow(new PolarPoint(theta, this.source.radius)).toComplex()
+        this.startpos = sour.follow(new PolarPoint(this.theta, this.source.radius))
 
-    if (Math.abs(dpos[0] - spos[0]) < 0.1) {
-        if (dy > 0) {
-            theta = Math.PI / 2
-        } else {
-            theta = - Math.PI / 2
+        var mytheta = this.theta
+        if (Math.abs(dpos[0] - spos[0]) < 0.1) {
+            if (dy > 0) {
+                mytheta = Math.PI / 2
+            } else {
+                mytheta = - Math.PI / 2
+            }
         }
-    }
-    var invvec = Math.PI + theta
-    //console.log("node " + this.source.value + " to " + this.destination.value + " dx " + dx + " dy " + dy + " theta " + theta + " invvec " + invvec)
-    var endp = dest.follow(new PolarPoint(invvec, this.destination.radius))
-    var end = endp.toComplex()
+        var invvec = Math.PI + mytheta
+        //console.log("node " + this.source.value + " to " + this.destination.value + " dx " + dx + " dy " + dy + " theta " + theta + " invvec " + invvec)
+        this.invvec = invvec
+        this.endpos = dest.follow(new PolarPoint(invvec, this.destination.radius))
+        this.destination.edge = this
+    },
 
-    ctx.strokeStyle = this.strokeStyle
-    ctx.moveTo(start[0], start[1])
-    ctx.lineTo(end[0], end[1])
-    ctx.closePath()
-    ctx.stroke()
 
-    if (this.directed) {
-        var arrowsize = 5
-        var oneend = endp.follow(new PolarPoint(invvec + Math.PI / 8, arrowsize)).toComplex()
-        var otherend = endp.follow(new PolarPoint(invvec - Math.PI / 8, arrowsize)).toComplex()
-
+    draw: function (ctx, graph) {
         ctx.beginPath()
-        ctx.moveTo(end[0], end[1])
-        ctx.lineTo(oneend[0], oneend[1])
-        ctx.moveTo(end[0], end[1])
-        ctx.lineTo(otherend[0], otherend[1])
+        var start = this.startpos.toComplex()
+        var end = this.endpos.toComplex()
+
+        ctx.strokeStyle = this.strokeStyle
+        ctx.moveTo(start[0], start[1])
+        ctx.lineTo(end[0], end[1])
         ctx.closePath()
         ctx.stroke()
-    }
+
+        if (this.directed) {
+            var arrowsize = 5
+            var oneend = this.endpos.follow(new PolarPoint(this.invvec + Math.PI / 8, arrowsize)).toComplex()
+            var otherend = this.endpos.follow(new PolarPoint(this.invvec - Math.PI / 8, arrowsize)).toComplex()
+
+            ctx.beginPath()
+            ctx.moveTo(end[0], end[1])
+            ctx.lineTo(oneend[0], oneend[1])
+            ctx.moveTo(end[0], end[1])
+            ctx.lineTo(otherend[0], otherend[1])
+            ctx.closePath()
+            ctx.stroke()
+        }
+    },
 }
 
-function Node (value, properties) {
+function Node (value) {
     this.value = value
     this.position = null
     this.fillStyle = "orange"
     this.textStyle = "black"
     this.radius = 10
-    if (properties)
-        for (var i = 0; i < properties.length; i = i + 2)
-            this.properties[i] = properties[i + 1]
+    this.edge = null
 }
 
 Node.prototype = {
@@ -201,10 +228,22 @@ Node.prototype = {
         var childs = graph.children(this)
         for (var i = 0; i < childs.length; i++) {
             if (childs[i].position == null) {
-                var vec = new PolarPoint(i * (Math.PI * 2 / (childs.length + 1)), 50)
+                var fact = childs.length
+                if (fact % 2 == 0)
+                    fact++
+
+                var stat = 0
+                var variance = Math.PI * 2
+                if (this.edge) {
+                    variance = Math.PI
+                    stat = this.edge.theta - (Math.PI / 2)
+                }
+
+                var vec = new PolarPoint(stat + i * (variance / fact), 50)
                 childs[i].position = this.position.follow(vec)
             }
         }
+        graph.outEdges(this).forEach(function (x) { x.place(graph) })
     },
 
     draw: function (ctx, graph) {
