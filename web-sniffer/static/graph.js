@@ -36,9 +36,10 @@ function canvas_init () {
         graph.setselected(node)
     }
 
+    graph.layout(canvas)
     var ctx = canvas.getContext('2d')
     graph.context = ctx
-    graph.draw(canvas, ctx)
+    graph.draw(ctx)
 }
 
 Function.prototype.compose  = function (argFunction) {
@@ -122,7 +123,7 @@ Edge.prototype.draw = function (ctx, graph) {
 
 function Node (value, properties) {
     this.value = value
-    this.position = new PolarPoint()
+    this.position = null
     this.fillStyle = "orange"
     this.textStyle = "black"
     this.radius = 10
@@ -135,14 +136,15 @@ Node.prototype = {
     redraw: function (ctx, graph) {
         var pos = this.position.toComplex()
         ctx.beginPath()
-        ctx.arc(pos[0], pos[1], this.radius, 0, Math.PI * 2, true)
+        ctx.arc(pos[0], pos[1], this.radius + 0.5, 0, Math.PI * 2, true)
         ctx.fillStyle = this.fillStyle
+        ctx.closePath()
         ctx.fill()
         if (this.isselected) {
             var old = ctx.strokeStyle
             ctx.strokeStyle = "red"
-            ctx.arc(pos[0], pos[1], this.radius - 1, 0, Math.PI * 2, true)
-            ctx.arc(pos[0], pos[1], this.radius - 2, 0, Math.PI * 2, true)
+            ctx.arc(pos[0], pos[1], this.radius - 0.5, 0, Math.PI * 2, true)
+            ctx.arc(pos[0], pos[1], this.radius - 1.5, 0, Math.PI * 2, true)
             ctx.closePath()
             ctx.stroke()
             ctx.strokeStyle = old
@@ -152,15 +154,19 @@ Node.prototype = {
     },
 
 
+    place: function (graph) {
+        var childs = graph.children(this)
+        for (var i = 0; i < childs.length; i++) {
+            if (childs[i].position == null) {
+                var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
+                childs[i].position = this.position.follow(vec)
+            }
+        }
+    },
+
     draw: function (ctx, graph) {
         //we better have a position
         this.redraw(ctx, graph)
-
-        var childs = graph.children(this)
-        for (var i = 0; i < childs.length; i++) {
-            var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
-            childs[i].position = this.position.follow(vec)
-        }
 
         var old = ctx.globalCompositeOperation
         ctx.globalCompositeOperation = 'destination-over'
@@ -176,8 +182,13 @@ function Graph () {
 }
 
 Graph.prototype = {
-    draw: function (canvas, ctx) {
+    layout: function (canvas) {
         this.nodes[0].position = toPolar(canvas.width / 2, canvas.height / 2)
+        var cb = function (graph, x) { x.place(graph) }
+        this.visit(cb.curry(this), 'down')
+    },
+
+    draw: function (ctx) {
         var cb = function (ctx, graph, x) { x.draw(ctx, graph) }
         this.visit(cb.curry(ctx, this), 'down')
     },
