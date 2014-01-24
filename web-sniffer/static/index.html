@@ -4,6 +4,8 @@
 <script src="graph.js"></script>
 <script>window.onload = function () { initialize(); canvas_init(); }</script>
 <body>
+  <canvas id="canvas" class="canvas" width="800" height="300"></canvas>
+
   <div class="input">
     ? for help:<input type="text" id="shell" autofocus="true"></input><br/>
   </div>
@@ -17,7 +19,6 @@
     debug: <div id="debug"></div>
   </div>
 
-  <canvas id="canvas" class="canvas" width="800" height="800"></canvas>
 
   <div class="packets">
     <table id="packets"></table>

@@ -33,7 +33,7 @@ function canvas_init () {
         var y = event.pageY - canvas.offsetTop
         var node = graph.find(x, y)
         console.log("x: " + x + " y: " + y + " node ", node)
-        graph.selected(node)
+        graph.setselected(node)
     }
 
     var ctx = canvas.getContext('2d')
@@ -131,42 +131,42 @@ function Node (value, properties) {
             this.properties[i] = properties[i + 1]
 }
 
-Node.prototype.redraw = function (ctx, graph) {
-    var pos = this.position.toComplex()
-    ctx.beginPath()
-    ctx.arc(pos[0], pos[1], this.radius, 0, Math.PI * 2, true)
-    ctx.fillStyle = this.fillStyle
-    ctx.fill()
-    if (this.isselected) {
-        var old = ctx.strokeStyle
-        ctx.strokeStyle = "red"
-        ctx.arc(pos[0], pos[1], this.radius - 1, 0, Math.PI * 2, true)
-        ctx.arc(pos[0], pos[1], this.radius - 2, 0, Math.PI * 2, true)
-        ctx.closePath()
-        ctx.stroke()
-        ctx.strokeStyle = old
-    }
+Node.prototype = {
+    redraw: function (ctx, graph) {
+        var pos = this.position.toComplex()
+        ctx.beginPath()
+        ctx.arc(pos[0], pos[1], this.radius, 0, Math.PI * 2, true)
+        ctx.fillStyle = this.fillStyle
+        ctx.fill()
+        if (this.isselected) {
+            var old = ctx.strokeStyle
+            ctx.strokeStyle = "red"
+            ctx.arc(pos[0], pos[1], this.radius - 1, 0, Math.PI * 2, true)
+            ctx.arc(pos[0], pos[1], this.radius - 2, 0, Math.PI * 2, true)
+            ctx.closePath()
+            ctx.stroke()
+            ctx.strokeStyle = old
+        }
+        ctx.fillStyle = this.textStyle
+        ctx.fillText(this.value, pos[0], pos[1])
+    },
 
-    ctx.fillStyle = this.textStyle
-    ctx.fillText(this.value, pos[0], pos[1])
 
-}
+    draw: function (ctx, graph) {
+        //we better have a position
+        this.redraw(ctx, graph)
 
+        var childs = graph.children(this)
+        for (var i = 0; i < childs.length; i++) {
+            var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
+            childs[i].position = this.position.follow(vec)
+        }
 
-Node.prototype.draw = function (ctx, graph) {
-    //we better have a position
-    this.redraw(ctx, graph)
-
-    var childs = graph.children(this)
-    for (var i = 0; i < childs.length; i++) {
-        var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
-        childs[i].position = this.position.follow(vec)
-    }
-
-    var old = ctx.globalCompositeOperation
-    ctx.globalCompositeOperation = 'destination-over'
-    graph.outEdges(this).forEach(function (x) { x.draw(ctx, graph) })
-    ctx.globalCompositeOperation = old
+        var old = ctx.globalCompositeOperation
+        ctx.globalCompositeOperation = 'destination-over'
+        graph.outEdges(this).forEach(function (x) { x.draw(ctx, graph) })
+        ctx.globalCompositeOperation = old
+    },
 }
 
 function Graph () {
@@ -175,102 +175,114 @@ function Graph () {
     this.selectedNode = null
 }
 
-Graph.prototype.draw = function (canvas, ctx) {
-    this.nodes[0].position = toPolar(canvas.width / 2, canvas.height / 2)
-    var cb = function (ctx, graph, x) { x.draw(ctx, graph) }
-    this.visit(cb.curry(ctx, this), 'down')
-}
+Graph.prototype = {
+    draw: function (canvas, ctx) {
+        this.nodes[0].position = toPolar(canvas.width / 2, canvas.height / 2)
+        var cb = function (ctx, graph, x) { x.draw(ctx, graph) }
+        this.visit(cb.curry(ctx, this), 'down')
+    },
 
-Graph.prototype.find = function (x, y) {
-    var res = null
-    var hit =
-        function (nod) {
-            var nums = nod.position.toComplex()
-            if (nums[0] - 10 < x && nums[0] + 10 > x)
-                if (nums[1] - 10 < y && nums[1] + 10 > y)
-                    res = nod
+    find: function (x, y) {
+        var res = null
+        var hit =
+            function (nod) {
+                var nums = nod.position.toComplex()
+                if (nums[0] - 10 < x && nums[0] + 10 > x)
+                    if (nums[1] - 10 < y && nums[1] + 10 > y)
+                        res = nod
+            }
+
+        this.visit(hit)
+        return res
+    },
+
+    outEdges: function (node) {
+        return this.edges.filter(eq.curry(node).compose(getProp.curry("source")))
+    },
+
+    children: function (node) {
+        return this.outEdges(node).map(getProp.curry("destination"))
+    },
+
+    inEdges: function (node) {
+        return this.edges.filter(eq.curry(node).compose(getProp.curry("destination")))
+    },
+
+    parents: function (node) {
+        return this.inEdges(node).map(getProp.curry("source"))
+    },
+
+    neighbours: function (node) {
+        return this.children(node).concat(this.parents(node))
+    },
+
+    connect: function (node1, node2) {
+        this.edges.push(new Edge(node1, node2))
+    },
+
+    insert: function (node) {
+        this.nodes.push(node)
+    },
+
+    contains: function (node) {
+        return (this.nodes.filter(eq.curry(node)).length > 0)
+    },
+
+    findNode: function (val) {
+        var nodes = this.nodes.filter(function (x) { return x.value == val })
+        if (nodes.length == 1)
+            return nodes[0]
+        else
+            return null
+    },
+
+    setselected: function (node) {
+        var old = this.selectedNode
+        if (old && node && old == node) { }
+        else {
+            if (old) {
+                old.isselected = false
+                old.redraw(this.context, this)
+                this.selectedNode = null
+            }
+
+            if (node) {
+                this.selectedNode = node
+                node.isselected = true
+                node.redraw(this.context, this)
+            }
+        }
+    },
+
+    visit: function (callback, direction) {
+        //implements a breadth-first search
+        var todo = [this.nodes[0]]
+        var visited = []
+        function doVisit (graph) {
+            while (todo.length > 0) {
+                var node = todo.shift()
+                if (visited.filter(eq.curry(node)).length == 0) {
+                    callback(node)
+                    visited.push(node)
+                    if (direction && direction == 'up')
+                        graph.parents(node).forEach(function (x) { todo.push(x) })
+                    if (direction && direction == 'down')
+                        graph.children(node).forEach(function (x) { todo.push(x) })
+                    if (direction == null)
+                        graph.neighbours(node).forEach(function (x) { todo.push(x) })
+                }
+            }
         }
 
-    this.visit(hit)
-    return res
-}
+        doVisit(this)
 
-Graph.prototype.outEdges = function (node) {
-    return this.edges.filter(eq.curry(node).compose(getProp.curry("source")))
-}
-Graph.prototype.children = function (node) {
-    return this.outEdges(node).map(getProp.curry("destination"))
-}
+        //find remaining, disconnected nodes
+        for (var i = 0; i < this.nodes.length; i++)
+            if (visited.filter(eq.curry(this.nodes[i])).length == 0) {
+                console.log("disconnected graph!")
+                todo.push(this.nodes[i])
+                doVisit(this)
+            }
+    },
 
-Graph.prototype.inEdges = function (node) {
-    return this.edges.filter(eq.curry(node).compose(getProp.curry("destination")))
-}
-Graph.prototype.parents = function (node) {
-    return this.inEdges(node).map(getProp.curry("source"))
-}
-
-Graph.prototype.neighbours = function (node) {
-    return this.children(node).concat(this.parents(node))
-}
-
-Graph.prototype.connect = function (node1, node2) {
-    this.edges.push(new Edge(node1, node2))
-}
-
-Graph.prototype.insert = function (node) {
-    this.nodes.push(node)
-}
-
-Graph.prototype.contains = function (node) {
-    return (this.nodes.filter(eq.curry(node)).length > 0)
-}
-
-Graph.prototype.selected = function (node) {
-    var old = this.selectedNode
-    console.log("selected with ", old, node)
-    if (old && node && old == node) { }
-    else {
-        if (old) {
-            old.isselected = false
-            old.redraw(this.context, this)
-            this.selectedNode = null
-        }
-
-        if (node) {
-            this.selectedNode = node
-            node.isselected = true
-            node.redraw(this.context, this)
-        }
-    }
-}
-
-Graph.prototype.visit = function (callback, direction) {
-    //implements a breadth-first search
-    var todo = [this.nodes[0]]
-    var visited = []
-    function doVisit (graph) {
-        while (todo.length > 0) {
-            var node = todo.shift()
-            if (visited.filter(eq.curry(node)).length == 0) {
-                callback(node)
-                visited.push(node)
-                if (direction && direction == 'up')
-                    graph.parents(node).forEach(function (x) { todo.push(x) })
-                if (direction && direction == 'down')
-                    graph.children(node).forEach(function (x) { todo.push(x) })
-                if (direction == null)
-                    graph.neighbours(node).forEach(function (x) { todo.push(x) })
-             }
-         }
-     }
-
-     doVisit(this)
-
-     //find remaining, disconnected nodes
-     for (var i = 0; i < this.nodes.length; i++)
-         if (visited.filter(eq.curry(this.nodes[i])).length == 0) {
-             console.log("disconnected graph!")
-             todo.push(this.nodes[i])
-             doVisit(this)
-         }
 }
