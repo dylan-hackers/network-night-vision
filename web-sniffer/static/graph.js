@@ -29,6 +29,7 @@ function canvas_init () {
     graph.connect(n7, n8)
     //graph.connect(n1, n9)
     graph.connect(n9, n8)
+    graph.connect(n9, n7)
     //graph.connect(n1, n7)
     //graph.visit(function (x) { console.log("[neighbours] callback of " + x.value) })
     //graph.visit(function (x) { console.log("[up] callback of " + x.value) }, 'up')
@@ -39,7 +40,6 @@ function canvas_init () {
         var x = event.pageX - canvas.offsetLeft
         var y = event.pageY - canvas.offsetTop
         var node = graph.find(x, y)
-        console.log("x: " + x + " y: " + y + " node ", node)
         graph.setselected(node)
     }
 
@@ -123,7 +123,6 @@ Edge.prototype.draw = function (ctx, graph) {
     var sour = this.source.position
     var dest = this.destination.position
 
-    //something wonky in here!
     var spos = sour.toComplex()
     var dpos = dest.toComplex()
     var dx = dpos[0] - spos[0]
@@ -132,12 +131,15 @@ Edge.prototype.draw = function (ctx, graph) {
 
     var start = sour.follow(new PolarPoint(theta, this.source.radius)).toComplex()
 
-    if (Math.abs(dpos[0] - spos[0]) < 0.1)
-        theta = Math.PI / 2
-
-    var invvec = Math.PI - theta
-    if (dx > 0)
-        invvec = Math.PI + theta
+    if (Math.abs(dpos[0] - spos[0]) < 0.1) {
+        if (dy > 0) {
+            theta = Math.PI / 2
+        } else {
+            theta = - Math.PI / 2
+        }
+    }
+    var invvec = Math.PI + theta
+    //console.log("node " + this.source.value + " to " + this.destination.value + " dx " + dx + " dy " + dy + " theta " + theta + " invvec " + invvec)
     var endp = dest.follow(new PolarPoint(invvec, this.destination.radius))
     var end = endp.toComplex()
 
@@ -199,7 +201,7 @@ Node.prototype = {
         var childs = graph.children(this)
         for (var i = 0; i < childs.length; i++) {
             if (childs[i].position == null) {
-                var vec = new PolarPoint(i * (Math.PI * 2 / childs.length), 50)
+                var vec = new PolarPoint(i * (Math.PI * 2 / (childs.length + 1)), 50)
                 childs[i].position = this.position.follow(vec)
             }
         }
