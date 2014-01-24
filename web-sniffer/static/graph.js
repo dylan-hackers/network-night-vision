@@ -123,18 +123,21 @@ Edge.prototype.draw = function (ctx, graph) {
     var sour = this.source.position
     var dest = this.destination.position
 
+    //something wonky in here!
     var spos = sour.toComplex()
     var dpos = dest.toComplex()
-    var theta  = toPolar(dpos[0] - spos[0], dpos[1] - spos[1]).theta
+    var dx = dpos[0] - spos[0]
+    var dy = dpos[1] - spos[1]
+    var theta  = toPolar(dx, dy).theta
 
     var start = sour.follow(new PolarPoint(theta, this.source.radius)).toComplex()
-    if (Math.abs(dpos[0] - spos[0]) < 0.1) {
+
+    if (Math.abs(dpos[0] - spos[0]) < 0.1)
         theta = Math.PI / 2
-        if (spos[1] < dpos[1])
-            theta = - theta
-    }
 
     var invvec = Math.PI - theta
+    if (dx > 0)
+        invvec = Math.PI + theta
     var endp = dest.follow(new PolarPoint(invvec, this.destination.radius))
     var end = endp.toComplex()
 
