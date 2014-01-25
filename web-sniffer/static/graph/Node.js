@@ -168,8 +168,15 @@ CircleNode.prototype = {
         }
 
         ctx.fillStyle = this.textStyle
-        ctx.fillText(this.value, pos[0], pos[1])
+        var size = ctx.measureText(this.value)
+        ctx.fillText(this.value, pos[0] - (size.width / 2), pos[1])
     },
+
+    afterplace: function (graph) {
+        var size = graph.context.measureText(this.value)
+        this.radius = size.width / 3
+    },
+
 
     intersects: function (polar) {
         var nums = this.position.toComplex()
