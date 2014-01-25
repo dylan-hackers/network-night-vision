@@ -16,12 +16,27 @@ function toArray (xs) {
   return Array.prototype.slice.call(xs)
 }
 
-function initialize () {
-    var evtSource = new EventSource("events")
 
+function initialize () {
+
+
+    var canvas = document.getElementById('canvas')
+    canvas.onclick = function (event) {
+        var x = event.pageX - canvas.offsetLeft
+        var y = event.pageY - canvas.offsetTop
+        var node = graph.find(x, y)
+        graph.setselected(node)
+        node.onclick()
+    }
+
+    var ctx = canvas.getContext('2d')
+    graph.context = ctx
+
+    var evtSource = new EventSource("events")
     evtSource.onmessage = handle_event
 
     function handle_event (event) {
+        console.log("handling event")
         var val = event.data
         var res = eval(val)[0]
 
@@ -76,6 +91,15 @@ function initialize () {
             var out = document.getElementById("details")
             executeCommand("details" , ("details/" + res.packetid), handle_details)
         }
+
+        //console.log("[" + graph.nodes.length + "] inserting " + res.source)
+        var source = graph.findNodeOrInsert(res.source)
+        //console.log("[" + graph.nodes.length + "] inserting " + res.destination)
+        var dest = graph.findNodeOrInsert(res.destination)
+        //console.log("[" + graph.nodes.length + "] connecting ")
+        graph.connect(source, dest)
+        //console.log("[" + graph.edges.length + "] connected ")
+
         var newElement = document.createElement("tr")
 
         var td1 = document.createElement("td")
@@ -104,6 +128,13 @@ function initialize () {
         newElement.appendChild(td5)
 
         document.getElementById("packets").appendChild(newElement)
+        console.log("handling event done")
+    }
+
+    var layout = document.getElementById("layout")
+    layout.onclick = function () {
+        graph.layout(canvas)
+        graph.draw(ctx)
     }
 
     var shell = document.getElementById("shell")
@@ -188,6 +219,7 @@ function handle_keypress (debug, output, inputfield, event) {
 function executeCommand (command, req, cont) {
     if (command == "clear") {
         clear_element(document.getElementById("packets"))
+        graph.clear()
         if (cont)
             cont()
     } else {

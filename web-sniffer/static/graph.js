@@ -1,72 +1,4 @@
 
-function canvas_init () {
-    var graph = new Graph()
-    var n1 = new Node(1)
-    graph.insert(n1)
-    var n2 = new Node(2)
-    graph.insert(n2)
-    var n3 = new Node(3)
-    graph.insert(n3)
-    graph.connect(n1, n2)
-    var n4 = new Node(4)
-    graph.insert(n4)
-    graph.connect(n4, n3)
-    graph.connect(n1, n4)
-    var n5 = new Node(5)
-    var n6 = new Node(6)
-    var n7 = new Node(7)
-    var n8 = new Node(8)
-    var n9 = new Node(9)
-    var n10 = new Node(10)
-    var n11 = new Node(11)
-    var n12 = new Node(12)
-    graph.insert(n5)
-    graph.insert(n6)
-    graph.insert(n7)
-    graph.insert(n8)
-    graph.insert(n9)
-    graph.insert(n10)
-    graph.insert(n11)
-    graph.insert(n12)
-    graph.connect(n5, n4)
-    graph.connect(n2, n3)
-    graph.connect(n1, n5)
-    graph.connect(n1, n6)
-    graph.connect(n1, n10)
-    graph.connect(n1, n11)
-//    graph.connect(n1, n12)
-    graph.connect(n7, n8)
-    graph.connect(n1, n9)
-    graph.connect(n9, n8)
-    graph.connect(n9, n7)
-    var n13 = new Node(13)
-    var n14 = new Node(14)
-    var n15 = new Node(15)
-    graph.insert(n13)
-    graph.insert(n14)
-    graph.insert(n15)
-    graph.connect(n9, n13)
-    graph.connect(n9, n14)
-    graph.connect(n9, n15)
-    //graph.connect(n1, n7)
-    //graph.visit(function (x) { console.log("[neighbours] callback of " + x.value) })
-    //graph.visit(function (x) { console.log("[up] callback of " + x.value) }, 'up')
-    //graph.visit(function (x) { console.log("[down] callback of " + x.value) }, 'down')
-
-    var canvas = document.getElementById('canvas')
-    canvas.onclick = function (event) {
-        var x = event.pageX - canvas.offsetLeft
-        var y = event.pageY - canvas.offsetTop
-        var node = graph.find(x, y)
-        graph.setselected(node)
-    }
-
-    graph.layout(canvas)
-    var ctx = canvas.getContext('2d')
-    graph.context = ctx
-    graph.draw(ctx)
-}
-
 Function.prototype.compose  = function (argFunction) {
     var invokingFunction = this
     return function () {
@@ -113,16 +45,46 @@ PolarPoint.prototype = {
         var n1 = this.toComplex()
         var n2 = polar.toComplex()
         return toPolar(n1[0] + n2[0], n1[1] + n2[1])
-
     },
 
     scale: function (number) {
-        return new PolarPoint(this.theta, this.rho * number);
+        return new PolarPoint(this.theta, this.rho * number)
     },
 
     copy: function () {
         return new PolarPoint(this.theta, this.rho)
     },
+
+    distance: function (other) {
+        return Math.sqrt(this.rho * this.rho + other.rho * other.rho - 2 * this.rho * other.rho * Math.cos(this.theta - other.theta))
+    },
+
+    interpolate: function (other, delta) {
+        var pi = Math.PI, pi2 = pi * 2
+        var ch = function (t) {
+            return (t < 0)? (t % pi2) + pi2 : t % pi2
+        }
+        var tt = this.theta, et = other.theta
+        var sum, diff = Math.abs(tt - et)
+        if (diff == pi) {
+            if(tt > et) {
+                sum = ch((et + ((tt - pi2) - et) * delta))
+            } else {
+                sum = ch((et - pi2 + (tt - (et)) * delta))
+            }
+        } else if(diff >= pi) {
+            if(tt > et) {
+                sum = ch((et + ((tt - pi2) - et) * delta))
+            } else {
+                sum = ch((et - pi2 + (tt - (et - pi2)) * delta))
+            }
+        } else {
+            sum = ch((et + (tt - et) * delta))
+        }
+        var r = (this.rho - other.rho) * delta + other.rho
+        return new PolarPoint(sum, r)
+    },
+
 }
 
 
@@ -240,6 +202,7 @@ Node.prototype = {
                 }
 
                 var vec = new PolarPoint(stat + (i + 1) * (variance / fact), 50)
+                //console.log("setting position of " + childs[i].value + " to ", vec.toComplex())
                 childs[i].position = this.position.follow(vec)
             }
         }
@@ -257,13 +220,21 @@ function Graph () {
     this.nodes = []
     this.edges = []
     this.selectedNode = null
-    this.subgraphs = []
+    this.allroots = []
 }
 
 Graph.prototype = {
+    clear: function () {
+        this.nodes = []
+        this.edges = []
+        this.selectNode = null
+        this.allroots = []
+    },
+
     layout: function (canvas) {
-        this.findsubgraphs()
-        var subgraphs = this.subgraphs
+        //console.log("laying out " + this.nodes.length)
+        this.nodes.forEach(function (x) { x.edge = null ; x.position = null })
+        var subgraphs = this.findsubgraphs()
         for (var i = 0; i < subgraphs.length; i++) {
             var roots = this.getRoots(subgraphs[i])
             for (var r = 0; r < roots.length; r++) {
@@ -271,13 +242,16 @@ Graph.prototype = {
                 var x = canvas.width / (2 * subgraphs.length) + (canvas.width * i / subgraphs.length)
                 var y = canvas.height / (2 * roots.length) + (canvas.height * r / roots.length)
                 root.position = toPolar(x, y)
+                this.allroots.push(root)
             }
         }
+        //console.log("set " + this.allroots.length + "positions")
         var cb = function (graph, x) { x.place(graph) }
         this.visit(cb.curry(this), 'down')
     },
 
     draw: function (ctx) {
+        ctx.clearRect(0, 0, 800, 300)
         var cb = function (ctx, graph, x) { x.draw(ctx, graph) }
         this.visit(cb.curry(ctx, this))
     },
@@ -317,7 +291,9 @@ Graph.prototype = {
     },
 
     connect: function (node1, node2) {
-        this.edges.push(new Edge(node1, node2))
+        //console.log("connecting " + node1.value + " with " + node2.value + " (already? " + this.children(node1).filter(eq.curry(node2)).length)
+        if (this.children(node1).filter(eq.curry(node2)).length == 0)
+            this.edges.push(new Edge(node1, node2))
     },
 
     insert: function (node) {
@@ -334,6 +310,15 @@ Graph.prototype = {
             return nodes[0]
         else
             return null
+    },
+
+    findNodeOrInsert: function (val) {
+        var node = this.findNode(val)
+        if (node)
+            return node
+        var n = new Node(val)
+        this.insert(n)
+        return n
     },
 
     setselected: function (node) {
@@ -358,6 +343,7 @@ Graph.prototype = {
         //implements a breadth-first search
         var todo = [this.nodes[0]]
         var visited = []
+        var subgraphs = []
         var subgraph = []
         function doVisit (graph) {
             while (todo.length > 0) {
@@ -371,17 +357,18 @@ Graph.prototype = {
         }
 
         doVisit(this)
-        this.subgraphs.push(subgraph)
+        subgraphs.push(subgraph)
 
         //find remaining, disconnected nodes
         for (var i = 0; i < this.nodes.length; i++)
             if (visited.filter(eq.curry(this.nodes[i])).length == 0) {
-                console.log("disconnected graph!")
+                //console.log("disconnected graph!")
                 subgraph = []
                 todo.push(this.nodes[i])
                 doVisit(this)
-                this.subgraphs.push(subgraph)
+                subgraphs.push(subgraph)
             }
+        return subgraphs
     },
 
     getRoots: function (nodelist) {
@@ -397,10 +384,7 @@ Graph.prototype = {
     visit: function (callback, direction) {
         //implements a breadth-first search
         var todo = []
-        var cb = function (graph, subgraph) {
-            graph.getRoots(subgraph).forEach(function (r) { todo.push(r)})
-        }
-        this.subgraphs.forEach(cb.curry(this))
+        this.allroots.forEach(function (r) { todo.push(r) })
         var visited = []
         function doVisit (graph) {
             while (todo.length > 0) {
@@ -420,5 +404,6 @@ Graph.prototype = {
 
         doVisit(this)
     },
-
 }
+
+var graph = new Graph()
