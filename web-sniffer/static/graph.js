@@ -378,6 +378,8 @@ Graph.prototype = {
                 roots.push(x)
         }
         nodelist.filter(cb.curry(this))
+        if (roots.length == 0)
+            roots.push(nodelist[0])
         return roots
     },
 
