@@ -26,7 +26,7 @@ function initialize () {
         var y = event.pageY - canvas.offsetTop
         var node = graph.find(x, y)
         graph.setselected(node)
-        node.onclick()
+        //if (node) //callback
     }
 
     var ctx = canvas.getContext('2d')
@@ -36,7 +36,6 @@ function initialize () {
     evtSource.onmessage = handle_event
 
     function handle_event (event) {
-        console.log("handling event")
         var val = event.data
         var res = eval(val)[0]
 
@@ -128,7 +127,6 @@ function initialize () {
         newElement.appendChild(td5)
 
         document.getElementById("packets").appendChild(newElement)
-        console.log("handling event done")
     }
 
     var layout = document.getElementById("layout")
