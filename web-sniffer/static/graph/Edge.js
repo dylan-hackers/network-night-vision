@@ -20,7 +20,7 @@ Edge.prototype = {
         var dy = dpos[1] - spos[1]
         this.theta = toPolar(dx, dy).theta
 
-        this.startpos = sour.follow(new PolarPoint(this.theta, this.source.radius))
+        this.startpos = sour.follow(new PolarPoint(this.theta, this.source.overlapping(this.theta)))
 
         var mytheta = this.theta
         if (Math.abs(dpos[0] - spos[0]) < 0.1) {
@@ -33,7 +33,7 @@ Edge.prototype = {
         var invvec = Math.PI + mytheta
         //console.log("node " + this.source.value + " to " + this.destination.value + " dx " + dx + " dy " + dy + " theta " + theta + " invvec " + invvec)
         this.invvec = invvec
-        this.endpos = dest.follow(new PolarPoint(invvec, this.destination.radius))
+        this.endpos = dest.follow(new PolarPoint(invvec, this.destination.overlapping(invvec)))
         this.destination.edge = this
     },
 

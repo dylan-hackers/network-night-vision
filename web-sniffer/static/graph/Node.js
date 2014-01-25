@@ -12,9 +12,17 @@ Node.prototype = {
         console.log("this better not happen")
     },
 
+    //returns boolean whether polar is contained in node
     intersects: function (polar) {
         console.log("also better not happen here")
     },
+
+    //returns rho
+    overlapping: function (theta) {
+        console.log("better not happen")
+    },
+
+    afterplace: function (graph) { },
 
     place: function (graph) {
         var childs = graph.children(this)
@@ -37,7 +45,7 @@ Node.prototype = {
                 childs[i].position = this.position.follow(vec)
             }
         }
-        graph.outEdges(this).forEach(function (x) { x.place(graph) })
+        this.afterplace(graph)
     },
 
     draw: function (ctx, graph) {
@@ -49,8 +57,8 @@ Node.prototype = {
 
 function EllipseNode (val) {
     this.value = val
-    this.width = 0
-    this.height = 17
+    this.a = 0
+    this.b = 9
     this.focalpoint1 = null
     this.focalpoint2 = null
 }
@@ -59,25 +67,18 @@ EllipseNode.prototype = {
     __proto__ : Node.prototype,
     redraw: function (ctx, graph) {
         var pos = this.position.toComplex()
-        var size = ctx.measureText(this.value)
-        var width = size.width + (size.width / 10)
-        this.width = width
-        var height = this.height
-        if (height > width)
-            console.log("ALL WRONG!!!!")
-        var fp = Math.sqrt(width / 2 * width / 2 - height / 2 * height / 2)
-        this.focalpoint1 = this.position.follow(new PolarPoint(0, fp))
-        this.focalpoint2 = this.position.follow(new PolarPoint(Math.PI, fp))
+        var widthh = this.a
+        var heighth = this.b
         ctx.beginPath()
         var kappa = .5522848
         var xm = pos[0]                // x center
         var ym = pos[1]                // y center
-        var xs = xm - width / 2        // x start
-        var ys = ym - height / 2       // y start
-        var ox = (width / 2) * kappa   // control point offset horizontal
-        var oy = (height / 2) * kappa  // control point offset vertical
-        var xe = xm + width / 2        // x end
-        var ye = ym + height / 2       // y end
+        var xs = xm - widthh           // x start
+        var ys = ym - heighth          // y start
+        var ox = widthh * kappa        // control point offset horizontal
+        var oy = heighth * kappa       // control point offset vertical
+        var xe = xm + widthh           // x end
+        var ye = ym + heighth          // y end
 
         ctx.moveTo(xs, ym)
         ctx.bezierCurveTo(xs, ym - oy, xm - ox, ys, xm, ys)
@@ -88,7 +89,7 @@ EllipseNode.prototype = {
         ctx.fill()
         ctx.closePath()
         ctx.fillStyle = this.textStyle
-        ctx.fillText(this.value, xs + (size.width / 20), ym + height / 6)
+        ctx.fillText(this.value, xs + (widthh / 10), ym + (heighth / 3))
 
         if (this.isselected) {
             var old = ctx.strokeStyle
@@ -112,12 +113,32 @@ EllipseNode.prototype = {
 
     },
 
+    afterplace: function (graph) {
+        var size = graph.context.measureText(this.value)
+        var width = (size.width + (size.width / 10)) / 2
+        this.a = width
+        var height = this.b
+        if (height > width)
+            console.log("ALL WRONG!!!!")
+        var fp = Math.sqrt(width * width - height * height)
+        this.focalpoint1 = this.position.follow(new PolarPoint(0, fp))
+        this.focalpoint2 = this.position.follow(new PolarPoint(Math.PI, fp))
+    },
+
     intersects: function (polar) {
         //distance between ''polar'' and focal points is < 2*(width/2)
         var d = this.focalpoint1.distance(polar) + this.focalpoint2.distance(polar)
         if (d < this.width)
-            console.log("d " + d + " < " + this.width + " width")
-        return d < this.width
+            console.log("d " + d + " < " + (this.a * 2) + " a * 2")
+        return d < (this.a * 2)
+    },
+
+    overlapping: function (theta) {
+        var ab = this.a * this.b
+        var below = Math.sqrt(Math.pow(this.b * Math.cos(theta), 2) + Math.pow(this.a * Math.sin(theta), 2))
+        var res = new PolarPoint(theta, ab / below).toComplex()
+        console.log("overlapping for this ellipsis results in ", res[0], ", " , res[1])
+        return ab / below
     }
 }
 
@@ -157,5 +178,9 @@ CircleNode.prototype = {
             if (nums[1] - this.radius < nums2[1] && nums[1] + this.radius > nums2[1])
                 return true
     },
+
+    overlapping: function () {
+        return this.radius
+    }
 }
 

@@ -31,6 +31,7 @@ Graph.prototype = {
         //console.log("set " + this.allroots.length + "positions")
         var cb = function (graph, x) { x.place(graph) }
         this.visit(cb.curry(this), 'down')
+        this.edges.forEach(cb.curry(this))
     },
 
     draw: function (ctx) {
