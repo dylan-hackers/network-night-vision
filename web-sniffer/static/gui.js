@@ -19,8 +19,10 @@ function toArray (xs) {
 
 function initialize () {
 
-
+    var graph = new Graph()
     var canvas = document.getElementById('canvas')
+    var ctx = canvas.getContext('2d')
+    graph.context = ctx
     canvas.onclick = function (event) {
         var x = event.pageX - canvas.offsetLeft
         var y = event.pageY - canvas.offsetTop
@@ -29,8 +31,6 @@ function initialize () {
         //if (node) //callback
     }
 
-    var ctx = canvas.getContext('2d')
-    graph.context = ctx
 
     var evtSource = new EventSource("events")
     evtSource.onmessage = handle_event
@@ -78,7 +78,7 @@ function initialize () {
                 var ele = document.createElement("li")
                 ele.innerHTML = layers[i]
                 function cb (id, packet, cont) {
-                    executeCommand("treedetails", ("treedetails/" + packet + "/" + id), cont)
+                    executeCommand(graph, "treedetails", ("treedetails/" + packet + "/" + id), cont)
                 }
                 ele.onclick = cb.curry(i, json.packetid, handle_treedetails.curry(ele))
                 ul.appendChild(ele)
@@ -88,7 +88,7 @@ function initialize () {
 
         function cb () {
             var out = document.getElementById("details")
-            executeCommand("details" , ("details/" + res.packetid), handle_details)
+            executeCommand(graph, "details" , ("details/" + res.packetid), handle_details)
         }
 
         //console.log("[" + graph.nodes.length + "] inserting " + res.source)
@@ -139,20 +139,20 @@ function initialize () {
     var output = document.getElementById("output")
     var debug = document.getElementById("debug")
     var filter = document.getElementById("filter")
-    filter.onkeyup = handle_filterkey.curry(debug, output, filter)
-    shell.onkeyup = handle_keypress.curry(debug, output, shell)
+    filter.onkeyup = handle_filterkey.curry(debug, output, filter, graph)
+    shell.onkeyup = handle_keypress.curry(debug, output, shell, graph)
 }
 
-function handle_filterkey (debug, output, filter, event) {
+function handle_filterkey (debug, output, filter, graph, event) {
     var keyCode = ('which' in event) ? event.which : event.keyCode
     var val = filter.value
     switch (keyCode) {
     case 13: //return
-        executeCommand("clear")
+        executeCommand(graph, "clear")
         if (val == "")
-            executeCommand("filter", "filter/delete", null, output)
+            executeCommand(graph, "filter", "filter/delete", null, output)
         else
-            executeCommand("filter", "filter/" + val, null, output)
+            executeCommand(graph, "filter", "filter/" + val, null, output)
         break
     default:
         debug.innerHTML = "unknown filterkey " + keyCode
@@ -160,7 +160,7 @@ function handle_filterkey (debug, output, filter, event) {
 }
 
 
-function handle_keypress (debug, output, inputfield, event) {
+function handle_keypress (debug, output, inputfield, graph, event) {
     var keyCode = ('which' in event) ? event.which : event.keyCode
     var val = inputfield.value
 
@@ -180,7 +180,7 @@ function handle_keypress (debug, output, inputfield, event) {
             inputfield.value = ""
         }
         var cmd = val.split(" ")
-        executeCommand(cmd[0], cmd.join("/"), cont)
+        executeCommand(graph, cmd[0], cmd.join("/"), cont)
         break
     case 191: //?
         var cont = function (res) {
@@ -207,14 +207,14 @@ function handle_keypress (debug, output, inputfield, event) {
             output.appendChild(table)
             inputfield.value = ""
         }
-        executeCommand("help", "help", cont)
+        executeCommand(graph, "help", "help", cont)
         break
     default:
         debug.innerHTML = "unknown key " + keyCode
     }
 }
 
-function executeCommand (command, req, cont) {
+function executeCommand (graph, command, req, cont) {
     if (command == "clear") {
         clear_element(document.getElementById("packets"))
         graph.clear()

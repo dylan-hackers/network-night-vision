@@ -1,4 +1,3 @@
-
 Function.prototype.compose  = function (argFunction) {
     var invokingFunction = this
     return function () {
@@ -11,9 +10,3 @@ function getProp (property, object) {
 function eq (a, b) {
     return a == b
 }
-
-
-
-
-
-var graph = new Graph()
