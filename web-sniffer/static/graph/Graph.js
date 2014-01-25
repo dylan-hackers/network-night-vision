@@ -99,7 +99,7 @@ Graph.prototype = {
         var node = this.findNode(val)
         if (node)
             return node
-        var n = new Node(val)
+        var n = new EllipseNode(val)
         this.insert(n)
         return n
     },
