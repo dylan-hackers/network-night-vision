@@ -128,8 +128,8 @@ EllipseNode.prototype = {
     intersects: function (polar) {
         //distance between ''polar'' and focal points is < 2*(width/2)
         var d = this.focalpoint1.distance(polar) + this.focalpoint2.distance(polar)
-        if (d < this.width)
-            console.log("d " + d + " < " + (this.a * 2) + " a * 2")
+        //if (d < this.width)
+        //    console.log("d " + d + " < " + (this.a * 2) + " a * 2")
         return d < (this.a * 2)
     },
 
@@ -137,7 +137,7 @@ EllipseNode.prototype = {
         var ab = this.a * this.b
         var below = Math.sqrt(Math.pow(this.b * Math.cos(theta), 2) + Math.pow(this.a * Math.sin(theta), 2))
         var res = new PolarPoint(theta, ab / below).toComplex()
-        console.log("overlapping for this ellipsis results in ", res[0], ", " , res[1])
+        //console.log("overlapping for this ellipsis results in ", res[0], ", " , res[1])
         return ab / below
     }
 }

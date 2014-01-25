@@ -20,6 +20,10 @@
     list-style: none;
 }
 
+.highlight {
+    background-color:#AADDAA;
+}
+
 .success {
     background-color:#AADDAA;
     border: 1px;

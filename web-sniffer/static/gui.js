@@ -27,9 +27,19 @@ function initialize () {
         var y = event.pageY - canvas.offsetTop
         var node = graph.findNodeAt(x, y)
         graph.setselected(node)
-        if (node)
+        var ps = document.getElementById("packets").childNodes
+        if (node) {
             console.log("selected is " + node.value)
-        //if (node) //callback
+            for (var i = 0 ; i < ps.length ; i++) {
+                ps[i].className = "normal"
+                if ((ps[i].childNodes[1].innerHTML == node.value) ||
+                    (ps[i].childNodes[2].innerHTML == node.value))
+                    ps[i].className = "highlight"
+            }
+        } else {
+            for (var i = 0 ; i < ps.length ; i++)
+                ps[i].className = "normal"
+        }
     }
 
 
