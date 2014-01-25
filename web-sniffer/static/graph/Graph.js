@@ -39,18 +39,15 @@ Graph.prototype = {
         this.visit(cb.curry(ctx, this))
     },
 
-    find: function (x, y) {
-        var res = null
-        var hit =
-            function (nod) {
-                var nums = nod.position.toComplex()
-                if (nums[0] - 10 < x && nums[0] + 10 > x)
-                    if (nums[1] - 10 < y && nums[1] + 10 > y)
-                        res = nod
-            }
-
-        this.visit(hit)
-        return res
+    findNodeAt: function (x, y) {
+        var pos = toPolar(x, y)
+        var hit = this.nodes.filter(function (x) { return x.intersects(pos) })
+        if (hit.length > 1) {
+            console.log("multiple hits: ", hit.length)
+            hit.forEach(function (x) { console.log("  " + x.value) })
+        }
+        if (hit.length > 0)
+            return hit[0]
     },
 
     outEdges: function (node) {

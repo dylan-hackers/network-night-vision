@@ -18,7 +18,6 @@ function toArray (xs) {
 
 
 function initialize () {
-
     var graph = new Graph()
     var canvas = document.getElementById('canvas')
     var ctx = canvas.getContext('2d')
@@ -26,8 +25,10 @@ function initialize () {
     canvas.onclick = function (event) {
         var x = event.pageX - canvas.offsetLeft
         var y = event.pageY - canvas.offsetTop
-        var node = graph.find(x, y)
+        var node = graph.findNodeAt(x, y)
         graph.setselected(node)
+        if (node)
+            console.log("selected is " + node.value)
         //if (node) //callback
     }
 
