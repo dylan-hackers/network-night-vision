@@ -166,7 +166,7 @@ function handle_filterkey (debug, output, filter, graph, event) {
             executeCommand(graph, "filter", "filter/" + val, null, output)
         break
     default:
-        debug.innerHTML = "unknown filterkey " + keyCode
+        debug.innerHTML = "debug: unknown filterkey " + keyCode
     }
 }
 
@@ -177,7 +177,7 @@ function handle_keypress (debug, output, inputfield, graph, event) {
 
     switch (keyCode) {
     case 32: //space
-        debug.innerHTML = "space: " + val; break
+        debug.innerHTML = "debug: space: " + val; break
     case 13: //return
         var cont = function (res) {
             clear_element(output)
@@ -221,7 +221,7 @@ function handle_keypress (debug, output, inputfield, graph, event) {
         executeCommand(graph, "help", "help", cont)
         break
     default:
-        debug.innerHTML = "unknown key " + keyCode
+        debug.innerHTML = "debug: unknown key " + keyCode
     }
 }
 
@@ -243,8 +243,8 @@ function executeCommand (graph, command, req, cont) {
                 output.className = "error"
                 output.innerHTML = json.error
             } else {
-                output.className = "success"
-                output.innerHTML = "Success!: " + json
+                output.className = "highlight"
+                output.innerHTML = "output: " + json
                 if (cont)
                     cont(res)
             }

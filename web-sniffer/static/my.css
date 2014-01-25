@@ -1,25 +1,11 @@
 .error {
     background-color:#DDAAAA;
-    border: 1px;
-    padding: 2px;
-    display: block;
-    margin: 0;
-    list-style-type: none;
-    list-style: none;
+    border: 1px solid black;
+    margin: 2px;
 }
 
 .highlight {
     background-color:#AADDAA;
-}
-
-.success {
-    background-color:#AADDAA;
-    border: 1px;
-    padding: 2px;
-    display: block;
-    margin: 0;
-    list-style-type: none;
-    list-style: none;
 }
 
 .canvas { border: 1px solid black; }
