@@ -142,27 +142,19 @@ end;
 
 
 define function maybe-get-summary (id :: <integer>, frame :: <object>)
-  let queue = stream-resource.sse-queue;
-  let lock = stream-resource.sse-queue-lock;
-  let notification = stream-resource.sse-queue-notification;
   if (~ *filter-expression* | matches?(frame, *filter-expression*))
-    with-lock (lock)
-      if (queue.empty?)
-        release-all(notification)
-      end;
-      let last-data = frame.latest-payload;
-      let (source, target) = find-addresses(frame);
-      let data = struct(packetid:, id,
-                        source: as(<string>, source),
-                        destination: as(<string>, target),
-                        protocol: last-data.frame-name,
-                        content: last-data.summary.quote-html);
-      let str = make(<string-stream>, direction: #"output");
-      encode-json(str, list(data));
-      let json = str.stream-contents;
-      dbg("inserting data: %s\n", json);
-      push-last(queue, concatenate("data: ", json));
-    end;
+    let last-data = frame.latest-payload;
+    let (source, target) = find-addresses(frame);
+    let data = struct(packetid:, id,
+                      source: as(<string>, source),
+                      destination: as(<string>, target),
+                      protocol: last-data.frame-name,
+                      content: last-data.summary.quote-html);
+    let str = make(<string-stream>, direction: #"output");
+    encode-json(str, list(data));
+    let json = str.stream-contents;
+    dbg("inserting data: %s\n", json);
+    sse-push-event(stream-resource, concatenate("data: ", json));
   end;
 end;
 
